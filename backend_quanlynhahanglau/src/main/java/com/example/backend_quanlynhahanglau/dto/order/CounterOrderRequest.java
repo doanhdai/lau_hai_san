@@ -1,0 +1,27 @@
+package com.example.backend_quanlynhahanglau.dto.order;
+
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CounterOrderRequest {
+    private String customerName;
+    private String customerPhone;
+    
+    private Long tableId; // Bàn cho khách đặt trực tiếp tại nhà hàng (tùy chọn)
+    private Long roomId; // Phòng cho khách đặt trực tiếp tại nhà hàng (tùy chọn)
+    
+    @NotEmpty(message = "Đơn hàng phải có ít nhất một món")
+    private List<OrderItemRequest> items;
+    
+    private String notes;
+    
+    private Long promotionId; // Optional promotion code
+}

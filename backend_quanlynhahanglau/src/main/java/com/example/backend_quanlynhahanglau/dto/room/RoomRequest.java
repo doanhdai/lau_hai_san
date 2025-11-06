@@ -1,0 +1,27 @@
+package com.example.backend_quanlynhahanglau.dto.room;
+
+import com.example.backend_quanlynhahanglau.enums.TableStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RoomRequest {
+    @NotBlank(message = "Số phòng không được để trống")
+    private String roomNumber;
+
+    @NotBlank(message = "Tên phòng không được để trống")
+    private String name;
+
+    @NotNull(message = "Sức chứa không được để trống")
+    @Positive(message = "Sức chứa phải là số dương")
+    private Integer capacity;
+
+    private TableStatus status;
+    private String description;
+}

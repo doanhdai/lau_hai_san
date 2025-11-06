@@ -1,0 +1,240 @@
+<template>
+  <div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Quản lý Phản hồi</h1>
+        <p class="text-gray-600 mt-1">Đánh giá và phản hồi khách hàng</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-yellow-100 text-sm">Đánh giá trung bình</p>
+            <p class="text-3xl font-bold mt-1">{{ averageRating.toFixed(1) }} ★</p>
+          </div>
+          <span class="text-4xl opacity-50">⭐</span>
+        </div>
+      </div>
+      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-green-100 text-sm">Tích cực</p>
+            <p class="text-3xl font-bold mt-1">{{ goodFeedbackCount }}</p>
+          </div>
+          <span class="text-4xl opacity-50">😊</span>
+        </div>
+      </div>
+      <div class="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-red-100 text-sm">Tiêu cực</p>
+            <p class="text-3xl font-bold mt-1">{{ badFeedbackCount }}</p>
+          </div>
+          <span class="text-4xl opacity-50">😞</span>
+        </div>
+      </div>
+      <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-blue-100 text-sm">Tổng phản hồi</p>
+            <p class="text-3xl font-bold mt-1">{{ feedbacks.length }}</p>
+          </div>
+          <span class="text-4xl opacity-50">💬</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tên khách hàng..."
+            class="input-field"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Đánh giá</label>
+          <select v-model="filterRating" class="input-field">
+            <option value="">Tất cả</option>
+            <option value="5">5 sao</option>
+            <option value="4">4 sao</option>
+            <option value="3">3 sao</option>
+            <option value="2">2 sao</option>
+            <option value="1">1 sao</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button @click="loadFeedbacks" class="btn-secondary w-full flex items-center justify-center gap-2">
+            <span class="text-lg">🔄</span>
+            Làm mới
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center justify-center h-64">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Feedbacks List -->
+    <div v-else class="space-y-4">
+      <div 
+        v-for="feedback in filteredFeedbacks" 
+        :key="feedback.id"
+        class="card hover:shadow-lg transition-all duration-300"
+      >
+        <div class="space-y-3">
+          <!-- Header -->
+          <div class="flex justify-between items-start">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                {{ feedback.customerName ? feedback.customerName.charAt(0) : 'K' }}
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900">{{ feedback.customerName || 'Khách hàng' }}</h3>
+                <p class="text-sm text-gray-500">{{ formatDate(feedback.feedbackDate) }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <StarIcon 
+                v-for="i in 5" 
+                :key="i"
+                :class="i <= feedback.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'"
+                class="w-5 h-5"
+              />
+            </div>
+          </div>
+
+          <!-- Comment -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-gray-700">{{ feedback.comment || 'Không có bình luận' }}</p>
+          </div>
+
+          <!-- Response -->
+          <div v-if="feedback.response" class="bg-blue-50 rounded-lg p-4 ml-8">
+            <p class="text-sm font-medium text-blue-900 mb-1">Đã phản hồi:</p>
+            <p class="text-gray-700">{{ feedback.response }}</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 pt-2 border-t">
+            <button 
+              v-if="!feedback.response"
+              @click="respondToFeedback(feedback)" 
+              class="text-sm btn-secondary py-1 px-3"
+            >
+              Phản hồi
+            </button>
+            <button @click="deleteFeedback(feedback)" class="text-sm text-red-600 hover:text-red-800 font-medium px-3">
+              Xóa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="!loading && filteredFeedbacks.length === 0" class="card text-center py-12">
+      <span class="text-8xl text-gray-300 block mb-4">💬</span>
+      <p class="text-gray-500 text-lg">Không tìm thấy phản hồi nào</p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { feedbackService } from '@/services/feedbackService'
+import { useNotificationStore } from '@/stores/notification'
+// Heroicons replaced with emojis
+
+const notification = useNotificationStore()
+
+const loading = ref(false)
+const feedbacks = ref([])
+const searchQuery = ref('')
+const filterRating = ref('')
+
+const averageRating = computed(() => {
+  if (feedbacks.value.length === 0) return 0
+  const sum = feedbacks.value.reduce((acc, f) => acc + f.rating, 0)
+  return sum / feedbacks.value.length
+})
+
+const goodFeedbackCount = computed(() => feedbacks.value.filter(f => f.rating >= 4).length)
+const badFeedbackCount = computed(() => feedbacks.value.filter(f => f.rating <= 2).length)
+
+const filteredFeedbacks = computed(() => {
+  let result = feedbacks.value
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(f => 
+      (f.customerName && f.customerName.toLowerCase().includes(query)) ||
+      (f.comment && f.comment.toLowerCase().includes(query))
+    )
+  }
+
+  if (filterRating.value) {
+    result = result.filter(f => f.rating === parseInt(filterRating.value))
+  }
+
+  return result.sort((a, b) => new Date(b.feedbackDate) - new Date(a.feedbackDate))
+})
+
+onMounted(() => {
+  loadFeedbacks()
+})
+
+async function loadFeedbacks() {
+  loading.value = true
+  try {
+    const response = await feedbackService.getAll()
+    if (response.success) {
+      feedbacks.value = response.data
+    }
+  } catch (error) {
+    notification.error('Không thể tải danh sách phản hồi')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function respondToFeedback(feedback) {
+  const response = prompt(`Phản hồi cho ${feedback.customerName}:`)
+  if (response && response.trim()) {
+    try {
+      await feedbackService.respond(feedback.id, response)
+      notification.success('Đã gửi phản hồi')
+      loadFeedbacks()
+    } catch (error) {
+      notification.error('Không thể gửi phản hồi')
+    }
+  }
+}
+
+async function deleteFeedback(feedback) {
+  if (confirm('Bạn có chắc muốn xóa phản hồi này?')) {
+    try {
+      await feedbackService.delete(feedback.id)
+      notification.success('Xóa phản hồi thành công')
+      loadFeedbacks()
+    } catch (error) {
+      notification.error('Không thể xóa phản hồi')
+    }
+  }
+}
+
+function formatDate(date) {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('vi-VN')
+}
+</script>
