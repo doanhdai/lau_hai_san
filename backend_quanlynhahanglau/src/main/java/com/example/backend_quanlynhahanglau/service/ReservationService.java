@@ -28,7 +28,6 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final CustomerRepository customerRepository;
     private final RestaurantTableRepository tableRepository;
-    private final RoomRepository roomRepository;
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
@@ -59,6 +58,42 @@ public class ReservationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> getReservationsByCustomerId(Long customerId) {
+        // Kiểm tra customer có tồn tại không
+        if (!customerRepository.existsById(customerId)) {
+            throw new ResourceNotFoundException("Khách hàng", "id", customerId);
+        }
+        
+        // Lấy lịch sử đặt bàn của customer, sắp xếp theo thời gian đặt bàn giảm dần
+        return reservationRepository.findByCustomerIdOrderByReservationTimeDesc(customerId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> getReservationsByUserId(Long userId) {
+        // Kiểm tra User có tồn tại không
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Người dùng", "id", userId);
+        }
+        
+        // Tìm tất cả Customer theo User ID (có thể có nhiều Customer cho 1 User)
+        List<Customer> customers = customerRepository.findByUserId(userId);
+        
+        if (customers.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Không tìm thấy thông tin khách hàng cho người dùng này. Vui lòng liên kết tài khoản với thông tin khách hàng.");
+        }
+        
+        // Lấy tất cả reservation của tất cả Customer, sắp xếp theo thời gian đặt bàn giảm dần
+        return customers.stream()
+                .flatMap(customer -> reservationRepository.findByCustomerIdOrderByReservationTimeDesc(customer.getId()).stream())
+                .sorted((r1, r2) -> r2.getReservationTime().compareTo(r1.getReservationTime()))
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ReservationResponse createPublicReservation(PublicReservationRequest request) {
         log.info("Creating public reservation for phone: {}", request.getCustomerPhone());
@@ -68,53 +103,68 @@ public class ReservationService {
                 .orElseGet(() -> {
                     log.info("Creating new customer for phone: {}", request.getCustomerPhone());
                     String customerCode = generateUniqueCustomerCode();
-                    Customer newCustomer = Customer.builder()
+                    Customer.CustomerBuilder customerBuilder = Customer.builder()
                             .customerCode(customerCode)
                             .fullName(request.getCustomerName())
                             .phone(request.getCustomerPhone())
                             .email(request.getCustomerEmail())
                             .isVip(false)
                             .active(true)
-                            .blocked(false)
-                            .build();
-                    return customerRepository.save(newCustomer);
+                            .blocked(false);
+                    
+                    // Liên kết với User nếu có userId được truyền vào
+                    if (request.getUserId() != null) {
+                        User user = userRepository.findById(request.getUserId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", request.getUserId()));
+                        customerBuilder.user(user);
+                    }
+                    
+                    return customerRepository.save(customerBuilder.build());
                 });
+
+        // Nếu customer đã tồn tại nhưng chưa có user và request có userId, cập nhật liên kết
+        if (customer.getUser() == null && request.getUserId() != null) {
+            User user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", request.getUserId()));
+            customer.setUser(user);
+            customer = customerRepository.save(customer);
+            log.info("Linked customer {} with user {}", customer.getId(), user.getId());
+        }
 
         if (customer.getBlocked()) {
             throw new BadRequestException("Khách hàng này đã bị chặn");
         }
 
-        // Kiểm tra bàn bắt buộc phải có
-        if (request.getTableId() == null) {
-            throw new BadRequestException("Vui lòng chọn bàn");
+        // Table có thể để trống, admin/manager sẽ cập nhật sau
+        RestaurantTable table = null;
+        if (request.getTableId() != null) {
+            table = tableRepository.findById(request.getTableId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
+            
+            if (table.getStatus() != TableStatus.AVAILABLE) {
+                throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
+            }
+
+            // Kiểm tra conflict với các reservation khác trong khoảng ±3 giờ (chỉ khi có table)
+            LocalDateTime reservationTime = request.getReservationDateTime();
+            LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
+            LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
+            
+            List<Reservation> conflictingReservations = reservationRepository
+                    .findConflictingReservationsByTable(table.getId(), startTime, endTime);
+            
+            if (!conflictingReservations.isEmpty()) {
+                Reservation conflict = conflictingReservations.get(0);
+                throw new BadRequestException(
+                        String.format("Bàn %s đã được đặt vào lúc %s. Không thể đặt trong khoảng ±3 giờ (từ %s đến %s)",
+                                table.getTableNumber(),
+                                conflict.getReservationTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                                startTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                                endTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
+            }
         }
 
-        RestaurantTable table = tableRepository.findById(request.getTableId())
-                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
-        
-        if (table.getStatus() != TableStatus.AVAILABLE) {
-            throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
-        }
-
-        // Kiểm tra conflict với các reservation khác trong khoảng ±3 giờ
-        LocalDateTime reservationTime = request.getReservationDateTime();
-        LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
-        LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
-        
-        List<Reservation> conflictingReservations = reservationRepository
-                .findConflictingReservationsByTable(table.getId(), startTime, endTime);
-        
-        if (!conflictingReservations.isEmpty()) {
-            Reservation conflict = conflictingReservations.get(0);
-            throw new BadRequestException(
-                    String.format("Bàn %s đã được đặt vào lúc %s. Không thể đặt trong khoảng ±3 giờ (từ %s đến %s)",
-                            table.getTableNumber(),
-                            conflict.getReservationTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                            startTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                            endTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
-        }
-
-        // Tạo reservation
+        // Tạo reservation (có thể không có table)
         Reservation reservation = Reservation.builder()
                 .customer(customer)
                 .table(table)
@@ -187,9 +237,9 @@ public class ReservationService {
                 .emailSent(false)
                 .build();
 
-        // Bắt buộc phải có tableId hoặc roomId (ít nhất một trong hai)
-        if (request.getTableId() == null && request.getRoomId() == null) {
-            throw new BadRequestException("Vui lòng chọn bàn hoặc phòng");
+        // Bắt buộc phải có tableId
+        if (request.getTableId() == null) {
+            throw new BadRequestException("Vui lòng chọn bàn");
         }
 
         if (request.getTableId() != null) {
@@ -219,16 +269,6 @@ public class ReservationService {
             }
             
             reservation.setTable(table);
-        }
-
-        if (request.getRoomId() != null) {
-            Room room = roomRepository.findById(request.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-            
-            if (room.getStatus() != TableStatus.AVAILABLE) {
-                throw new BadRequestException("Phòng không khả dụng. Trạng thái hiện tại: " + room.getStatus());
-            }
-            reservation.setRoom(room);
         }
 
         reservation = reservationRepository.save(reservation);
@@ -288,14 +328,6 @@ public class ReservationService {
             reservation.setTable(null);
         }
 
-        if (request.getRoomId() != null) {
-            Room room = roomRepository.findById(request.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-            reservation.setRoom(room);
-        } else {
-            reservation.setRoom(null);
-        }
-
         reservation = reservationRepository.save(reservation);
         log.info("Reservation updated successfully with ID: {}", reservation.getId());
         return mapToResponse(reservation);
@@ -323,15 +355,10 @@ public class ReservationService {
         reservation.setConfirmedBy(user);
         reservation.setConfirmedAt(LocalDateTime.now());
 
-        // Cập nhật trạng thái bàn/phòng
+        // Cập nhật trạng thái bàn
         if (reservation.getTable() != null) {
             reservation.getTable().setStatus(TableStatus.RESERVED);
             tableRepository.save(reservation.getTable());
-        }
-
-        if (reservation.getRoom() != null) {
-            reservation.getRoom().setStatus(TableStatus.RESERVED);
-            roomRepository.save(reservation.getRoom());
         }
 
         reservation = reservationRepository.save(reservation);
@@ -345,19 +372,60 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.CANCELLED);
 
-        // Cập nhật lại trạng thái bàn/phòng
+        // Cập nhật lại trạng thái bàn
         if (reservation.getTable() != null && reservation.getTable().getStatus() == TableStatus.RESERVED) {
             reservation.getTable().setStatus(TableStatus.AVAILABLE);
             tableRepository.save(reservation.getTable());
         }
 
-        if (reservation.getRoom() != null && reservation.getRoom().getStatus() == TableStatus.RESERVED) {
-            reservation.getRoom().setStatus(TableStatus.AVAILABLE);
-            roomRepository.save(reservation.getRoom());
-        }
-
         reservation = reservationRepository.save(reservation);
         return mapToResponse(reservation);
+    }
+
+    @Transactional
+    public ReservationResponse cancelPublicReservation(Long id, Long userId) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
+
+        // Nếu có userId, kiểm tra xem reservation có thuộc về user này không
+        if (userId != null) {
+            // Tìm Customer theo User ID
+            List<Customer> customers = customerRepository.findByUserId(userId);
+            if (customers.isEmpty()) {
+                throw new BadRequestException("Không tìm thấy thông tin khách hàng cho người dùng này");
+            }
+            
+            // Kiểm tra xem reservation có thuộc về một trong các Customer của User không
+            Long reservationCustomerId = reservation.getCustomer().getId();
+            boolean belongsToUser = customers.stream()
+                    .anyMatch(customer -> customer.getId().equals(reservationCustomerId));
+            
+            if (!belongsToUser) {
+                throw new BadRequestException("Bạn không có quyền hủy đặt bàn này");
+            }
+        }
+
+        // Kiểm tra trạng thái reservation
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new BadRequestException("Đặt bàn này đã được hủy rồi");
+        }
+
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+            // Nếu đã confirm, có thể cần thông báo cho nhà hàng
+            log.warn("User {} is cancelling a confirmed reservation {}", userId, id);
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+
+        // Cập nhật lại trạng thái bàn
+        if (reservation.getTable() != null && reservation.getTable().getStatus() == TableStatus.RESERVED) {
+            reservation.getTable().setStatus(TableStatus.AVAILABLE);
+            tableRepository.save(reservation.getTable());
+        }
+
+        Reservation savedReservation = reservationRepository.save(reservation);
+        log.info("Public reservation {} cancelled by user {}", id, userId);
+        return mapToResponse(savedReservation);
     }
 
     private String generateUniqueCustomerCode() {
@@ -376,8 +444,6 @@ public class ReservationService {
                 .customerId(reservation.getCustomer().getId())
                 .tableNumber(reservation.getTable() != null ? reservation.getTable().getTableNumber() : null)
                 .tableId(reservation.getTable() != null ? reservation.getTable().getId() : null)
-                .roomName(reservation.getRoom() != null ? reservation.getRoom().getName() : null)
-                .roomId(reservation.getRoom() != null ? reservation.getRoom().getId() : null)
                 .reservationTime(reservation.getReservationTime())
                 .numberOfGuests(reservation.getNumberOfGuests())
                 .status(reservation.getStatus())

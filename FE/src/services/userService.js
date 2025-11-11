@@ -5,6 +5,15 @@ export const userService = {
   async getAll(params = {}) {
     try {
       const response = await api.get('/users', { params })
+      // API returns: { success, message, data: { content, number, totalPages, ... } }
+      // Return the data directly if response has success and data
+      if (response.data && response.data.success && response.data.data) {
+        return {
+          success: true,
+          data: response.data.data
+        }
+      }
+      // Fallback: return response as is
       return {
         success: true,
         data: response.data
@@ -77,6 +86,15 @@ export const userService = {
   async toggleStatus(id) {
     try {
       const response = await api.patch(`/users/${id}/toggle-status`)
+      // API may return: { success, message, data } or just data
+      if (response.data && response.data.success && response.data.data) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || 'Cập nhật trạng thái thành công'
+        }
+      }
+      // Fallback: return response as is
       return {
         success: true,
         data: response.data,

@@ -3,61 +3,69 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Quản lý Bàn</h1>
-        <p class="text-gray-600 mt-1">Danh sách và trạng thái bàn ăn</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý Bàn</h1>
+        <p class="text-slate-600 mt-1 text-sm">Danh sách và trạng thái bàn ăn</p>
       </div>
-      <button @click="showCreateModal = true" class="btn-primary flex items-center gap-2">
-        <span class="text-lg">➕</span>
-        Thêm bàn mới
+      <button @click="showCreateModal = true" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-plus"></i>
+        <span>Thêm bàn mới</span>
       </button>
     </div>
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-green-100 text-sm">Bàn trống</p>
-            <p class="text-3xl font-bold mt-1">{{ availableCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Bàn trống</p>
+            <p class="text-2xl font-bold text-slate-900">{{ availableCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">✅</span>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-red-100 text-sm">Đang phục vụ</p>
-            <p class="text-3xl font-bold mt-1">{{ occupiedCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Đang phục vụ</p>
+            <p class="text-2xl font-bold text-slate-900">{{ occupiedCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">👥</span>
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-users text-red-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-yellow-100 text-sm">Đã đặt</p>
-            <p class="text-3xl font-bold mt-1">{{ reservedCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Đã đặt</p>
+            <p class="text-2xl font-bold text-slate-900">{{ reservedCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">⏰</span>
+          <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-clock text-amber-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-gray-500 to-gray-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-100 text-sm">Tổng số bàn</p>
-            <p class="text-3xl font-bold mt-1">{{ tables.length }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Tổng số bàn</p>
+            <p class="text-2xl font-bold text-slate-900">{{ tables.length }}</p>
           </div>
-          <span class="text-4xl opacity-50">🪑</span>
+          <div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-chair text-slate-600 text-xl"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-          <select v-model="filterStatus" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+          <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
             <option value="AVAILABLE">Trống</option>
             <option value="OCCUPIED">Đang phục vụ</option>
@@ -66,13 +74,13 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Sức chứa tối thiểu</label>
-          <input v-model.number="minCapacity" type="number" min="0" class="input-field" placeholder="0" />
+          <label class="block text-sm font-medium text-slate-700 mb-2">Sức chứa tối thiểu</label>
+          <input v-model.number="minCapacity" type="number" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" placeholder="0" />
         </div>
         <div class="flex items-end">
-          <button @click="loadTables" class="btn-secondary w-full flex items-center justify-center gap-2">
-            <span class="text-lg">🔍</span>
-            Tìm kiếm
+          <button @click="loadTables" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-search"></i>
+            <span>Tìm kiếm</span>
           </button>
         </div>
       </div>
@@ -80,7 +88,7 @@
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Tables Grid -->
@@ -88,15 +96,15 @@
       <div 
         v-for="table in filteredTables" 
         :key="table.id"
-        class="card cursor-pointer transform transition-all duration-300 hover:scale-105"
+        class="bg-white border rounded-lg p-5 cursor-pointer transition-all duration-200 hover:shadow-lg"
         :class="getTableCardClass(table.status)"
         @click="selectTable(table)"
       >
         <div class="text-center space-y-3">
           <!-- Table Icon -->
           <div class="flex justify-center">
-            <div class="w-16 h-16 rounded-full flex items-center justify-center" :class="getTableIconBg(table.status)">
-              <span class="text-3xl">🪑</span>
+            <div class="w-16 h-16 rounded-lg flex items-center justify-center" :class="getTableIconBg(table.status)">
+              <i :class="['fas', 'fa-chair', 'text-2xl', getTableIconColor(table.status)]"></i>
             </div>
           </div>
 
@@ -115,25 +123,27 @@
 
           <!-- Room -->
           <div v-if="table.roomName">
-            <p class="text-xs text-gray-500">{{ table.roomName }}</p>
+            <p class="text-xs text-slate-500">{{ table.roomName }}</p>
           </div>
 
           <!-- Location -->
           <div v-if="table.location">
-            <p class="text-xs text-gray-500">{{ table.location }}</p>
+            <p class="text-xs text-slate-500">{{ table.location }}</p>
           </div>
 
           <!-- Quick Actions -->
-          <div class="flex gap-2 pt-2 border-t">
+          <div class="flex gap-2 pt-3 border-t border-gray-100">
             <button 
               @click.stop="changeStatus(table)"
-              class="flex-1 text-xs btn-secondary py-1"
+              class="flex-1 text-xs bg-gray-100 hover:bg-gray-200 text-slate-700 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
               :disabled="table.status === 'MAINTENANCE'"
             >
-              Đổi TT
+              <i class="fas fa-sync-alt text-xs"></i>
+              <span>Đổi TT</span>
             </button>
-            <button @click.stop="editTable(table)" class="flex-1 text-xs btn-secondary py-1">
-              Sửa
+            <button @click.stop="editTable(table)" class="flex-1 text-xs bg-gray-100 hover:bg-gray-200 text-slate-700 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
+              <i class="fas fa-edit text-xs"></i>
+              <span>Sửa</span>
             </button>
           </div>
         </div>
@@ -141,9 +151,9 @@
     </div>
 
     <!-- Empty state -->
-    <div v-if="!loading && filteredTables.length === 0" class="card text-center py-12">
-      <span class="text-8xl text-gray-300 block mb-4">🪑</span>
-      <p class="text-gray-500 text-lg">Không tìm thấy bàn nào</p>
+    <div v-if="!loading && filteredTables.length === 0" class="bg-white border border-gray-200 rounded-lg text-center py-12">
+      <i class="fas fa-chair text-6xl text-slate-300 block mb-4"></i>
+      <p class="text-slate-600 text-base">Không tìm thấy bàn nào</p>
     </div>
 
     <!-- Table Modal -->
@@ -270,7 +280,7 @@ function getTableCardClass(status) {
   const classes = {
     'AVAILABLE': 'border-2 border-green-200 hover:border-green-400',
     'OCCUPIED': 'border-2 border-red-200 hover:border-red-400',
-    'RESERVED': 'border-2 border-yellow-200 hover:border-yellow-400',
+    'RESERVED': 'border-2 border-amber-200 hover:border-amber-400',
     'MAINTENANCE': 'border-2 border-gray-200 hover:border-gray-400 opacity-60'
   }
   return classes[status] || 'border-2 border-gray-200'
@@ -280,7 +290,7 @@ function getTableIconBg(status) {
   const classes = {
     'AVAILABLE': 'bg-green-100',
     'OCCUPIED': 'bg-red-100',
-    'RESERVED': 'bg-yellow-100',
+    'RESERVED': 'bg-amber-100',
     'MAINTENANCE': 'bg-gray-100'
   }
   return classes[status] || 'bg-gray-100'
@@ -290,7 +300,7 @@ function getTableIconColor(status) {
   const classes = {
     'AVAILABLE': 'text-green-600',
     'OCCUPIED': 'text-red-600',
-    'RESERVED': 'text-yellow-600',
+    'RESERVED': 'text-amber-600',
     'MAINTENANCE': 'text-gray-600'
   }
   return classes[status] || 'text-gray-600'
@@ -298,12 +308,12 @@ function getTableIconColor(status) {
 
 function getStatusBadgeClass(status) {
   const classes = {
-    'AVAILABLE': 'badge bg-green-100 text-green-800',
-    'OCCUPIED': 'badge bg-red-100 text-red-800',
-    'RESERVED': 'badge bg-yellow-100 text-yellow-800',
-    'MAINTENANCE': 'badge bg-gray-100 text-gray-800'
+    'AVAILABLE': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800',
+    'OCCUPIED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800',
+    'RESERVED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800',
+    'MAINTENANCE': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
   }
-  return classes[status] || 'badge bg-gray-100 text-gray-800'
+  return classes[status] || 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
 }
 
 function getStatusLabel(status) {

@@ -11,6 +11,11 @@ export const dishService = {
     return response.data
   },
 
+  async getByCategory(categoryId) {
+    const response = await api.get(`/dishes/category/${categoryId}`)
+    return response.data
+  },
+
   async getById(id) {
     const response = await api.get(`/dishes/${id}`)
     return response.data

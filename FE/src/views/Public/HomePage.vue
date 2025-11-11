@@ -10,26 +10,26 @@
           transform: `scale(1.1) translateY(${scrollY * 0.5}px)`
         }"
       ></div>
-      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"></div>
+      <div class="absolute inset-0 bg-black/60"></div>
       
       <!-- Hero Content -->
       <div class="relative z-10 text-center px-4 animate-fade-in-up">
-        <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 animate-slide-up">
-          Trải Nghiệm <span class="text-sky-400">Lẩu</span> Đích Thực
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight">
+          Trải Nghiệm <span class="text-white/90">Lẩu</span> Đích Thực
         </h1>
-        <p class="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto animate-slide-up animation-delay-200">
+        <p class="text-lg md:text-xl text-white/85 mb-8 max-w-2xl mx-auto leading-relaxed">
           Hương vị truyền thống kết hợp không gian hiện đại, mang đến bữa tiệc lẩu hoàn hảo cho gia đình và bạn bè
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up animation-delay-400">
           <router-link 
             to="/reservation" 
-            class="btn-primary px-8 py-4 text-lg shadow-2xl hover:shadow-sky-500/50 transform hover:scale-105 transition-all"
+            class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3.5 rounded-lg font-semibold text-base transition-colors shadow-lg"
           >
             Đặt Bàn Ngay
           </router-link>
           <router-link 
             to="/menu" 
-            class="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 shadow-xl transform hover:scale-105 transition-all"
+            class="bg-white/95 hover:bg-white text-slate-900 px-8 py-3.5 rounded-lg font-semibold text-base border border-white/20 transition-colors shadow-lg"
           >
             Xem Thực Đơn
           </router-link>
@@ -47,9 +47,9 @@
     <!-- Features Section -->
     <section class="py-20 bg-white">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16 scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Tại Sao Chọn Chúng Tôi?</h2>
-          <div class="w-20 h-1 bg-sky-600 mx-auto"></div>
+        <div class="text-center mb-12 scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Tại Sao Chọn Chúng Tôi?</h2>
+          <div class="w-16 h-0.5 bg-slate-900 mx-auto"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -59,12 +59,12 @@
             class="group scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div class="w-16 h-16 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                {{ feature.icon }}
+            <div class="bg-white border border-gray-200 p-8 rounded-lg hover:shadow-lg transition-all duration-200">
+              <div class="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center mb-4">
+                <i :class="['fas', feature.icon]" class="text-white text-2xl"></i>
               </div>
-              <h3 class="text-2xl font-bold text-gray-900 mb-3">{{ feature.title }}</h3>
-              <p class="text-gray-600 leading-relaxed">{{ feature.description }}</p>
+              <h3 class="text-xl font-bold text-slate-900 mb-2">{{ feature.title }}</h3>
+              <p class="text-slate-600 leading-relaxed text-sm">{{ feature.description }}</p>
             </div>
           </div>
         </div>
@@ -72,16 +72,12 @@
     </section>
 
     <!-- Menu Preview Section -->
-    <section class="py-20 bg-gray-900 text-white relative overflow-hidden">
-      <div class="absolute inset-0 opacity-10">
-        <div class="absolute top-0 left-0 w-96 h-96 bg-sky-500 rounded-full filter blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl"></div>
-      </div>
+    <section class="py-20 bg-slate-900 text-white">
 
-      <div class="container mx-auto px-4 relative z-10">
-        <div class="text-center mb-16 scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold mb-4">Thực Đơn Đặc Biệt</h2>
-          <p class="text-xl text-gray-300">Khám phá các món lẩu độc đáo và hấp dẫn</p>
+      <div class="container mx-auto px-4">
+        <div class="text-center mb-12 scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold mb-3 text-white">Thực Đơn Đặc Biệt</h2>
+          <p class="text-lg text-slate-300">Khám phá các món lẩu độc đáo và hấp dẫn</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -91,18 +87,18 @@
             class="group scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="bg-gray-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-sky-500/20 transition-all duration-300 transform hover:-translate-y-2">
-              <div class="aspect-square bg-gradient-to-br from-sky-900/20 to-gray-800 overflow-hidden">
-                <div class="w-full h-full flex items-center justify-center text-6xl group-hover:scale-110 transition-transform duration-300">
-                  {{ dish.icon }}
+            <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden hover:border-slate-600 transition-all duration-200">
+              <div class="aspect-square bg-slate-700/50 overflow-hidden">
+                <div class="w-full h-full flex items-center justify-center opacity-60">
+                  <i :class="['fas', dish.icon]" class="text-5xl text-white"></i>
                 </div>
               </div>
               <div class="p-5">
-                <h3 class="text-xl font-bold mb-2">{{ dish.name }}</h3>
-                <p class="text-gray-400 text-sm mb-3">{{ dish.description }}</p>
-                <div class="flex items-center justify-between">
-                  <span class="text-2xl font-bold text-sky-500">{{ formatPrice(dish.price) }}</span>
-                  <button class="bg-sky-600 hover:bg-sky-700 px-4 py-2 rounded-lg font-semibold transition">
+                <h3 class="text-lg font-semibold mb-1.5 text-white">{{ dish.name }}</h3>
+                <p class="text-slate-400 text-sm mb-3 line-clamp-2">{{ dish.description }}</p>
+                <div class="flex items-center justify-between pt-3 border-t border-slate-700">
+                  <span class="text-xl font-bold text-white">{{ formatPrice(dish.price) }}</span>
+                  <button class="bg-white hover:bg-slate-100 text-slate-900 px-4 py-2 rounded-md text-sm font-medium transition-colors">
                     Đặt món
                   </button>
                 </div>
@@ -111,10 +107,10 @@
           </div>
         </div>
 
-        <div class="text-center mt-12 scroll-animate">
+        <div class="text-center mt-10 scroll-animate">
           <router-link 
             to="/menu" 
-            class="inline-block bg-white text-gray-900 px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 shadow-xl transform hover:scale-105 transition-all"
+            class="inline-block bg-white hover:bg-slate-100 text-slate-900 px-8 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm"
           >
             Xem Tất Cả Thực Đơn
           </router-link>
@@ -123,7 +119,7 @@
     </section>
 
     <!-- Stats Section -->
-    <section class="py-20 bg-gradient-to-br from-sky-600 to-blue-700 text-white">
+    <section class="py-16 bg-slate-50 border-y border-gray-200">
       <div class="container mx-auto px-4">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div 
@@ -132,8 +128,8 @@
             class="text-center scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="text-5xl md:text-6xl font-bold mb-2 counter" :data-target="stat.value">0</div>
-            <div class="text-xl text-sky-100">{{ stat.label }}</div>
+            <div class="text-4xl md:text-5xl font-bold mb-2 text-slate-900 counter" :data-target="stat.value">0</div>
+            <div class="text-sm md:text-base text-slate-600 font-medium">{{ stat.label }}</div>
           </div>
         </div>
       </div>
@@ -142,9 +138,9 @@
     <!-- Testimonials Section -->
     <section class="py-20 bg-white">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16 scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Khách Hàng Nói Gì?</h2>
-          <div class="w-20 h-1 bg-sky-600 mx-auto"></div>
+        <div class="text-center mb-12 scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Khách Hàng Nói Gì?</h2>
+          <div class="w-16 h-0.5 bg-slate-900 mx-auto"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -154,18 +150,18 @@
             class="scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all">
-              <div class="flex items-center gap-1 text-yellow-500 mb-4">
-                <span v-for="i in 5" :key="i" class="text-2xl">★</span>
+            <div class="bg-white border border-gray-200 p-6 rounded-lg hover:shadow-md transition-all">
+              <div class="flex items-center gap-1 text-amber-500 mb-3">
+                <i v-for="i in 5" :key="i" class="fas fa-star text-sm"></i>
               </div>
-              <p class="text-gray-700 text-lg mb-6 italic leading-relaxed">"{{ testimonial.comment }}"</p>
-              <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+              <p class="text-slate-700 text-sm mb-5 italic leading-relaxed">"{{ testimonial.comment }}"</p>
+              <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
+                <div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                   {{ testimonial.name.charAt(0) }}
                 </div>
                 <div>
-                  <div class="font-bold text-gray-900">{{ testimonial.name }}</div>
-                  <div class="text-sm text-gray-500">{{ testimonial.role }}</div>
+                  <div class="font-semibold text-slate-900 text-sm">{{ testimonial.name }}</div>
+                  <div class="text-xs text-slate-500">{{ testimonial.role }}</div>
                 </div>
               </div>
             </div>
@@ -175,21 +171,16 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 bg-gray-900 text-white relative overflow-hidden">
-      <div 
-        class="absolute inset-0 bg-cover bg-center opacity-20"
-        style="background-image: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920')"
-      ></div>
-      
-      <div class="container mx-auto px-4 relative z-10">
-        <div class="max-w-3xl mx-auto text-center scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold mb-6">Sẵn Sàng Trải Nghiệm?</h2>
-          <p class="text-xl text-gray-300 mb-8">
-            Đặt bàn ngay hôm nay và nhận ưu đãi đặc biệt cho khách hàng mới!
+    <section class="py-16 bg-slate-900 text-white">
+      <div class="container mx-auto px-4">
+        <div class="max-w-2xl mx-auto text-center scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold mb-4">Sẵn Sàng Trải Nghiệm?</h2>
+          <p class="text-lg text-slate-300 mb-6">
+            Đặt bàn ngay hôm nay và nhận ưu đãi đặc biệt cho khách hàng mới
           </p>
           <router-link 
             to="/reservation" 
-            class="inline-block bg-sky-600 hover:bg-sky-700 px-10 py-5 rounded-lg font-bold text-xl shadow-2xl transform hover:scale-105 transition-all"
+            class="inline-block bg-white hover:bg-slate-100 text-slate-900 px-8 py-3.5 rounded-lg font-semibold text-base transition-colors shadow-sm"
           >
             Đặt Bàn Ngay - Nhận Ưu Đãi 20%
           </router-link>
@@ -206,27 +197,27 @@ const scrollY = ref(0)
 
 const features = [
   {
-    icon: '🍲',
+    icon: 'fa-bowl-food',
     title: 'Nguyên Liệu Tươi Ngon',
     description: 'Chúng tôi chọn lọc kỹ càng từng nguyên liệu từ các nguồn uy tín, đảm bảo chất lượng và độ tươi ngon tốt nhất.'
   },
   {
-    icon: '👨‍🍳',
+    icon: 'fa-utensils',
     title: 'Đầu Bếp Chuyên Nghiệp',
     description: 'Đội ngũ đầu bếp giàu kinh nghiệm, tâm huyết với nghề, mang đến những món ăn đậm đà hương vị truyền thống.'
   },
   {
-    icon: '✨',
+    icon: 'fa-sparkles',
     title: 'Không Gian Sang Trọng',
     description: 'Thiết kế hiện đại, thoáng mát với âm nhạc nhẹ nhàng, tạo không gian lý tưởng cho mọi bữa tiệc.'
   }
 ]
 
 const popularDishes = [
-  { icon: '🥘', name: 'Lẩu Thái Chua Cay', description: 'Hương vị đặc trưng Thái Lan', price: 299000 },
-  { icon: '🍖', name: 'Lẩu Bò Mỹ', description: 'Bò nhập khẩu cao cấp', price: 399000 },
-  { icon: '🦐', name: 'Lẩu Hải Sản', description: 'Hải sản tươi sống', price: 449000 },
-  { icon: '🍄', name: 'Lẩu Nấm Chay', description: 'Dinh dưỡng cho người ăn chay', price: 249000 }
+  { icon: 'fa-bowl-food', name: 'Lẩu Thái Chua Cay', description: 'Hương vị đặc trưng Thái Lan', price: 299000 },
+  { icon: 'fa-drumstick-bite', name: 'Lẩu Bò Mỹ', description: 'Bò nhập khẩu cao cấp', price: 399000 },
+  { icon: 'fa-fish', name: 'Lẩu Hải Sản', description: 'Hải sản tươi sống', price: 449000 },
+  { icon: 'fa-seedling', name: 'Lẩu Nấm Chay', description: 'Dinh dưỡng cho người ăn chay', price: 249000 }
 ]
 
 const stats = [
@@ -334,15 +325,6 @@ onUnmounted(() => {
   }
 }
 
-@keyframes scroll-down {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(8px);
-  }
-}
-
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
 }
@@ -359,10 +341,6 @@ onUnmounted(() => {
 .animation-delay-400 {
   animation-delay: 0.4s;
   opacity: 0;
-}
-
-.animate-scroll-down {
-  animation: scroll-down 2s ease-in-out infinite;
 }
 
 .scroll-animate {

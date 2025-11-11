@@ -20,7 +20,6 @@ public class TableRequest {
     private Integer capacity;
 
     private TableStatus status;
-    private Long roomId;
     private String location;
     private String notes;
 }

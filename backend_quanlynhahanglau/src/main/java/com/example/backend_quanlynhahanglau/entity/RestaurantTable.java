@@ -26,10 +26,6 @@ public class RestaurantTable {
     @Column(nullable = false)
     private TableStatus status = TableStatus.AVAILABLE;
 
-    @ManyToOne
-    @JoinColumn(name = "room_id")
-    private Room room; // Bàn có thể thuộc phòng riêng hoặc khu vực chung
-
     @Column(length = 100)
     private String location; // Vị trí trong nhà hàng
 

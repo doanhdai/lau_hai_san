@@ -3,179 +3,190 @@
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p class="text-gray-600 mt-1">Tổng quan hệ thống quản lý nhà hàng</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Dashboard</h1>
+        <p class="text-slate-600 mt-1 text-sm">Tổng quan hệ thống quản lý nhà hàng</p>
       </div>
-      <button @click="loadDashboard" class="btn-primary flex items-center gap-2">
-        <ArrowPathIcon class="w-5 h-5" :class="{ 'animate-spin': loading }" />
-        Làm mới
+      <button @click="loadDashboard" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-sync-alt" :class="{ 'animate-spin': loading }"></i>
+        <span>Làm mới</span>
       </button>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading && !stats" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Dashboard Content -->
     <template v-else-if="stats">
       <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Total Customers -->
-        <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white transform hover:scale-105 transition-transform cursor-pointer">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-blue-100 text-sm font-medium">Tổng khách hàng</p>
-              <p class="text-3xl font-bold mt-2">{{ stats.totalCustomers }}</p>
-              <p class="text-blue-100 text-xs mt-2">VIP: {{ stats.vipCustomers }}</p>
+              <p class="text-slate-500 text-xs font-medium mb-1">Tổng khách hàng</p>
+              <p class="text-2xl font-bold text-slate-900">{{ stats.totalCustomers }}</p>
+              <p class="text-slate-500 text-xs mt-1">VIP: {{ stats.vipCustomers }}</p>
             </div>
-            <UsersIcon class="w-16 h-16 text-blue-200 opacity-50" />
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-users text-blue-600 text-xl"></i>
+            </div>
           </div>
         </div>
 
         <!-- Total Tables -->
-        <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white transform hover:scale-105 transition-transform cursor-pointer">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-100 text-sm font-medium">Tổng số bàn</p>
-              <p class="text-3xl font-bold mt-2">{{ stats.totalTables }}</p>
-              <p class="text-green-100 text-xs mt-2">Trống: {{ stats.availableTables }}</p>
+              <p class="text-slate-500 text-xs font-medium mb-1">Tổng số bàn</p>
+              <p class="text-2xl font-bold text-slate-900">{{ stats.totalTables }}</p>
+              <p class="text-slate-500 text-xs mt-1">Trống: {{ stats.availableTables }}</p>
             </div>
-            <TableCellsIcon class="w-16 h-16 text-green-200 opacity-50" />
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-chair text-green-600 text-xl"></i>
+            </div>
           </div>
         </div>
 
         <!-- Total Dishes -->
-        <div class="card bg-gradient-to-br from-orange-500 to-orange-600 text-white transform hover:scale-105 transition-transform cursor-pointer">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-orange-100 text-sm font-medium">Tổng món ăn</p>
-              <p class="text-3xl font-bold mt-2">{{ stats.totalDishes }}</p>
-              <p class="text-orange-100 text-xs mt-2">Sẵn có: {{ stats.availableDishes }}</p>
+              <p class="text-slate-500 text-xs font-medium mb-1">Tổng món ăn</p>
+              <p class="text-2xl font-bold text-slate-900">{{ stats.totalDishes }}</p>
+              <p class="text-slate-500 text-xs mt-1">Sẵn có: {{ stats.availableDishes }}</p>
             </div>
-            <CakeIcon class="w-16 h-16 text-orange-200 opacity-50" />
+            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-utensils text-orange-600 text-xl"></i>
+            </div>
           </div>
         </div>
 
         <!-- Total Orders -->
-        <div class="card bg-gradient-to-br from-purple-500 to-purple-600 text-white transform hover:scale-105 transition-transform cursor-pointer">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-purple-100 text-sm font-medium">Tổng đơn hàng</p>
-              <p class="text-3xl font-bold mt-2">{{ stats.totalOrders }}</p>
-              <p class="text-purple-100 text-xs mt-2">Hoàn thành: {{ stats.completedOrders }}</p>
+              <p class="text-slate-500 text-xs font-medium mb-1">Tổng đơn hàng</p>
+              <p class="text-2xl font-bold text-slate-900">{{ stats.totalOrders }}</p>
+              <p class="text-slate-500 text-xs mt-1">Hoàn thành: {{ stats.completedOrders }}</p>
             </div>
-            <ShoppingBagIcon class="w-16 h-16 text-purple-200 opacity-50" />
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-shopping-bag text-purple-600 text-xl"></i>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Revenue Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card bg-gradient-to-br from-sky-500 to-sky-600 text-white">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">Doanh thu hôm nay</h3>
-            <CurrencyDollarIcon class="w-8 h-8 text-sky-200" />
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900 text-white rounded-lg p-5 border border-slate-800">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-slate-300">Doanh thu hôm nay</h3>
+            <i class="fas fa-dollar-sign text-slate-400"></i>
           </div>
-          <p class="text-3xl font-bold">{{ formatCurrency(stats.todayRevenue) }}</p>
+          <p class="text-2xl font-bold">{{ formatCurrency(stats.todayRevenue) }}</p>
         </div>
 
-        <div class="card bg-gradient-to-br from-sky-600 to-sky-700 text-white">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">Doanh thu tháng này</h3>
-            <CurrencyDollarIcon class="w-8 h-8 text-sky-200" />
+        <div class="bg-slate-900 text-white rounded-lg p-5 border border-slate-800">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-slate-300">Doanh thu tháng này</h3>
+            <i class="fas fa-dollar-sign text-slate-400"></i>
           </div>
-          <p class="text-3xl font-bold">{{ formatCurrency(stats.monthRevenue) }}</p>
+          <p class="text-2xl font-bold">{{ formatCurrency(stats.monthRevenue) }}</p>
         </div>
 
-        <div class="card bg-gradient-to-br from-sky-700 to-sky-800 text-white">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">Doanh thu năm nay</h3>
-            <CurrencyDollarIcon class="w-8 h-8 text-sky-200" />
+        <div class="bg-slate-900 text-white rounded-lg p-5 border border-slate-800">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-slate-300">Doanh thu năm nay</h3>
+            <i class="fas fa-dollar-sign text-slate-400"></i>
           </div>
-          <p class="text-3xl font-bold">{{ formatCurrency(stats.yearRevenue) }}</p>
+          <p class="text-2xl font-bold">{{ formatCurrency(stats.yearRevenue) }}</p>
         </div>
       </div>
 
       <!-- Charts Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Table Status Chart -->
-        <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Trạng thái bàn</h3>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+          <h3 class="text-base font-semibold text-slate-900 mb-4">Trạng thái bàn</h3>
           <div class="space-y-3">
-            <div v-for="(count, status) in stats.tableStatusCount" :key="status" class="flex items-center justify-between">
+            <div v-for="(count, status) in stats.tableStatusCount" :key="status" class="flex items-center justify-between py-2">
               <div class="flex items-center gap-3">
                 <div class="w-3 h-3 rounded-full" :class="getStatusColor(status)"></div>
-                <span class="text-sm font-medium text-gray-700">{{ translateStatus(status) }}</span>
+                <span class="text-sm font-medium text-slate-700">{{ translateStatus(status) }}</span>
               </div>
-              <span class="text-lg font-bold text-gray-900">{{ count }}</span>
+              <span class="text-base font-bold text-slate-900">{{ count }}</span>
             </div>
           </div>
         </div>
 
         <!-- Order Status Chart -->
-        <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Trạng thái đơn hàng</h3>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+          <h3 class="text-base font-semibold text-slate-900 mb-4">Trạng thái đơn hàng</h3>
           <div class="space-y-3">
-            <div v-for="(count, status) in stats.orderStatusCount" :key="status" class="flex items-center justify-between">
+            <div v-for="(count, status) in stats.orderStatusCount" :key="status" class="flex items-center justify-between py-2">
               <div class="flex items-center gap-3">
                 <div class="w-3 h-3 rounded-full" :class="getOrderStatusColor(status)"></div>
-                <span class="text-sm font-medium text-gray-700">{{ translateOrderStatus(status) }}</span>
+                <span class="text-sm font-medium text-slate-700">{{ translateOrderStatus(status) }}</span>
               </div>
-              <span class="text-lg font-bold text-gray-900">{{ count }}</span>
+              <span class="text-base font-bold text-slate-900">{{ count }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Best Selling Dishes -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-gray-900">Món ăn bán chạy nhất</h3>
-          <router-link to="/reports" class="text-sm text-sky-600 hover:text-sky-700 font-medium">
-            Xem tất cả →
+      <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-semibold text-slate-900">Món ăn bán chạy nhất</h3>
+          <router-link to="/reports" class="text-sm text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1">
+            <span>Xem tất cả</span>
+            <i class="fas fa-arrow-right text-xs"></i>
           </router-link>
         </div>
         
-        <div v-if="bestSelling.length > 0" class="space-y-4">
+        <div v-if="bestSelling.length > 0" class="space-y-3">
           <div 
             v-for="(dish, index) in bestSelling.slice(0, 5)" 
             :key="dish.dishId"
-            class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+            class="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition border border-gray-100"
           >
-            <div class="flex items-center gap-4">
-              <div class="flex items-center justify-center w-10 h-10 bg-sky-500 text-white rounded-full font-bold">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-8 h-8 bg-slate-900 text-white rounded-lg font-bold text-sm">
                 {{ index + 1 }}
               </div>
               <div>
-                <p class="font-medium text-gray-900">{{ dish.dishName }}</p>
-                <p class="text-sm text-gray-600">{{ dish.categoryName }}</p>
+                <p class="font-medium text-slate-900 text-sm">{{ dish.dishName }}</p>
+                <p class="text-xs text-slate-500">{{ dish.categoryName }}</p>
               </div>
             </div>
             <div class="text-right">
-              <p class="font-bold text-gray-900">{{ dish.totalQuantitySold }} phần</p>
-              <p class="text-sm text-green-600">{{ formatCurrency(dish.totalRevenue) }}</p>
+              <p class="font-bold text-slate-900 text-sm">{{ dish.totalQuantitySold }} phần</p>
+              <p class="text-xs text-green-600">{{ formatCurrency(dish.totalRevenue) }}</p>
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-8 text-gray-500">
+        <div v-else class="text-center py-8 text-slate-500 text-sm">
           Chưa có dữ liệu món ăn bán chạy
         </div>
       </div>
 
       <!-- Rating -->
-      <div class="card bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-5">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-semibold mb-2">Đánh giá trung bình</h3>
+            <h3 class="text-base font-semibold text-slate-900 mb-2">Đánh giá trung bình</h3>
             <div class="flex items-center gap-2">
-              <span class="text-4xl font-bold">{{ stats.averageRating.toFixed(1) }}</span>
-              <div class="flex">
-                <StarIcon v-for="i in 5" :key="i" class="w-6 h-6" :class="i <= Math.round(stats.averageRating) ? 'text-yellow-200' : 'text-yellow-600'" />
+              <span class="text-3xl font-bold text-slate-900">{{ stats.averageRating.toFixed(1) }}</span>
+              <div class="flex gap-1">
+                <i v-for="i in 5" :key="i" :class="['text-sm', i <= Math.round(stats.averageRating) ? 'fas fa-star text-amber-500' : 'far fa-star text-amber-300']"></i>
               </div>
             </div>
           </div>
-          <ChatBubbleLeftRightIcon class="w-20 h-20 text-orange-300 opacity-50" />
+          <div class="w-16 h-16 bg-amber-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-comments text-amber-600 text-2xl"></i>
+          </div>
         </div>
       </div>
     </template>
@@ -186,16 +197,6 @@
 import { ref, onMounted } from 'vue'
 import { dashboardService } from '@/services/dashboardService'
 import { useNotificationStore } from '@/stores/notification'
-import {
-  UsersIcon,
-  TableCellsIcon,
-  CakeIcon,
-  ShoppingBagIcon,
-  CurrencyDollarIcon,
-  ArrowPathIcon,
-  ChatBubbleLeftRightIcon,
-  StarIcon
-} from '@heroicons/vue/24/outline'
 
 const notification = useNotificationStore()
 
@@ -278,3 +279,4 @@ function translateOrderStatus(status) {
   return translations[status] || status
 }
 </script>
+

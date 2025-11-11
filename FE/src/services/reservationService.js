@@ -50,5 +50,27 @@ export const reservationService = {
   async cancel(id) {
     const response = await api.put(`/reservations/${id}/cancel`)
     return response.data
+  },
+
+  async cancelPublic(id, userId) {
+    try {
+      const response = await api.put(`/reservations/public/${id}/cancel?userId=${userId}`)
+      return response.data
+    } catch (error) {
+      console.error('Error in cancelPublic:', error)
+      throw error
+    }
+  },
+
+  async getByUserId(userId) {
+    try {
+      const response = await api.get(`/reservations/public/user/${userId}`)
+      // API response structure: { data: {...} } from axios
+      // Backend may return: { success: true, data: [...] } or directly [...]
+      return response.data
+    } catch (error) {
+      console.error('Error in getByUserId:', error)
+      throw error
+    }
   }
 }

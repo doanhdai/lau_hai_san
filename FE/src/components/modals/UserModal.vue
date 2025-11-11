@@ -109,20 +109,20 @@
               v-for="role in availableRoles"
               :key="role.value"
               class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
-              :class="{ 'border-primary-500 bg-primary-50': form.roles.includes(role.value) }"
+              :class="{ 'border-primary-500 bg-primary-50': form.selectedRole === role.value }"
             >
               <input
-                type="checkbox"
+                type="radio"
                 :value="role.value"
-                v-model="form.roles"
+                v-model="form.selectedRole"
                 class="sr-only"
               />
               <div class="flex items-center">
                 <div
-                  class="w-4 h-4 border-2 rounded mr-3 flex items-center justify-center"
-                  :class="form.roles.includes(role.value) ? 'border-primary-500 bg-primary-500' : 'border-gray-300'"
+                  class="w-4 h-4 border-2 rounded-full mr-3 flex items-center justify-center"
+                  :class="form.selectedRole === role.value ? 'border-primary-500 bg-primary-500' : 'border-gray-300'"
                 >
-                  <CheckIcon v-if="form.roles.includes(role.value)" class="w-3 h-3 text-white" />
+                  <div v-if="form.selectedRole === role.value" class="w-2 h-2 bg-white rounded-full"></div>
                 </div>
                 <div>
                   <div class="text-sm font-medium text-gray-900">{{ role.label }}</div>
@@ -146,8 +146,8 @@
           ></textarea>
         </div>
 
-        <!-- Status -->
-        <div class="flex items-center">
+        <!-- Status - Only show when editing -->
+        <div v-if="isEdit" class="flex items-center">
           <input
             id="active"
             v-model="form.active"
@@ -195,7 +195,8 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { userService } from '@/services/userService'
 import { useNotificationStore } from '@/stores/notification'
-import { XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import { XMarkIcon } from '@heroicons/vue/24/outline'
+import { validateEmail, validatePhone } from '@/utils/validation'
 
 const props = defineProps({
   user: {
@@ -241,14 +242,16 @@ const form = reactive({
   phoneNumber: '',
   password: '',
   confirmPassword: '',
-  roles: [],
+  selectedRole: '', // Single role selection
   address: '',
-  active: true
+  active: true // Default to active for new users
 })
 
 // Initialize form when user prop changes
 watch(() => props.user, (newUser) => {
   if (newUser) {
+    // Get first role from array for editing
+    const firstRole = newUser.roles && newUser.roles.length > 0 ? newUser.roles[0] : ''
     Object.assign(form, {
       fullName: newUser.fullName || '',
       username: newUser.username || '',
@@ -256,12 +259,12 @@ watch(() => props.user, (newUser) => {
       phoneNumber: newUser.phoneNumber || '',
       password: '',
       confirmPassword: '',
-      roles: newUser.roles || [],
+      selectedRole: firstRole,
       address: newUser.address || '',
       active: newUser.active !== false
     })
   } else {
-    // Reset form for new user
+    // Reset form for new user - default to active
     Object.assign(form, {
       fullName: '',
       username: '',
@@ -269,9 +272,9 @@ watch(() => props.user, (newUser) => {
       phoneNumber: '',
       password: '',
       confirmPassword: '',
-      roles: ['ROLE_CUSTOMER'],
+      selectedRole: '', // No default role
       address: '',
-      active: true
+      active: true // Always active for new users
     })
   }
 }, { immediate: true })
@@ -288,9 +291,20 @@ async function handleSubmit() {
     return
   }
 
-  if (!form.email.trim()) {
-    notification.error('Vui lòng nhập email')
+  // Email validation
+  const emailError = validateEmail(form.email, true)
+  if (emailError) {
+    notification.error(emailError)
     return
+  }
+
+  // Phone validation (optional but validate if provided)
+  if (form.phoneNumber && form.phoneNumber.trim()) {
+    const phoneError = validatePhone(form.phoneNumber, false)
+    if (phoneError) {
+      notification.error(phoneError)
+      return
+    }
   }
 
   if (!isEdit.value) {
@@ -310,15 +324,8 @@ async function handleSubmit() {
     }
   }
 
-  if (form.roles.length === 0) {
-    notification.error('Vui lòng chọn ít nhất một vai trò')
-    return
-  }
-
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(form.email)) {
-    notification.error('Email không hợp lệ')
+  if (!form.selectedRole) {
+    notification.error('Vui lòng chọn vai trò')
     return
   }
 
@@ -330,9 +337,9 @@ async function handleSubmit() {
       username: form.username.trim(),
       email: form.email.trim(),
       phoneNumber: form.phoneNumber.trim() || null,
-      roles: form.roles,
+      roles: [form.selectedRole], // Convert single role to array
       address: form.address.trim() || null,
-      active: form.active
+      active: isEdit.value ? form.active : true // Always true for new users
     }
 
     if (!isEdit.value) {

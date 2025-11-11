@@ -67,6 +67,11 @@ public class DishCategoryService {
 
         category.setName(request.getName());
         category.setDescription(request.getDescription());
+        
+        // Cập nhật trạng thái active nếu được cung cấp
+        if (request.getActive() != null) {
+            category.setActive(request.getActive());
+        }
 
         category = categoryRepository.save(category);
         return mapToResponse(category);
@@ -77,6 +82,15 @@ public class DishCategoryService {
         DishCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", id));
         categoryRepository.delete(category);
+    }
+
+    @Transactional
+    public CategoryResponse toggleCategoryStatus(Long id) {
+        DishCategory category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", id));
+        category.setActive(!category.getActive());
+        DishCategory updatedCategory = categoryRepository.save(category);
+        return mapToResponse(updatedCategory);
     }
 
     private CategoryResponse mapToResponse(DishCategory category) {

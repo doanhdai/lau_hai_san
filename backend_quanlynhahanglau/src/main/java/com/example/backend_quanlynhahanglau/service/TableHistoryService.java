@@ -43,8 +43,6 @@ public class TableHistoryService {
                 .id(history.getId())
                 .tableNumber(history.getTable() != null ? history.getTable().getTableNumber() : null)
                 .tableId(history.getTable() != null ? history.getTable().getId() : null)
-                .roomName(history.getRoom() != null ? history.getRoom().getName() : null)
-                .roomId(history.getRoom() != null ? history.getRoom().getId() : null)
                 .customerName(history.getCustomer() != null ? history.getCustomer().getFullName() : null)
                 .customerId(history.getCustomer() != null ? history.getCustomer().getId() : null)
                 .orderNumber(history.getOrder() != null ? history.getOrder().getOrderNumber() : null)

@@ -129,6 +129,10 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { tableService } from '@/services/tableService'
+import { validatePhone } from '@/utils/validation'
+import { useNotificationStore } from '@/stores/notification'
+
+const notification = useNotificationStore()
 
 const props = defineProps({
   reservation: {
@@ -243,13 +247,38 @@ onMounted(async () => {
 })
 
 function handleSubmit() {
+  // Validate customer name
+  if (!form.value.customerName.trim()) {
+    notification.error('Vui lòng nhập tên khách hàng')
+    return
+  }
+
+  // Validate phone (required)
+  const phoneError = validatePhone(form.value.customerPhone, true)
+  if (phoneError) {
+    notification.error(phoneError)
+    return
+  }
+
+  // Validate number of guests
+  if (!form.value.numberOfGuests || form.value.numberOfGuests < 1) {
+    notification.error('Vui lòng nhập số người hợp lệ (ít nhất 1 người)')
+    return
+  }
+
+  // Validate table selection
+  if (!form.value.tableId) {
+    notification.error('Vui lòng chọn bàn')
+    return
+  }
+
   // Combine date and time - format directly as ISO string to avoid timezone conversion
   const reservationDateTime = `${form.value.reservationDate}T${form.value.reservationTime}:00.000Z`
   
   // Validate that the datetime is not in the past (create Date object for comparison only)
   const datetime = new Date(reservationDateTime)
   if (datetime < new Date()) {
-    alert('Không thể đặt bàn cho thời gian đã qua. Vui lòng chọn thời gian trong tương lai.')
+    notification.error('Không thể đặt bàn cho thời gian đã qua. Vui lòng chọn thời gian trong tương lai.')
     return
   }
   

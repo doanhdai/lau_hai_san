@@ -17,8 +17,6 @@ public class ReservationResponse {
     private Long customerId;
     private String tableNumber;
     private Long tableId;
-    private String roomName;
-    private Long roomId;
     private LocalDateTime reservationTime;
     private Integer numberOfGuests;
     private ReservationStatus status;

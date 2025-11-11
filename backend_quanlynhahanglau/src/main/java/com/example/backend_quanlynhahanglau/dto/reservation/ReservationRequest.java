@@ -24,9 +24,9 @@ public class ReservationRequest {
     
     private String customerEmail;
 
-    // Phải có tableId hoặc roomId (ít nhất một trong hai)
+    // Phải có tableId
+    @NotNull(message = "Vui lòng chọn bàn")
     private Long tableId;
-    private Long roomId;
 
     @NotNull(message = "Thời gian đặt bàn không được để trống")
     private LocalDateTime reservationDateTime;

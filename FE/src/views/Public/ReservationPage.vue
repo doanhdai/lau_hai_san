@@ -1,21 +1,22 @@
 <template>
   <div>
     <!-- Hero -->
-    <section class="relative h-96 flex items-center justify-center bg-gradient-to-br from-sky-600 to-blue-700">
-      <div class="relative z-10 text-center text-white px-4">
-        <h1 class="text-5xl md:text-6xl font-bold mb-4">Đặt Bàn Online</h1>
-        <p class="text-xl">Đặt bàn nhanh chóng, nhận ưu đãi ngay</p>
+    <section class="relative h-64 flex items-center justify-center bg-slate-900">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="relative z-10 text-center text-white px-4 max-w-3xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-bold mb-3 tracking-tight">Đặt Bàn Online</h1>
+        <p class="text-base md:text-lg text-slate-200">Đặt bàn nhanh chóng, nhận ưu đãi ngay</p>
       </div>
     </section>
 
     <!-- Reservation Form -->
-    <section class="py-20 bg-gray-50">
+    <section class="py-12 bg-white">
       <div class="container mx-auto px-4">
-        <div class="max-w-3xl mx-auto">
-          <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
+        <div class="max-w-2xl mx-auto">
+          <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 md:p-10">
             <div class="text-center mb-8">
-              <h2 class="text-3xl font-bold text-gray-900 mb-2">Thông Tin Đặt Bàn</h2>
-              <p class="text-gray-600">Vui lòng điền đầy đủ thông tin</p>
+              <h2 class="text-2xl font-bold text-slate-900 mb-2">Thông Tin Đặt Bàn</h2>
+              <p class="text-slate-600 text-sm">Vui lòng điền đầy đủ thông tin</p>
             </div>
 
             <form @submit.prevent="submitReservation" class="space-y-6">
@@ -77,7 +78,7 @@
                   </label>
                   <select v-model="form.time" required class="input-field">
                     <option value="">Chọn giờ</option>
-                    <option v-for="time in timeSlots" :key="time" :value="time">{{ time }}</option>
+                    <option v-for="time in availableTimeSlots" :key="time" :value="time">{{ time }}</option>
                   </select>
                 </div>
               </div>
@@ -133,29 +134,32 @@
                 :disabled="submitting"
                 class="w-full btn-primary py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span v-if="!submitting">🎉 Xác Nhận Đặt Bàn</span>
+                <span v-if="!submitting" class="flex items-center justify-center gap-2">
+                  <i class="fas fa-check-circle"></i>
+                  <span>Xác Nhận Đặt Bàn</span>
+                </span>
                 <span v-else>Đang xử lý...</span>
               </button>
 
-              <p class="text-center text-sm text-gray-500">
+              <p class="text-center text-xs text-slate-500">
                 Bằng việc đặt bàn, bạn đồng ý với 
-                <a href="#" class="text-sky-600 hover:underline">Điều khoản dịch vụ</a>
+                <a href="#" class="text-slate-900 hover:underline font-medium">Điều khoản dịch vụ</a>
               </p>
             </form>
           </div>
 
           <!-- Success Message -->
-          <div v-if="showSuccess" class="mt-8 bg-green-50 border-2 border-green-500 rounded-2xl p-8 text-center animate-fade-in-up">
-            <div class="text-6xl mb-4">✅</div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Đặt Bàn Thành Công!</h3>
-            <p class="text-gray-700 mb-4">
+          <div v-if="showSuccess" class="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+            <i class="fas fa-check-circle text-5xl mb-3 text-green-600"></i>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Đặt Bàn Thành Công!</h3>
+            <p class="text-slate-700 mb-3 text-sm">
               Chúng tôi đã nhận được yêu cầu đặt bàn của bạn.<br/>
-              Mã đặt bàn: <strong class="text-sky-600">{{ reservationCode }}</strong>
+              Mã đặt bàn: <strong class="text-slate-900">{{ reservationCode }}</strong>
             </p>
-            <p class="text-gray-600 mb-6">
+            <p class="text-slate-600 mb-4 text-sm">
               Vui lòng kiểm tra email/SMS để xác nhận. Chúng tôi sẽ liên hệ trong vòng 15 phút.
             </p>
-            <button @click="resetForm" class="btn-primary px-8 py-3">
+            <button @click="resetForm" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors">
               Đặt Bàn Mới
             </button>
           </div>
@@ -164,40 +168,40 @@
     </section>
 
     <!-- Why Book Online -->
-    <section class="py-20 bg-white">
+    <section class="py-16 bg-white">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16">
-          <h2 class="text-4xl font-bold text-gray-900 mb-4">Tại Sao Đặt Bàn Online?</h2>
+        <div class="text-center mb-12">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Tại Sao Đặt Bàn Online?</h2>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div class="text-center group">
-            <div class="w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-xl">
-              ⚡
+            <div class="w-16 h-16 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4 transition-transform duration-200 group-hover:scale-105">
+              <i class="fas fa-bolt text-white text-2xl"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Nhanh Chóng</h3>
-            <p class="text-gray-600">Chỉ 2 phút hoàn tất</p>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Nhanh Chóng</h3>
+            <p class="text-slate-600 text-sm">Chỉ 2 phút hoàn tất</p>
           </div>
           <div class="text-center group">
-            <div class="w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-xl">
-              💰
+            <div class="w-16 h-16 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4 transition-transform duration-200 group-hover:scale-105">
+              <i class="fas fa-tag text-white text-2xl"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Ưu Đãi</h3>
-            <p class="text-gray-600">Giảm 20% lần đầu</p>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Ưu Đãi</h3>
+            <p class="text-slate-600 text-sm">Giảm 20% lần đầu</p>
           </div>
           <div class="text-center group">
-            <div class="w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-xl">
-              ✅
+            <div class="w-16 h-16 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4 transition-transform duration-200 group-hover:scale-105">
+              <i class="fas fa-check-circle text-white text-2xl"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Đảm Bảo</h3>
-            <p class="text-gray-600">Luôn có chỗ</p>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Đảm Bảo</h3>
+            <p class="text-slate-600 text-sm">Luôn có chỗ</p>
           </div>
           <div class="text-center group">
-            <div class="w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-xl">
-              📱
+            <div class="w-16 h-16 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4 transition-transform duration-200 group-hover:scale-105">
+              <i class="fas fa-mobile-alt text-white text-2xl"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Tiện Lợi</h3>
-            <p class="text-gray-600">Đặt mọi lúc, mọi nơi</p>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Tiện Lợi</h3>
+            <p class="text-slate-600 text-sm">Đặt mọi lúc, mọi nơi</p>
           </div>
         </div>
       </div>
@@ -206,10 +210,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { useNotificationStore } from '@/stores/notification'
+import { validateEmail, validatePhone } from '@/utils/validation'
 
+const router = useRouter()
 const notification = useNotificationStore()
 
 const form = ref({
@@ -240,7 +247,84 @@ const timeSlots = [
   '19:00', '19:30', '20:00', '20:30', '21:00', '21:30'
 ]
 
+// Filter time slots based on selected date
+const availableTimeSlots = computed(() => {
+  if (!form.value.date) {
+    return timeSlots
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const selectedDate = new Date(form.value.date)
+  selectedDate.setHours(0, 0, 0, 0)
+  
+  // If selected date is today, filter out past times
+  if (selectedDate.getTime() === today.getTime()) {
+    const now = new Date()
+    const currentHour = now.getHours()
+    const currentMinute = now.getMinutes()
+    
+    return timeSlots.filter(time => {
+      const [hour, minute] = time.split(':').map(Number)
+      const timeInMinutes = hour * 60 + minute
+      const currentTimeInMinutes = currentHour * 60 + currentMinute
+      
+      // Only show times that are at least 1 hour in the future
+      return timeInMinutes > currentTimeInMinutes + 60
+    })
+  }
+  
+  // If selected date is in the future, show all time slots
+  return timeSlots
+})
+
+// Watch for date changes and reset time if it's no longer valid
+watch(() => form.value.date, (newDate) => {
+  if (newDate && form.value.time) {
+    // Check if current selected time is still available
+    const isTimeAvailable = availableTimeSlots.value.includes(form.value.time)
+    if (!isTimeAvailable) {
+      form.value.time = ''
+    }
+  }
+})
+
 async function submitReservation() {
+  // Validate required fields
+  if (!form.value.name.trim()) {
+    notification.error('Vui lòng nhập họ và tên')
+    return
+  }
+
+  // Validate phone (required)
+  const phoneError = validatePhone(form.value.phone, true)
+  if (phoneError) {
+    notification.error(phoneError)
+    return
+  }
+
+  // Validate email (optional but validate if provided)
+  if (form.value.email && form.value.email.trim()) {
+    const emailError = validateEmail(form.value.email, false)
+    if (emailError) {
+      notification.error(emailError)
+      return
+    }
+  }
+
+  // Validate date and time
+  if (!form.value.date || !form.value.time) {
+    notification.error('Vui lòng chọn ngày và giờ đặt bàn')
+    return
+  }
+
+  // Validate number of guests
+  if (!form.value.guests || parseInt(form.value.guests) < 1) {
+    notification.error('Vui lòng chọn số người hợp lệ')
+    return
+  }
+
   submitting.value = true
   
   try {
@@ -257,15 +341,26 @@ async function submitReservation() {
     const response = await reservationService.createPublic(reservationData)
     
     if (response.success) {
-      // Sử dụng ID từ backend
-      reservationCode.value = `#${response.data.id}`
-      showSuccess.value = true
       notification.success('Đặt bàn thành công!')
       
-      // Scroll to success message
+      // Reset form
+      form.value = {
+        name: '',
+        phone: '',
+        email: '',
+        date: '',
+        time: '',
+        guests: '',
+        tableType: 'normal',
+        notes: '',
+        acceptPromo: true
+      }
+      showSuccess.value = false
+      
+      // Navigate to home after a short delay
       setTimeout(() => {
-        window.scrollTo({ top: 600, behavior: 'smooth' })
-      }, 100)
+        router.push('/home')
+      }, 1000)
     }
   } catch (error) {
     console.error('Reservation error:', error)

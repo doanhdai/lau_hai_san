@@ -47,4 +47,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("tableId") Long tableId,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
+    
+    // Tìm lịch sử đặt bàn theo phone hoặc email của Customer (liên kết với User)
+    @Query("SELECT r FROM Reservation r WHERE " +
+           "(:phone IS NOT NULL AND :phone != '' AND r.customer.phone = :phone) OR " +
+           "(:email IS NOT NULL AND :email != '' AND r.customer.email = :email) " +
+           "ORDER BY r.reservationTime DESC")
+    List<Reservation> findByCustomerPhoneOrEmailOrderByReservationTimeDesc(
+            @Param("phone") String phone,
+            @Param("email") String email);
 }

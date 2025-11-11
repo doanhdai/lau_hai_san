@@ -3,21 +3,21 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Quản lý Đơn hàng</h1>
-        <p class="text-gray-600 mt-1">Danh sách và trạng thái đơn hàng</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý Đơn hàng</h1>
+        <p class="text-slate-600 mt-1 text-sm">Danh sách và trạng thái đơn hàng</p>
       </div>
-      <router-link to="/admin/orders/create" class="btn-primary flex items-center gap-2">
-        <PlusIcon class="w-5 h-5" />
-        Tạo đơn hàng mới
+      <router-link to="/admin/orders/create" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-plus"></i>
+        <span>Tạo đơn hàng mới</span>
       </router-link>
     </div>
 
     <!-- Filters -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-          <select v-model="filterStatus" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+          <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
             <option value="PENDING">Chờ xử lý</option>
             <option value="CONFIRMED">Đã xác nhận</option>
@@ -28,84 +28,84 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
-          <input v-model="fromDate" type="date" class="input-field" />
+          <label class="block text-sm font-medium text-slate-700 mb-2">Từ ngày</label>
+          <input v-model="fromDate" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
-          <input v-model="toDate" type="date" class="input-field" />
+          <label class="block text-sm font-medium text-slate-700 mb-2">Đến ngày</label>
+          <input v-model="toDate" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
         </div>
       </div>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Orders Table -->
-    <div v-else class="card overflow-hidden">
+    <div v-else class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã đơn</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Khách hàng</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bàn/Phòng</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tổng tiền</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thời gian</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Mã đơn</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Khách hàng</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Bàn</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Tổng tiền</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Trạng thái</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Thời gian</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Thao tác</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="font-mono font-medium text-blue-600">{{ order.orderNumber }}</span>
+            <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-slate-50 transition">
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span class="font-mono font-medium text-slate-900 text-sm">{{ order.orderNumber }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 <div v-if="order.customerName">
-                  <p class="text-sm font-medium text-gray-900">{{ order.customerName }}</p>
+                  <p class="text-sm font-medium text-slate-900">{{ order.customerName }}</p>
                 </div>
-                <span v-else class="text-sm text-gray-500">-</span>
+                <span v-else class="text-sm text-slate-500">-</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ order.tableNumber || order.roomName || '-' }}
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">
+                {{ order.tableNumber || '-' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+              <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-slate-900">
                 {{ formatCurrency(order.total) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 <span :class="getStatusBadgeClass(order.status)">
                   {{ getStatusLabel(order.status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
                 {{ formatDate(order.createdAt) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="px-4 py-3 whitespace-nowrap text-sm">
                 <div class="flex items-center gap-2">
-                  <button @click="viewOrder(order)" class="text-blue-600 hover:text-blue-900" title="Xem chi tiết">
-                    <EyeIcon class="w-5 h-5" />
+                  <button @click="viewOrder(order)" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Xem chi tiết">
+                    <i class="fas fa-eye text-sm"></i>
                   </button>
-                  <button @click="printOrder(order)" class="text-purple-600 hover:text-purple-900" title="Xuất hóa đơn PDF">
-                    <PrinterIcon class="w-5 h-5" />
+                  <button @click="printOrder(order)" class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Xuất hóa đơn PDF">
+                    <i class="fas fa-print text-sm"></i>
                   </button>
                   <button 
                     v-if="order.status !== 'COMPLETED' && order.status !== 'CANCELLED'"
                     @click="updateOrderStatus(order)"
-                    class="text-green-600 hover:text-green-900"
+                    class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                     title="Cập nhật trạng thái"
                   >
-                    <CheckCircleIcon class="w-5 h-5" />
+                    <i class="fas fa-check-circle text-sm"></i>
                   </button>
                   <button 
                     v-if="order.status === 'PENDING'"
                     @click="cancelOrder(order)"
-                    class="text-red-600 hover:text-red-900"
+                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Hủy đơn"
                   >
-                    <XCircleIcon class="w-5 h-5" />
+                    <i class="fas fa-times-circle text-sm"></i>
                   </button>
                 </div>
               </td>
@@ -128,13 +128,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notification'
-import {
-  PlusIcon,
-  EyeIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  PrinterIcon
-} from '@heroicons/vue/24/outline'
 import OrderDetailModal from '@/components/modals/OrderDetailModal.vue'
 import { printInvoice } from '@/utils/invoicePrinter'
 
@@ -217,14 +210,14 @@ async function cancelOrder(order) {
 
 function getStatusBadgeClass(status) {
   const classes = {
-    'PENDING': 'badge bg-yellow-100 text-yellow-800',
-    'CONFIRMED': 'badge bg-blue-100 text-blue-800',
-    'PREPARING': 'badge bg-orange-100 text-orange-800',
-    'SERVED': 'badge bg-purple-100 text-purple-800',
-    'COMPLETED': 'badge bg-green-100 text-green-800',
-    'CANCELLED': 'badge bg-red-100 text-red-800'
+    'PENDING': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800',
+    'CONFIRMED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800',
+    'PREPARING': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800',
+    'SERVED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800',
+    'COMPLETED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800',
+    'CANCELLED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800'
   }
-  return classes[status] || 'badge bg-gray-100 text-gray-800'
+  return classes[status] || 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
 }
 
 function getStatusLabel(status) {

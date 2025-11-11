@@ -3,70 +3,41 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Quản lý Danh mục</h1>
-        <p class="text-gray-600 mt-1">Danh mục món ăn</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý Danh mục</h1>
+        <p class="text-slate-600 mt-1 text-sm">Danh mục món ăn</p>
       </div>
-      <button @click="showCreateModal = true" class="btn-primary flex items-center gap-2">
-        <span class="text-lg">➕</span>
-        Thêm danh mục
+      <button @click="showCreateModal = true" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-plus"></i>
+        <span>Thêm danh mục</span>
       </button>
     </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-blue-100 text-sm">Tổng danh mục</p>
-            <p class="text-3xl font-bold mt-1">{{ categories.length }}</p>
-          </div>
-          <span class="text-4xl opacity-50">📁</span>
-        </div>
-      </div>
-      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-green-100 text-sm">Đang hoạt động</p>
-            <p class="text-3xl font-bold mt-1">{{ activeCount }}</p>
-          </div>
-          <span class="text-4xl opacity-50">✅</span>
-        </div>
-      </div>
-      <div class="card bg-gradient-to-br from-gray-500 to-gray-600 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-100 text-sm">Ngừng hoạt động</p>
-            <p class="text-3xl font-bold mt-1">{{ inactiveCount }}</p>
-          </div>
-          <span class="text-4xl opacity-50">❌</span>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Filters -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
+          <label class="block text-sm font-medium text-slate-700 mb-2">Tìm kiếm</label>
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Tìm theo tên..."
-            class="input-field"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-          <select v-model="filterStatus" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+          <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
             <option value="active">Hoạt động</option>
             <option value="inactive">Ngừng hoạt động</option>
           </select>
         </div>
         <div class="flex items-end">
-          <button @click="loadCategories" class="btn-secondary w-full flex items-center justify-center gap-2">
-            <span class="text-lg">🔄</span>
-            Làm mới
+          <button @click="loadCategories" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-sync-alt"></i>
+            <span>Làm mới</span>
           </button>
         </div>
       </div>
@@ -74,56 +45,51 @@
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Categories Table -->
-    <div v-else class="card overflow-hidden">
+    <div v-else class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên danh mục</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">ID</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Tên danh mục</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Mô tả</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Trạng thái</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Thao tác</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="category in filteredCategories" :key="category.id" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ category.id }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
+            <tr v-for="category in filteredCategories" :key="category.id" class="hover:bg-slate-50 transition">
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">{{ category.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white">
-                    <span class="text-lg">📁</span>
+                  <div class="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-folder text-slate-600"></i>
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-gray-900">{{ category.categoryName }}</p>
+                    <p class="text-sm font-medium text-slate-900">{{ category.categoryName || category.name }}</p>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500">
+              <td class="px-4 py-3 text-sm text-slate-600">
                 <div class="max-w-xs truncate">{{ category.description || '-' }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span v-if="category.active" class="badge-success">Hoạt động</span>
-                <span v-else class="badge bg-gray-100 text-gray-800">Ngừng hoạt động</span>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span v-if="category.active" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Hoạt động</span>
+                <span v-else class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">Ngừng hoạt động</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <div class="flex items-center gap-2">
-                  <button @click="editCategory(category)" class="text-blue-600 hover:text-blue-800 font-medium">
-                    Sửa
+              <td class="px-4 py-3 whitespace-nowrap text-sm">
+                <div class="flex items-center gap-3">
+                  <button @click="editCategory(category)" class="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1">
+                    <i class="fas fa-edit text-xs"></i>
+                    <span>Sửa</span>
                   </button>
-                  <button 
-                    @click="toggleStatus(category)" 
-                    :class="category.active ? 'text-yellow-600 hover:text-yellow-800' : 'text-green-600 hover:text-green-800'"
-                    class="font-medium"
-                  >
-                    {{ category.active ? 'Tắt' : 'Bật' }}
-                  </button>
-                  <button @click="confirmDelete(category)" class="text-red-600 hover:text-red-800 font-medium">
-                    Xóa
+                  <button @click="confirmDelete(category)" class="text-red-600 hover:text-red-800 font-medium flex items-center gap-1">
+                    <i class="fas fa-trash text-xs"></i>
+                    <span>Xóa</span>
                   </button>
                 </div>
               </td>
@@ -134,8 +100,8 @@
 
       <!-- Empty state -->
       <div v-if="filteredCategories.length === 0" class="text-center py-12">
-        <span class="text-8xl text-gray-300 block mb-4">📁</span>
-        <p class="text-gray-500 text-lg">Không tìm thấy danh mục nào</p>
+        <i class="fas fa-folder-open text-6xl text-slate-300 block mb-4"></i>
+        <p class="text-slate-600 text-base">Không tìm thấy danh mục nào</p>
       </div>
     </div>
 
@@ -166,17 +132,17 @@ const showCreateModal = ref(false)
 const selectedCategory = ref(null)
 
 const activeCount = computed(() => categories.value.filter(c => c.active).length)
-const inactiveCount = computed(() => categories.value.filter(c => !c.active).length)
 
 const filteredCategories = computed(() => {
   let result = categories.value
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(c => 
-      c.categoryName.toLowerCase().includes(query) ||
-      (c.description && c.description.toLowerCase().includes(query))
-    )
+    result = result.filter(c => {
+      const name = (c.categoryName || c.name || '').toLowerCase()
+      const desc = (c.description || '').toLowerCase()
+      return name.includes(query) || desc.includes(query)
+    })
   }
 
   if (filterStatus.value === 'active') {
@@ -210,25 +176,19 @@ function editCategory(category) {
   selectedCategory.value = { ...category }
 }
 
-async function toggleStatus(category) {
-  try {
-    const updatedData = { ...category, active: !category.active }
-    await categoryService.update(category.id, updatedData)
-    notification.success(`Đã ${!category.active ? 'bật' : 'tắt'} danh mục`)
-    loadCategories()
-  } catch (error) {
-    notification.error('Không thể cập nhật trạng thái')
-  }
-}
-
 async function confirmDelete(category) {
-  if (confirm(`Bạn có chắc muốn xóa danh mục "${category.categoryName}"?`)) {
+  const categoryName = category.categoryName || category.name || 'danh mục này'
+  if (confirm(`Bạn có chắc muốn xóa danh mục "${categoryName}"?`)) {
     try {
-      await categoryService.delete(category.id)
+      // Update active = false instead of deleting
+      const updatedData = { ...category, active: false }
+      await categoryService.update(category.id, updatedData)
       notification.success('Xóa danh mục thành công')
-      loadCategories()
+      await loadCategories()
     } catch (error) {
-      notification.error('Không thể xóa danh mục')
+      console.error('Error deleting category:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Không thể xóa danh mục'
+      notification.error(errorMessage)
     }
   }
 }

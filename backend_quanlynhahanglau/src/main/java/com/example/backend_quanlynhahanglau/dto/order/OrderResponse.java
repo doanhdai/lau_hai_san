@@ -19,8 +19,6 @@ public class OrderResponse {
     private Long customerId;
     private String tableNumber;
     private Long tableId;
-    private String roomName;
-    private Long roomId;
     private Long reservationId; // ID của reservation nếu đơn hàng được tạo từ đặt bàn trực tuyến
     private List<OrderItemResponse> items;
     private BigDecimal subtotal;

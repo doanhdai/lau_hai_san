@@ -35,10 +35,6 @@ public class Order {
     private RestaurantTable table;
 
     @ManyToOne
-    @JoinColumn(name = "room_id")
-    private Room room;
-
-    @ManyToOne
     @JoinColumn(name = "reservation_id")
     private Reservation reservation;
 

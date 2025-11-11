@@ -102,6 +102,8 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { StarIcon } from '@heroicons/vue/24/outline'
+import { validateEmail, validatePhone } from '@/utils/validation'
+import { useNotificationStore } from '@/stores/notification'
 
 const props = defineProps({
   customer: {
@@ -111,6 +113,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'save'])
+
+const notification = useNotificationStore()
 
 const form = ref({
   fullName: '',
@@ -124,10 +128,42 @@ const form = ref({
 watch(() => props.customer, (newVal) => {
   if (newVal) {
     form.value = { ...newVal }
+  } else {
+    // Reset form for new customer
+    form.value = {
+      fullName: '',
+      phone: '',
+      email: '',
+      address: '',
+      notes: '',
+      isVip: false
+    }
   }
 }, { immediate: true })
 
 function handleSubmit() {
+  // Validate required fields
+  if (!form.value.fullName.trim()) {
+    notification.error('Vui lòng nhập họ tên')
+    return
+  }
+
+  // Validate phone (required)
+  const phoneError = validatePhone(form.value.phone, true)
+  if (phoneError) {
+    notification.error(phoneError)
+    return
+  }
+
+  // Validate email (optional but validate if provided)
+  if (form.value.email && form.value.email.trim()) {
+    const emailError = validateEmail(form.value.email, false)
+    if (emailError) {
+      notification.error(emailError)
+      return
+    }
+  }
+
   emit('save', form.value)
 }
 </script>

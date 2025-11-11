@@ -79,7 +79,19 @@ const form = ref({
 
 watch(() => props.category, (newVal) => {
   if (newVal) {
-    form.value = { ...newVal }
+    // Map both categoryName and name to form.categoryName
+    form.value = {
+      categoryName: newVal.categoryName || newVal.name || '',
+      description: newVal.description || '',
+      active: newVal.active !== undefined ? newVal.active : true
+    }
+  } else {
+    // Reset form for new category
+    form.value = {
+      categoryName: '',
+      description: '',
+      active: true
+    }
   }
 }, { immediate: true })
 

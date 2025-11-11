@@ -3,70 +3,78 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Quản lý Đặt bàn</h1>
-        <p class="text-gray-600 mt-1">Danh sách đặt bàn khách hàng</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý Đặt bàn</h1>
+        <p class="text-slate-600 mt-1 text-sm">Danh sách đặt bàn khách hàng</p>
       </div>
-      <button @click="showCreateModal = true" class="btn-primary flex items-center gap-2">
-        <span class="text-lg">➕</span>
-        Thêm đặt bàn
+      <button @click="showCreateModal = true" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-plus"></i>
+        <span>Thêm đặt bàn</span>
       </button>
     </div>
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-yellow-100 text-sm">Chờ xác nhận</p>
-            <p class="text-3xl font-bold mt-1">{{ pendingCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Chờ xác nhận</p>
+            <p class="text-2xl font-bold text-slate-900">{{ pendingCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">⏰</span>
+          <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-clock text-amber-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-green-100 text-sm">Đã xác nhận</p>
-            <p class="text-3xl font-bold mt-1">{{ confirmedCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Đã xác nhận</p>
+            <p class="text-2xl font-bold text-slate-900">{{ confirmedCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">✅</span>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-blue-100 text-sm">Hoàn thành</p>
-            <p class="text-3xl font-bold mt-1">{{ completedCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Hoàn thành</p>
+            <p class="text-2xl font-bold text-slate-900">{{ completedCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">✔️</span>
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-check-double text-blue-600 text-xl"></i>
+          </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-red-100 text-sm">Đã hủy</p>
-            <p class="text-3xl font-bold mt-1">{{ cancelledCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Đã hủy</p>
+            <p class="text-2xl font-bold text-slate-900">{{ cancelledCount }}</p>
           </div>
-          <span class="text-4xl opacity-50">❌</span>
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-times-circle text-red-600 text-xl"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
+          <label class="block text-sm font-medium text-slate-700 mb-2">Tìm kiếm</label>
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Tên, SĐT khách hàng..."
-            class="input-field"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-          <select v-model="filterStatus" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+          <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
             <option value="PENDING">Chờ xác nhận</option>
             <option value="CONFIRMED">Đã xác nhận</option>
@@ -75,13 +83,13 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
-          <input v-model="filterDateFrom" type="date" class="input-field" />
+          <label class="block text-sm font-medium text-slate-700 mb-2">Từ ngày</label>
+          <input v-model="filterDateFrom" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
         </div>
         <div class="flex items-end">
-          <button @click="loadReservations" class="btn-secondary w-full flex items-center justify-center gap-2">
-            <span class="text-lg">🔍</span>
-            Tìm kiếm
+          <button @click="loadReservations" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-search"></i>
+            <span>Tìm kiếm</span>
           </button>
         </div>
       </div>
@@ -89,70 +97,73 @@
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Reservations Table -->
-    <div v-else class="card overflow-hidden">
+    <div v-else class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Khách hàng</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SĐT</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày giờ</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số người</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">ID</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Khách hàng</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">SĐT</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Ngày giờ</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Số người</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Trạng thái</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Thao tác</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="reservation in filteredReservations" :key="reservation.id" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ reservation.id }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
+            <tr v-for="reservation in filteredReservations" :key="reservation.id" class="hover:bg-slate-50 transition">
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">{{ reservation.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                     {{ reservation.customerName.charAt(0) }}
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-gray-900">{{ reservation.customerName }}</p>
+                    <p class="text-sm font-medium text-slate-900">{{ reservation.customerName }}</p>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ reservation.customerPhone }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">{{ reservation.customerPhone }}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">
                 {{ formatDateTime(reservation.reservationTime) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <span class="flex items-center gap-1">
-                  <UsersIcon class="w-4 h-4" />
-                  {{ reservation.numberOfGuests }}
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">
+                <span class="flex items-center gap-1.5">
+                  <i class="fas fa-users text-xs text-slate-500"></i>
+                  <span>{{ reservation.numberOfGuests }}</span>
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 <span :class="getStatusBadgeClass(reservation.status)">
                   {{ getStatusLabel(reservation.status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="px-4 py-3 whitespace-nowrap text-sm">
                 <div class="flex items-center gap-2">
-                  <button @click="viewReservation(reservation)" class="text-blue-600 hover:text-blue-800 font-medium">
-                    Xem
+                  <button @click="viewReservation(reservation)" class="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1">
+                    <i class="fas fa-eye text-xs"></i>
+                    <span>Xem</span>
                   </button>
                   <button 
                     v-if="reservation.status === 'PENDING'"
                     @click="confirmReservation(reservation)" 
-                    class="text-green-600 hover:text-green-800 font-medium"
+                    class="text-green-600 hover:text-green-800 font-medium flex items-center gap-1"
                   >
-                    Xác nhận
+                    <i class="fas fa-check text-xs"></i>
+                    <span>Xác nhận</span>
                   </button>
                   <button 
                     v-if="reservation.status === 'PENDING'"
                     @click="cancelReservation(reservation)" 
-                    class="text-red-600 hover:text-red-800 font-medium"
+                    class="text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
                   >
-                    Hủy
+                    <i class="fas fa-times text-xs"></i>
+                    <span>Hủy</span>
                   </button>
                 </div>
               </td>
@@ -163,8 +174,8 @@
 
       <!-- Empty state -->
       <div v-if="filteredReservations.length === 0" class="text-center py-12">
-        <CalendarIcon class="w-20 h-20 text-gray-300 mx-auto mb-4" />
-        <p class="text-gray-500 text-lg">Không tìm thấy đặt bàn nào</p>
+        <i class="fas fa-calendar text-6xl text-slate-300 block mb-4"></i>
+        <p class="text-slate-600 text-base">Không tìm thấy đặt bàn nào</p>
       </div>
     </div>
 
@@ -297,12 +308,12 @@ async function handleSave(reservationData) {
 
 function getStatusBadgeClass(status) {
   const classes = {
-    'PENDING': 'badge bg-yellow-100 text-yellow-800',
-    'CONFIRMED': 'badge bg-green-100 text-green-800',
-    'COMPLETED': 'badge bg-blue-100 text-blue-800',
-    'CANCELLED': 'badge bg-red-100 text-red-800'
+    'PENDING': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800',
+    'CONFIRMED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800',
+    'COMPLETED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800',
+    'CANCELLED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800'
   }
-  return classes[status] || 'badge bg-gray-100 text-gray-800'
+  return classes[status] || 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
 }
 
 function getStatusLabel(status) {

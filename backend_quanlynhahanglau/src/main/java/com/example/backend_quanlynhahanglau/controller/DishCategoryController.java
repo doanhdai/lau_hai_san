@@ -22,7 +22,7 @@ public class DishCategoryController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
-        List<CategoryResponse> categories = categoryService.getAllCategories();
+        List<CategoryResponse> categories = categoryService.getActiveCategories();
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
@@ -60,5 +60,15 @@ public class DishCategoryController {
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa danh mục thành công", null));
+    }
+
+    @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<CategoryResponse>> toggleCategoryStatus(@PathVariable Long id) {
+        CategoryResponse category = categoryService.toggleCategoryStatus(id);
+        String message = category.getActive() 
+            ? "Kích hoạt danh mục thành công" 
+            : "Tắt danh mục thành công";
+        return ResponseEntity.ok(ApiResponse.success(message, category));
     }
 }

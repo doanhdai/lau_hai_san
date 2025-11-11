@@ -66,6 +66,19 @@ public class DishService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<DishResponse> getDishesByCategoryId(Long categoryId) {
+        // Kiểm tra category có tồn tại không
+        DishCategory category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", categoryId));
+        
+        // Lấy tất cả món của category và filter chỉ lấy món active
+        return dishRepository.findByCategory(category).stream()
+                .filter(dish -> dish.getActive())
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public DishResponse createDish(DishRequest request) {
         DishCategory category = categoryRepository.findById(request.getCategoryId())

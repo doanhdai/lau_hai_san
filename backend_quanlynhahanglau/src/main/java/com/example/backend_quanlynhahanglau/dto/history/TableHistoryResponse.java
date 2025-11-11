@@ -14,8 +14,6 @@ public class TableHistoryResponse {
     private Long id;
     private String tableNumber;
     private Long tableId;
-    private String roomName;
-    private Long roomId;
     private String customerName;
     private Long customerId;
     private String orderNumber;

@@ -54,6 +54,13 @@ public class ReservationController {
         return ResponseEntity.ok(ApiResponse.success(reservations));
     }
 
+    @GetMapping("/public/user/{userId}")
+    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservationHistoryByUserId(
+            @PathVariable Long userId) {
+        List<ReservationResponse> reservations = reservationService.getReservationsByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử đặt bàn thành công", reservations));
+    }
+
     @PostMapping("/public")
     public ResponseEntity<ApiResponse<ReservationResponse>> createPublicReservation(
             @Valid @RequestBody PublicReservationRequest request) {
@@ -85,6 +92,14 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<Void>> deleteReservation(@PathVariable Long id) {
         reservationService.deleteReservation(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa đặt bàn thành công", null));
+    }
+
+    @PutMapping("/public/{id}/cancel")
+    public ResponseEntity<ApiResponse<ReservationResponse>> cancelPublicReservation(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long userId) {
+        ReservationResponse reservation = reservationService.cancelPublicReservation(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Hủy đặt bàn thành công", reservation));
     }
 
     @PutMapping("/{id}/confirm")

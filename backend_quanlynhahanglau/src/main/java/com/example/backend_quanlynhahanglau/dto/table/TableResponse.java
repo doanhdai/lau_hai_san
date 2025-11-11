@@ -13,8 +13,6 @@ public class TableResponse {
     private String tableNumber;
     private Integer capacity;
     private TableStatus status;
-    private String roomName;
-    private Long roomId;
     private String location;
     private Boolean active;
     private String notes;

@@ -16,7 +16,6 @@ public class CounterOrderRequest {
     private String customerPhone;
     
     private Long tableId; // Bàn cho khách đặt trực tiếp tại nhà hàng (tùy chọn)
-    private Long roomId; // Phòng cho khách đặt trực tiếp tại nhà hàng (tùy chọn)
     
     @NotEmpty(message = "Đơn hàng phải có ít nhất một món")
     private List<OrderItemRequest> items;

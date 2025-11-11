@@ -28,7 +28,6 @@ public class OrderService {
     private final OrderDetailRepository orderDetailRepository;
     private final CustomerRepository customerRepository;
     private final RestaurantTableRepository tableRepository;
-    private final RoomRepository roomRepository;
     private final ReservationRepository reservationRepository;
     private final DishRepository dishRepository;
     private final UserRepository userRepository;
@@ -90,15 +89,15 @@ public class OrderService {
                 throw new BadRequestException("Đặt bàn này đã được sử dụng để tạo đơn");
             }
             
-            // Kiểm tra nếu có tableId hoặc roomId trong request thì báo lỗi
-            if (request.getTableId() != null || request.getRoomId() != null) {
-                throw new BadRequestException("Khi tạo đơn từ đặt bàn, không được chọn bàn/phòng lại. Bàn/phòng sẽ được lấy tự động từ đặt bàn.");
+            // Kiểm tra nếu có tableId trong request thì báo lỗi
+            if (request.getTableId() != null) {
+                throw new BadRequestException("Khi tạo đơn từ đặt bàn, không được chọn bàn lại. Bàn sẽ được lấy tự động từ đặt bàn.");
             }
             
             // Tự động lấy customer từ reservation
             order.setCustomer(reservation.getCustomer());
             
-            // Tự động lấy table/room từ reservation (bắt buộc phải có)
+            // Tự động lấy table từ reservation (bắt buộc phải có)
             if (reservation.getTable() != null) {
                 RestaurantTable table = reservation.getTable();
                 // Kiểm tra bàn có khả dụng không
@@ -114,24 +113,8 @@ public class OrderService {
                     // Kiểm tra xem bàn này có đang được sử dụng bởi reservation khác không
                     throw new BadRequestException("Bàn đang được sử dụng");
                 }
-            } else if (reservation.getRoom() == null) {
-                throw new BadRequestException("Đặt bàn này chưa có bàn hoặc phòng được gán");
-            }
-            
-            if (reservation.getRoom() != null) {
-                Room room = reservation.getRoom();
-                // Kiểm tra phòng có khả dụng không
-                if (room.getStatus() == TableStatus.MAINTENANCE) {
-                    throw new BadRequestException("Phòng đang trong quá trình bảo trì");
-                }
-                // Nếu phòng đang RESERVED hoặc AVAILABLE, có thể sử dụng cho reservation này
-                if (room.getStatus() == TableStatus.AVAILABLE || room.getStatus() == TableStatus.RESERVED) {
-                    room.setStatus(TableStatus.OCCUPIED);
-                    roomRepository.save(room);
-                    order.setRoom(room);
-                } else if (room.getStatus() == TableStatus.OCCUPIED) {
-                    throw new BadRequestException("Phòng đang được sử dụng");
-                }
+            } else {
+                throw new BadRequestException("Đặt bàn này chưa có bàn được gán");
             }
             
             order.setReservation(reservation);
@@ -144,7 +127,7 @@ public class OrderService {
                 reservationRepository.save(reservation);
             }
         } else {
-            // Nếu không có reservation, xử lý customer và table/room như bình thường
+            // Nếu không có reservation, xử lý customer và table như bình thường
             
             // Set customer
             if (request.getCustomerId() != null) {
@@ -169,25 +152,11 @@ public class OrderService {
                 tableRepository.save(table);
                 order.setTable(table);
             }
-
-            // Set room
-            if (request.getRoomId() != null) {
-                Room room = roomRepository.findById(request.getRoomId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-                
-                if (room.getStatus() != TableStatus.AVAILABLE && room.getStatus() != TableStatus.RESERVED) {
-                    throw new BadRequestException("Phòng không khả dụng. Trạng thái hiện tại: " + room.getStatus());
-                }
-                
-                room.setStatus(TableStatus.OCCUPIED);
-                roomRepository.save(room);
-                order.setRoom(room);
-            }
         }
 
-        // Kiểm tra có ít nhất customer hoặc table/room
-        if (order.getCustomer() == null && order.getTable() == null && order.getRoom() == null) {
-            throw new BadRequestException("Đơn hàng phải có ít nhất khách hàng hoặc bàn/phòng");
+        // Kiểm tra có ít nhất customer hoặc table
+        if (order.getCustomer() == null && order.getTable() == null) {
+            throw new BadRequestException("Đơn hàng phải có ít nhất khách hàng hoặc bàn");
         }
 
         // Save order first to get ID
@@ -243,15 +212,10 @@ public class OrderService {
         if (status == OrderStatus.COMPLETED) {
             order.setCompletedAt(LocalDateTime.now());
             
-            // Cập nhật lại trạng thái bàn/phòng
+            // Cập nhật lại trạng thái bàn
             if (order.getTable() != null) {
                 order.getTable().setStatus(TableStatus.AVAILABLE);
                 tableRepository.save(order.getTable());
-            }
-            
-            if (order.getRoom() != null) {
-                order.getRoom().setStatus(TableStatus.AVAILABLE);
-                roomRepository.save(order.getRoom());
             }
             
             // Cập nhật trạng thái reservation thành COMPLETED nếu có
@@ -307,15 +271,10 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", id));
         
-        // Cập nhật lại trạng thái bàn/phòng
+        // Cập nhật lại trạng thái bàn
         if (order.getTable() != null && order.getTable().getStatus() == TableStatus.OCCUPIED) {
             order.getTable().setStatus(TableStatus.AVAILABLE);
             tableRepository.save(order.getTable());
-        }
-        
-        if (order.getRoom() != null && order.getRoom().getStatus() == TableStatus.OCCUPIED) {
-            order.getRoom().setStatus(TableStatus.AVAILABLE);
-            roomRepository.save(order.getRoom());
         }
         
         orderRepository.delete(order);
@@ -369,7 +328,7 @@ public class OrderService {
             order.setCustomer(customer);
         }
 
-        // Hỗ trợ gán bàn/phòng cho khách đặt trực tiếp tại nhà hàng (nếu có)
+        // Hỗ trợ gán bàn cho khách đặt trực tiếp tại nhà hàng (nếu có)
         if (request.getTableId() != null) {
             RestaurantTable table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
@@ -381,19 +340,6 @@ public class OrderService {
             table.setStatus(TableStatus.OCCUPIED);
             tableRepository.save(table);
             order.setTable(table);
-        }
-
-        if (request.getRoomId() != null) {
-            Room room = roomRepository.findById(request.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-            
-            if (room.getStatus() != TableStatus.AVAILABLE && room.getStatus() != TableStatus.RESERVED) {
-                throw new BadRequestException("Phòng không khả dụng. Trạng thái hiện tại: " + room.getStatus());
-            }
-            
-            room.setStatus(TableStatus.OCCUPIED);
-            roomRepository.save(room);
-            order.setRoom(room);
         }
 
         // Save order first to get ID
@@ -485,8 +431,6 @@ public class OrderService {
                 .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
                 .tableNumber(order.getTable() != null ? order.getTable().getTableNumber() : null)
                 .tableId(order.getTable() != null ? order.getTable().getId() : null)
-                .roomName(order.getRoom() != null ? order.getRoom().getName() : null)
-                .roomId(order.getRoom() != null ? order.getRoom().getId() : null)
                 .reservationId(order.getReservation() != null ? order.getReservation().getId() : null)
                 .items(items)
                 .subtotal(order.getSubtotal())

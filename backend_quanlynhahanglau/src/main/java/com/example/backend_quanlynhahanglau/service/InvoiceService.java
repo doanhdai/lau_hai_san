@@ -70,10 +70,6 @@ public class InvoiceService {
             html.append("<p><strong>Bàn:</strong> " + order.getTable().getTableNumber() + "</p>");
         }
         
-        if (order.getRoom() != null) {
-            html.append("<p><strong>Phòng:</strong> " + order.getRoom().getName() + "</p>");
-        }
-        
         if (order.getCreatedBy() != null) {
             html.append("<p><strong>Nhân viên:</strong> " + order.getCreatedBy().getFullName() + "</p>");
         }

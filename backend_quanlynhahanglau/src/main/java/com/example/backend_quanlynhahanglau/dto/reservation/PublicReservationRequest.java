@@ -31,8 +31,9 @@ public class PublicReservationRequest {
     @Max(value = 50, message = "Số lượng khách tối đa 50 người")
     private Integer numberOfGuests;
 
-    @NotNull(message = "Bàn không được để trống")
-    private Long tableId; // Bắt buộc chọn bàn
+    private Long tableId; 
 
-    private String notes; // Ghi chú
+    private Long userId; // User ID để liên kết với Customer
+
+    private String notes; 
 }

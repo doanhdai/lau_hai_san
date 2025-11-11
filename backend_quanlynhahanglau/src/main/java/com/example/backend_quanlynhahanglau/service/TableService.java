@@ -3,13 +3,11 @@ package com.example.backend_quanlynhahanglau.service;
 import com.example.backend_quanlynhahanglau.dto.table.TableRequest;
 import com.example.backend_quanlynhahanglau.dto.table.TableResponse;
 import com.example.backend_quanlynhahanglau.entity.RestaurantTable;
-import com.example.backend_quanlynhahanglau.entity.Room;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.exception.DuplicateResourceException;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.repository.ReservationRepository;
 import com.example.backend_quanlynhahanglau.repository.RestaurantTableRepository;
-import com.example.backend_quanlynhahanglau.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +20,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TableService {
     private final RestaurantTableRepository tableRepository;
-    private final RoomRepository roomRepository;
     private final ReservationRepository reservationRepository;
 
     @Transactional(readOnly = true)
@@ -107,12 +104,6 @@ public class TableService {
                 .active(true)
                 .build();
 
-        if (request.getRoomId() != null) {
-            Room room = roomRepository.findById(request.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-            table.setRoom(room);
-        }
-
         table = tableRepository.save(table);
         return mapToResponse(table);
     }
@@ -132,14 +123,6 @@ public class TableService {
         table.setStatus(request.getStatus());
         table.setLocation(request.getLocation());
         table.setNotes(request.getNotes());
-
-        if (request.getRoomId() != null) {
-            Room room = roomRepository.findById(request.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Phòng", "id", request.getRoomId()));
-            table.setRoom(room);
-        } else {
-            table.setRoom(null);
-        }
 
         table = tableRepository.save(table);
         return mapToResponse(table);
@@ -166,8 +149,6 @@ public class TableService {
                 .tableNumber(table.getTableNumber())
                 .capacity(table.getCapacity())
                 .status(table.getStatus())
-                .roomName(table.getRoom() != null ? table.getRoom().getName() : null)
-                .roomId(table.getRoom() != null ? table.getRoom().getId() : null)
                 .location(table.getLocation())
                 .active(table.getActive())
                 .notes(table.getNotes())

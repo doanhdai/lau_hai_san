@@ -25,4 +25,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT c FROM Customer c JOIN Reservation r ON r.customer = c " +
            "GROUP BY c ORDER BY COUNT(r) DESC")
     List<Customer> findTopCustomers();
+    
+    // Tìm Customer theo User ID (có thể có nhiều Customer cho 1 User)
+    List<Customer> findByUserId(Long userId);
 }

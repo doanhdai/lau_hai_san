@@ -36,16 +36,22 @@ public class DishController {
         return ResponseEntity.ok(ApiResponse.success(dishes));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<DishResponse>> getDishById(@PathVariable Long id) {
-        DishResponse dish = dishService.getDishById(id);
-        return ResponseEntity.ok(ApiResponse.success(dish));
-    }
-
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<DishResponse>>> searchDishes(@RequestParam String keyword) {
         List<DishResponse> dishes = dishService.searchDishes(keyword);
         return ResponseEntity.ok(ApiResponse.success(dishes));
+    }
+
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<ApiResponse<List<DishResponse>>> getDishesByCategory(@PathVariable Long categoryId) {
+        List<DishResponse> dishes = dishService.getDishesByCategoryId(categoryId);
+        return ResponseEntity.ok(ApiResponse.success(dishes));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<DishResponse>> getDishById(@PathVariable Long id) {
+        DishResponse dish = dishService.getDishById(id);
+        return ResponseEntity.ok(ApiResponse.success(dish));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

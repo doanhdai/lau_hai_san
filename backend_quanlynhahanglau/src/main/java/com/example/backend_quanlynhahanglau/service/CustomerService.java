@@ -152,8 +152,6 @@ public class CustomerService {
                 .customerId(reservation.getCustomer().getId())
                 .tableNumber(reservation.getTable() != null ? reservation.getTable().getTableNumber() : null)
                 .tableId(reservation.getTable() != null ? reservation.getTable().getId() : null)
-                .roomName(reservation.getRoom() != null ? reservation.getRoom().getName() : null)
-                .roomId(reservation.getRoom() != null ? reservation.getRoom().getId() : null)
                 .reservationTime(reservation.getReservationTime())
                 .numberOfGuests(reservation.getNumberOfGuests())
                 .status(reservation.getStatus())

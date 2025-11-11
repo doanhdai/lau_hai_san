@@ -6,14 +6,14 @@
         <div class="flex items-center justify-between h-20">
           <!-- Logo -->
           <router-link to="/home" class="flex items-center gap-3 group">
-            <div class="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform">
-              <span class="text-white text-2xl font-bold">🍲</span>
+            <div class="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center">
+              <i class="fas fa-bowl-food text-white text-xl"></i>
             </div>
             <div>
-              <h1 class="text-xl font-bold" :class="scrolled ? 'text-gray-900' : 'text-white'">
+              <h1 class="text-lg font-bold" :class="scrolled ? 'text-slate-900' : 'text-white'">
                 Nhà Hàng Lẩu
               </h1>
-              <p class="text-xs" :class="scrolled ? 'text-gray-600' : 'text-white/80'">
+              <p class="text-xs" :class="scrolled ? 'text-slate-600' : 'text-white/80'">
                 Hương vị đậm đà
               </p>
             </div>
@@ -25,16 +25,16 @@
               v-for="item in menuItems" 
               :key="item.path"
               :to="item.path"
-              class="nav-link font-medium transition-all duration-300"
-              :class="scrolled ? 'text-gray-700 hover:text-sky-600' : 'text-white hover:text-sky-200'"
+              class="nav-link font-medium text-sm transition-all duration-200"
+              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               {{ item.label }}
             </router-link>
             <router-link 
               v-if="isAuthenticated"
               to="/my-reservations" 
-              class="font-medium transition-all duration-300"
-              :class="scrolled ? 'text-gray-700 hover:text-sky-600' : 'text-white hover:text-sky-200'"
+              class="font-medium text-sm transition-all duration-200"
+              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               Lịch sử
             </router-link>
@@ -43,8 +43,8 @@
             <router-link 
               v-if="!isAuthenticated"
               to="/login" 
-              class="font-medium transition-all duration-300"
-              :class="scrolled ? 'text-gray-700 hover:text-sky-600' : 'text-white hover:text-sky-200'"
+              class="font-medium text-sm transition-all duration-200"
+              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               Đăng nhập
             </router-link>
@@ -52,15 +52,15 @@
             <button 
               v-if="isAuthenticated"
               @click="handleLogout"
-              class="font-medium transition-all duration-300"
-              :class="scrolled ? 'text-gray-700 hover:text-sky-600' : 'text-white hover:text-sky-200'"
+              class="font-medium text-sm transition-all duration-200"
+              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               Đăng xuất
             </button>
             
             <router-link 
               to="/reservation" 
-              class="btn-primary px-6 py-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+              class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
             >
               Đặt Bàn Ngay
             </router-link>
@@ -89,7 +89,7 @@
             :key="item.path"
             :to="item.path"
             @click="mobileMenuOpen = false"
-            class="block px-4 py-3 rounded-lg text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            class="block px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
           >
             {{ item.label }}
           </router-link>
@@ -97,7 +97,7 @@
             v-if="isAuthenticated"
             to="/my-reservations"
             @click="mobileMenuOpen = false"
-            class="block px-4 py-3 rounded-lg text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            class="block px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
           >
             Lịch sử đặt bàn
           </router-link>
@@ -107,7 +107,7 @@
             v-if="!isAuthenticated"
             to="/login"
             @click="mobileMenuOpen = false"
-            class="block px-4 py-3 rounded-lg text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            class="block px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
           >
             Đăng nhập
           </router-link>
@@ -115,7 +115,7 @@
           <button 
             v-if="isAuthenticated"
             @click="handleLogout"
-            class="block w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            class="block w-full text-left px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
           >
             Đăng xuất
           </button>
@@ -123,7 +123,7 @@
           <router-link 
             to="/reservation"
             @click="mobileMenuOpen = false"
-            class="block btn-primary text-center mt-4"
+            class="block bg-slate-900 hover:bg-slate-800 text-white text-center px-4 py-3 rounded-lg font-medium mt-4 transition-colors"
           >
             Đặt Bàn Ngay
           </router-link>
@@ -143,33 +143,33 @@
           <!-- About -->
           <div>
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center">
-                <span class="text-white text-xl">🍲</span>
+              <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                <i class="fas fa-bowl-food text-slate-900 text-xl"></i>
               </div>
-              <h3 class="text-xl font-bold">Nhà Hàng Lẩu</h3>
+              <h3 class="text-lg font-bold text-white">Nhà Hàng Lẩu</h3>
             </div>
-            <p class="text-gray-400 mb-4">
+            <p class="text-slate-400 text-sm mb-4 leading-relaxed">
               Mang đến trải nghiệm ẩm thực lẩu đặc sắc với hương vị truyền thống và không gian sang trọng.
             </p>
-            <div class="flex gap-3">
-              <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-sky-600 transition">
-                <span>📘</span>
+            <div class="flex gap-2">
+              <a href="#" class="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                <i class="fab fa-facebook-f text-white text-sm"></i>
               </a>
-              <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-sky-600 transition">
-                <span>📷</span>
+              <a href="#" class="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                <i class="fab fa-instagram text-white text-sm"></i>
               </a>
-              <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-sky-600 transition">
-                <span>🎬</span>
+              <a href="#" class="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                <i class="fab fa-youtube text-white text-sm"></i>
               </a>
             </div>
           </div>
 
           <!-- Quick Links -->
           <div>
-            <h4 class="text-lg font-bold mb-4">Liên Kết</h4>
+            <h4 class="text-base font-semibold mb-3 text-white">Liên Kết</h4>
             <ul class="space-y-2">
               <li v-for="item in menuItems" :key="item.path">
-                <router-link :to="item.path" class="text-gray-400 hover:text-sky-400 transition">
+                <router-link :to="item.path" class="text-sm text-slate-400 hover:text-white transition">
                   {{ item.label }}
                 </router-link>
               </li>
@@ -178,18 +178,18 @@
 
           <!-- Contact -->
           <div>
-            <h4 class="text-lg font-bold mb-4">Liên Hệ</h4>
-            <ul class="space-y-3 text-gray-400">
+            <h4 class="text-base font-semibold mb-3 text-white">Liên Hệ</h4>
+            <ul class="space-y-2.5 text-slate-400 text-sm">
               <li class="flex items-start gap-2">
-                <span>📍</span>
+                <i class="fas fa-map-marker-alt mt-0.5 text-slate-500"></i>
                 <span>123 Đường ABC, Quận 1, TP.HCM</span>
               </li>
               <li class="flex items-center gap-2">
-                <span>📞</span>
+                <i class="fas fa-phone text-slate-500"></i>
                 <span>0123 456 789</span>
               </li>
               <li class="flex items-center gap-2">
-                <span>✉️</span>
+                <i class="fas fa-envelope text-slate-500"></i>
                 <span>contact@nhahang.com</span>
               </li>
             </ul>
@@ -197,22 +197,22 @@
 
           <!-- Hours -->
           <div>
-            <h4 class="text-lg font-bold mb-4">Giờ Mở Cửa</h4>
-            <ul class="space-y-2 text-gray-400">
+            <h4 class="text-base font-semibold mb-3 text-white">Giờ Mở Cửa</h4>
+            <ul class="space-y-2 text-slate-400 text-sm">
               <li class="flex justify-between">
                 <span>Thứ 2 - Thứ 6:</span>
-                <span class="text-white">10:00 - 22:00</span>
+                <span class="text-white font-medium">10:00 - 22:00</span>
               </li>
               <li class="flex justify-between">
                 <span>Thứ 7 - CN:</span>
-                <span class="text-white">09:00 - 23:00</span>
+                <span class="text-white font-medium">09:00 - 23:00</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 Nhà Hàng Lẩu. All rights reserved. | <router-link to="/sitemap" class="hover:text-sky-400">Site Map</router-link></p>
+        <div class="border-t border-slate-800 mt-8 pt-6 text-center text-slate-500 text-sm">
+          <p>&copy; 2024 Nhà Hàng Lẩu. All rights reserved. | <router-link to="/sitemap" class="hover:text-white transition">Site Map</router-link></p>
         </div>
       </div>
     </footer>
@@ -221,7 +221,7 @@
     <button
       v-show="showScrollTop"
       @click="scrollToTop"
-      class="fixed bottom-8 right-8 w-12 h-12 bg-sky-600 text-white rounded-full shadow-lg hover:bg-sky-700 hover:shadow-xl transform hover:scale-110 transition-all z-40 flex items-center justify-center"
+      class="fixed bottom-8 right-8 w-11 h-11 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors z-40 flex items-center justify-center"
     >
       ↑
     </button>

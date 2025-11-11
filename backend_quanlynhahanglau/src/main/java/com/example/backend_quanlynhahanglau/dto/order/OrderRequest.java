@@ -13,7 +13,6 @@ import java.util.List;
 public class OrderRequest {
     private Long customerId;
     private Long tableId;
-    private Long roomId;
     private Long reservationId;
 
     @NotEmpty(message = "Đơn hàng phải có ít nhất một món")

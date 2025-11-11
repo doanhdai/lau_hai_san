@@ -24,10 +24,6 @@ public class TableHistory {
     private RestaurantTable table;
 
     @ManyToOne
-    @JoinColumn(name = "room_id")
-    private Room room;
-
-    @ManyToOne
     @JoinColumn(name = "customer_id")
     private Customer customer;
 

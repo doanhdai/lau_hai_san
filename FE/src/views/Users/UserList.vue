@@ -3,30 +3,30 @@
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Quản lý người dùng</h1>
-        <p class="text-gray-600 mt-1">Quản lý tài khoản người dùng và phân quyền</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý người dùng</h1>
+        <p class="text-slate-600 mt-1 text-sm">Quản lý tài khoản người dùng và phân quyền</p>
       </div>
-      <button @click="openCreateModal" class="btn-primary flex items-center gap-2">
-        <span class="text-lg">+</span>
-        Thêm người dùng
+      <button @click="openCreateModal" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <i class="fas fa-plus"></i>
+        <span>Thêm người dùng</span>
       </button>
     </div>
 
     <!-- Filters -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
+          <label class="block text-sm font-medium text-slate-700 mb-2">Tìm kiếm</label>
           <input
             v-model="filters.search"
             type="text"
             placeholder="Tên, email, số điện thoại..."
-            class="input-field"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Vai trò</label>
-          <select v-model="filters.role" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Vai trò</label>
+          <select v-model="filters.role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả vai trò</option>
             <option value="ROLE_ADMIN">Quản trị viên</option>
             <option value="ROLE_MANAGER">Quản lý</option>
@@ -35,51 +35,51 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-          <select v-model="filters.status" class="input-field">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+          <select v-model="filters.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả trạng thái</option>
             <option value="true">Hoạt động</option>
             <option value="false">Tạm khóa</option>
           </select>
         </div>
         <div class="flex items-end">
-          <button @click="loadUsers" class="btn-secondary w-full">
-            <span class="mr-2">🔍</span>
-            Tìm kiếm
+          <button @click="loadUsers" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-search"></i>
+            <span>Tìm kiếm</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- Users Table -->
-    <div class="card">
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Người dùng
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Liên hệ
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Vai trò
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Trạng thái
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Ngày tạo
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase">
                 Thao tác
               </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="loading" v-for="n in 5" :key="n" class="animate-pulse">
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <div class="flex items-center">
                   <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
                   <div class="ml-4">
@@ -88,20 +88,20 @@
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <div class="h-4 bg-gray-200 rounded w-32 mb-2"></div>
                 <div class="h-3 bg-gray-200 rounded w-28"></div>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <div class="h-6 bg-gray-200 rounded w-20"></div>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <div class="h-6 bg-gray-200 rounded w-16"></div>
               </td>
-              <td class="px-6 py-4">
-                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              <td class="px-4 py-3">
+                <div class="h-4 bg-gray-200 rounded w-24"></div>
               </td>
-              <td class="px-6 py-4 text-right">
+              <td class="px-4 py-3 text-right">
                 <div class="flex justify-end gap-2">
                   <div class="h-8 w-8 bg-gray-200 rounded"></div>
                   <div class="h-8 w-8 bg-gray-200 rounded"></div>
@@ -110,59 +110,59 @@
             </tr>
             
             <tr v-else-if="users.length === 0">
-              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                <div class="text-6xl mb-4">👤</div>
-                <p class="text-lg font-medium">Không tìm thấy người dùng</p>
-                <p class="text-sm">Thử thay đổi bộ lọc hoặc thêm người dùng mới</p>
+              <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                <i class="fas fa-user text-6xl mb-4 text-slate-300 block"></i>
+                <p class="text-base font-medium">Không tìm thấy người dùng</p>
+                <p class="text-sm mt-1">Thử thay đổi bộ lọc hoặc thêm người dùng mới</p>
               </td>
             </tr>
 
-            <tr v-else v-for="user in users" :key="user.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4">
+            <tr v-else v-for="user in users" :key="user.id" class="hover:bg-slate-50 transition">
+              <td class="px-4 py-3">
                 <div class="flex items-center">
-                  <div class="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold">
+                  <div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-semibold text-sm">
                     {{ getUserInitial(user.fullName) }}
                   </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-medium text-gray-900">{{ user.fullName }}</div>
-                    <div class="text-sm text-gray-500">{{ user.username }}</div>
+                  <div class="ml-3">
+                    <div class="text-sm font-medium text-slate-900">{{ user.fullName }}</div>
+                    <div class="text-xs text-slate-500">{{ user.username }}</div>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4">
-                <div class="text-sm text-gray-900">{{ user.email }}</div>
-                <div class="text-sm text-gray-500">{{ user.phoneNumber || 'Chưa có' }}</div>
+              <td class="px-4 py-3">
+                <div class="text-sm text-slate-900">{{ user.email }}</div>
+                <div class="text-xs text-slate-500">{{ user.phoneNumber || 'Chưa có' }}</div>
               </td>
-              <td class="px-6 py-4">
-                <span class="badge" :class="getRoleBadgeClass(user.roles)">
+              <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="getRoleBadgeClass(user.roles)">
                   {{ getRoleDisplay(user.roles) }}
                 </span>
               </td>
-              <td class="px-6 py-4">
-                <span class="badge" :class="user.active ? 'badge-success' : 'badge-danger'">
+              <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                   {{ user.active ? 'Hoạt động' : 'Tạm khóa' }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500">
+              <td class="px-4 py-3 text-sm text-slate-600">
                 {{ formatDate(user.createdAt) }}
               </td>
-              <td class="px-6 py-4 text-right">
+              <td class="px-4 py-3 text-right">
                 <div class="flex justify-end gap-2">
                   <button
                     @click="openEditModal(user)"
-                    class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                     title="Chỉnh sửa"
                   >
-                    <span class="text-lg">✏️</span>
+                    <i class="fas fa-edit text-sm"></i>
                   </button>
                   <button
                     @click="toggleUserStatus(user)"
                     :class="user.active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'"
-                    class="p-2 rounded-lg transition"
+                    class="p-2 rounded-lg transition-colors"
                     :title="user.active ? 'Khóa tài khoản' : 'Kích hoạt tài khoản'"
                   >
-                    <span v-if="user.active" class="text-lg">🔒</span>
-                    <span v-else class="text-lg">🔓</span>
+                    <i v-if="user.active" class="fas fa-lock text-sm"></i>
+                    <i v-else class="fas fa-unlock text-sm"></i>
                   </button>
                 </div>
               </td>
@@ -267,14 +267,18 @@ async function loadUsers() {
 
     const response = await userService.getAll(params)
     
-    if (response.success) {
-      users.value = response.data.content || response.data
-      
-      // Update pagination if response has pagination info
-      if (response.data.totalElements !== undefined) {
-        pagination.totalElements = response.data.totalElements
-        pagination.totalPages = response.data.totalPages
-        pagination.currentPage = response.data.number + 1
+    if (response.success && response.data) {
+      // Handle paginated response
+      if (response.data.content && Array.isArray(response.data.content)) {
+        users.value = response.data.content
+        
+        // Update pagination from response
+        pagination.totalElements = response.data.totalElements || 0
+        pagination.totalPages = response.data.totalPages || 1
+        pagination.currentPage = (response.data.number || 0) + 1
+      } else if (Array.isArray(response.data)) {
+        // Fallback: if data is directly an array (no pagination)
+        users.value = response.data
       }
     }
   } catch (error) {
@@ -307,6 +311,8 @@ function handleUserSaved() {
 
 async function toggleUserStatus(user) {
   const action = user.active ? 'khóa' : 'kích hoạt'
+  const actionText = user.active ? 'Khóa' : 'Kích hoạt'
+  
   if (!confirm(`Bạn có chắc muốn ${action} tài khoản "${user.fullName}"?`)) {
     return
   }
@@ -314,12 +320,17 @@ async function toggleUserStatus(user) {
   try {
     const response = await userService.toggleStatus(user.id)
     if (response.success) {
-      notification.success(`${action === 'khóa' ? 'Khóa' : 'Kích hoạt'} tài khoản thành công`)
-      loadUsers()
+      const successMessage = response.message || `${actionText} tài khoản thành công`
+      notification.success(successMessage)
+      // Reload users list to reflect the change
+      await loadUsers()
+    } else {
+      notification.error(`Không thể ${action} tài khoản`)
     }
   } catch (error) {
     console.error('Error toggling user status:', error)
-    notification.error(`Không thể ${action} tài khoản`)
+    const errorMessage = error.response?.data?.message || error.message || `Không thể ${action} tài khoản`
+    notification.error(errorMessage)
   }
 }
 
@@ -379,7 +390,7 @@ function getRoleDisplay(roles) {
 }
 
 function getRoleBadgeClass(roles) {
-  if (!roles || roles.length === 0) return 'badge-info'
+  if (!roles || roles.length === 0) return 'bg-gray-100 text-gray-800'
   
   const mainRole = roles.find(role => role !== 'ROLE_CUSTOMER') || roles[0]
   
@@ -388,7 +399,7 @@ function getRoleBadgeClass(roles) {
     case 'ROLE_MANAGER': return 'bg-purple-100 text-purple-800'
     case 'ROLE_STAFF': return 'bg-blue-100 text-blue-800'
     case 'ROLE_CUSTOMER': return 'bg-green-100 text-green-800'
-    default: return 'badge-info'
+    default: return 'bg-gray-100 text-gray-800'
   }
 }
 

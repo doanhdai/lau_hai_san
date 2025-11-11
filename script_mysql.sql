@@ -377,3 +377,23 @@ ALTER TABLE `table_histories` ADD CONSTRAINT `FKsk2qwjmygxwdke2x41uyb4fq8` FOREI
 ALTER TABLE `user_roles` ADD CONSTRAINT `FKh8ciramu9cc9q3qcqiv4ue8a6` FOREIGN KEY(`role_id`) REFERENCES `roles`(`id`);
 ALTER TABLE `user_roles` ADD CONSTRAINT `FKhfh9dx7w3ubf1co1vdev94g3f` FOREIGN KEY(`user_id`) REFERENCES `users`(`id`);
 
+ALTER TABLE customers 
+ADD COLUMN user_id BIGINT NULL;
+
+-- Thêm khóa ngoại
+ALTER TABLE customers 
+ADD CONSTRAINT fk_customer_user 
+FOREIGN KEY (user_id) REFERENCES users(id) 
+ON DELETE SET NULL 
+ON UPDATE CASCADE;
+
+-- Thêm index để tối ưu truy vấn
+CREATE INDEX idx_customer_user_id ON customers(user_id);
+
+-- Comment cho cột
+ALTER TABLE customers 
+MODIFY COLUMN user_id BIGINT NULL 
+COMMENT 'Liên kết với bảng users - User ID của khách hàng (nếu có tài khoản)';
+
+
+

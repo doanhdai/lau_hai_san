@@ -2,43 +2,45 @@
   <div class="flex h-screen bg-gray-50">
     <!-- Sidebar -->
     <aside 
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-sky-600 to-sky-800 text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col border-r border-slate-800"
       :class="{ '-translate-x-full': !sidebarOpen }"
     >
       <!-- Logo -->
-      <div class="flex items-center justify-center h-16 bg-sky-900 bg-opacity-50">
-        <h1 class="text-2xl font-bold flex items-center gap-2">
-          <span class="text-3xl">🍲</span>
-          Hotpot Manager
+      <div class="flex items-center justify-center h-16 border-b border-slate-800 flex-shrink-0">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+          <i class="fas fa-bowl-food text-2xl"></i>
+          <span>Hotpot Manager</span>
         </h1>
       </div>
 
-      <!-- Navigation -->
-      <nav class="mt-6 px-4 space-y-2">
+      <!-- Navigation - Scrollable -->
+      <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         <router-link
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-sky-700"
-          :class="{ 'bg-sky-700 shadow-lg': isActive(item.path) }"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm"
+          :class="isActive(item.path) 
+            ? 'bg-white text-slate-900 font-semibold' 
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
         >
-          <span class="text-lg">{{ item.icon }}</span>
-          <span class="font-medium">{{ item.label }}</span>
+          <i :class="['fas', item.icon, 'text-base']"></i>
+          <span>{{ item.label }}</span>
         </router-link>
       </nav>
 
       <!-- User Info -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 bg-sky-900 bg-opacity-50">
+      <div class="flex-shrink-0 p-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center">
-            <span class="text-lg font-bold">{{ userInitial }}</span>
+          <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+            <span class="text-sm font-semibold">{{ userInitial }}</span>
           </div>
-          <div class="flex-1">
-            <p class="font-medium text-sm">{{ authStore.user?.fullName }}</p>
-            <p class="text-xs text-sky-200">{{ userRole }}</p>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate">{{ authStore.user?.fullName }}</p>
+            <p class="text-xs text-slate-400 truncate">{{ userRole }}</p>
           </div>
-          <button @click="handleLogout" class="p-2 hover:bg-sky-700 rounded-lg transition">
-            <span class="text-lg">🚪</span>
+          <button @click="handleLogout" class="p-2 hover:bg-slate-800 rounded-lg transition-colors">
+            <i class="fas fa-sign-out-alt text-base"></i>
           </button>
         </div>
       </div>
@@ -47,21 +49,21 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col lg:ml-64">
       <!-- Header -->
-      <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
         <button
           @click="toggleSidebar"
-          class="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+          class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <span class="text-xl">☰</span>
+          <i class="fas fa-bars text-slate-700"></i>
         </button>
 
         <div class="flex-1"></div>
 
         <div class="flex items-center gap-4">
           <!-- Notifications -->
-          <button class="relative p-2 rounded-lg hover:bg-gray-100">
-            <span class="text-xl text-gray-600">🔔</span>
-            <span class="absolute top-1 right-1 w-2 h-2 bg-sky-500 rounded-full"></span>
+          <button class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <i class="fas fa-bell text-slate-600"></i>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
         </div>
       </header>
@@ -123,46 +125,44 @@ const menuItems = computed(() => {
   // Admin menu
   if (userRoles.includes('ROLE_ADMIN')) {
     return [
-      { path: '/admin/dashboard', label: 'Tổng quan', icon: '🏠' },
-      { path: '/admin/users', label: 'Người dùng', icon: '👥' },
-      { path: '/admin/customers', label: 'Khách hàng', icon: '👤' },
-      { path: '/admin/tables', label: 'Quản lý bàn', icon: '🪑' },
-      { path: '/admin/rooms', label: 'Quản lý phòng', icon: '🏢' },
-      { path: '/admin/dishes', label: 'Thực đơn', icon: '🍽️' },
-      { path: '/admin/categories', label: 'Danh mục', icon: '🏷️' },
-      { path: '/admin/orders', label: 'Đơn hàng', icon: '🛒' },
-      { path: '/admin/reservations', label: 'Đặt bàn', icon: '📅' },
-      { path: '/admin/promotions', label: 'Khuyến mãi', icon: '🎁' },
-      { path: '/admin/feedbacks', label: 'Phản hồi', icon: '💬' },
-      { path: '/admin/reports', label: 'Báo cáo', icon: '📊' },
+      { path: '/admin/dashboard', label: 'Tổng quan', icon: 'fa-home' },
+      { path: '/admin/users', label: 'Người dùng', icon: 'fa-users' },
+      { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
+      { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
+      { path: '/admin/dishes', label: 'Thực đơn', icon: 'fa-utensils' },
+      { path: '/admin/categories', label: 'Danh mục', icon: 'fa-tags' },
+      { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
+      { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
+      { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
+      { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },
     ]
   }
   
   // Manager menu
   if (userRoles.includes('ROLE_MANAGER')) {
     return [
-      { path: '/manager/dashboard', label: 'Tổng quan', icon: '🏠' },
-      { path: '/admin/customers', label: 'Khách hàng', icon: '👤' },
-      { path: '/admin/tables', label: 'Quản lý bàn', icon: '🪑' },
-      { path: '/admin/rooms', label: 'Quản lý phòng', icon: '🏢' },
-      { path: '/admin/dishes', label: 'Thực đơn', icon: '🍽️' },
-      { path: '/admin/categories', label: 'Danh mục', icon: '🏷️' },
-      { path: '/admin/orders', label: 'Đơn hàng', icon: '🛒' },
-      { path: '/admin/reservations', label: 'Đặt bàn', icon: '📅' },
-      { path: '/admin/promotions', label: 'Khuyến mãi', icon: '🎁' },
-      { path: '/admin/feedbacks', label: 'Phản hồi', icon: '💬' },
-      { path: '/admin/reports', label: 'Báo cáo', icon: '📊' },
+      { path: '/manager/dashboard', label: 'Tổng quan', icon: 'fa-home' },
+      { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
+      { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
+      { path: '/admin/dishes', label: 'Thực đơn', icon: 'fa-utensils' },
+      { path: '/admin/categories', label: 'Danh mục', icon: 'fa-tags' },
+      { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
+      { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
+      { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
+      { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },
     ]
   }
   
   // Staff menu
   if (userRoles.includes('ROLE_STAFF')) {
     return [
-      { path: '/staff/dashboard', label: 'Tổng quan', icon: '🏠' },
-      { path: '/admin/customers', label: 'Khách hàng', icon: '👤' },
-      { path: '/admin/tables', label: 'Quản lý bàn', icon: '🪑' },
-      { path: '/admin/reservations', label: 'Đặt bàn', icon: '📅' },
-      { path: '/admin/orders', label: 'Đơn hàng', icon: '🛒' },
+      { path: '/staff/dashboard', label: 'Tổng quan', icon: 'fa-home' },
+      { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
+      { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
+      { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
     ]
   }
   

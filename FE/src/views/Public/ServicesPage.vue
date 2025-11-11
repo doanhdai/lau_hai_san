@@ -1,35 +1,35 @@
 <template>
   <div>
     <!-- Hero -->
-    <section class="relative h-96 flex items-center justify-center bg-gradient-to-br from-sky-600 to-blue-700">
-      <div class="absolute inset-0 bg-black/20"></div>
-      <div class="relative z-10 text-center text-white px-4">
-        <h1 class="text-5xl md:text-6xl font-bold mb-4 animate-slide-up">Dịch Vụ Của Chúng Tôi</h1>
-        <p class="text-xl animate-slide-up animation-delay-200">Phục vụ mọi nhu cầu của quý khách</p>
+    <section class="relative h-64 flex items-center justify-center bg-slate-900">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="relative z-10 text-center text-white px-4 max-w-3xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-bold mb-3 tracking-tight">Dịch Vụ Của Chúng Tôi</h1>
+        <p class="text-base md:text-lg text-slate-200">Phục vụ mọi nhu cầu của quý khách</p>
       </div>
     </section>
 
     <!-- Services Grid -->
-    <section class="py-20 bg-white">
+    <section class="py-16 bg-white">
       <div class="container mx-auto px-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div 
             v-for="(service, index) in services" 
             :key="index"
             class="scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="bg-gradient-to-br from-white to-gray-50 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div class="flex items-start gap-6">
-                <div class="w-20 h-20 bg-gradient-to-br from-sky-500 to-sky-600 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 transform hover:rotate-12 transition-transform">
-                  {{ service.icon }}
+            <div class="bg-white border border-gray-200 p-6 rounded-lg hover:shadow-md transition-all duration-200">
+              <div class="flex items-start gap-4">
+                <div class="w-16 h-16 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i :class="['fas', service.icon]" class="text-white text-2xl"></i>
                 </div>
                 <div class="flex-1">
-                  <h3 class="text-2xl font-bold text-gray-900 mb-3">{{ service.title }}</h3>
-                  <p class="text-gray-600 leading-relaxed mb-4">{{ service.description }}</p>
-                  <ul class="space-y-2">
-                    <li v-for="(feature, idx) in service.features" :key="idx" class="flex items-center gap-2 text-gray-700">
-                      <span class="text-sky-600">✓</span>
+                  <h3 class="text-xl font-bold text-slate-900 mb-2">{{ service.title }}</h3>
+                  <p class="text-slate-600 text-sm leading-relaxed mb-3">{{ service.description }}</p>
+                  <ul class="space-y-1.5">
+                    <li v-for="(feature, idx) in service.features" :key="idx" class="flex items-center gap-2 text-slate-700 text-sm">
+                      <i class="fas fa-check text-slate-900 text-xs"></i>
                       <span>{{ feature }}</span>
                     </li>
                   </ul>
@@ -42,36 +42,36 @@
     </section>
 
     <!-- Special Packages -->
-    <section class="py-20 bg-gray-50">
+    <section class="py-16 bg-slate-50 border-y border-gray-200">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16 scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Gói Dịch Vụ Đặc Biệt</h2>
-          <div class="w-20 h-1 bg-sky-600 mx-auto"></div>
+        <div class="text-center mb-12 scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Gói Dịch Vụ Đặc Biệt</h2>
+          <div class="w-16 h-0.5 bg-slate-900 mx-auto"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div 
             v-for="(pkg, index) in packages" 
             :key="index"
             class="scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
-            <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105" :class="pkg.featured ? 'border-4 border-sky-600' : ''">
-              <div v-if="pkg.featured" class="bg-sky-600 text-white text-sm font-bold px-4 py-1 rounded-full inline-block mb-4">
+            <div class="bg-white border p-6 rounded-lg hover:shadow-lg transition-all duration-200" :class="pkg.featured ? 'border-slate-900 border-2' : 'border-gray-200'">
+              <div v-if="pkg.featured" class="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-md inline-block mb-3">
                 PHỔ BIẾN NHẤT
               </div>
-              <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ pkg.name }}</h3>
-              <div class="text-4xl font-bold text-sky-600 mb-6">
+              <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ pkg.name }}</h3>
+              <div class="text-3xl font-bold text-slate-900 mb-4">
                 {{ formatPrice(pkg.price) }}
-                <span class="text-lg text-gray-500 font-normal">/người</span>
+                <span class="text-base text-slate-500 font-normal">/người</span>
               </div>
-              <ul class="space-y-3 mb-8">
-                <li v-for="(item, idx) in pkg.includes" :key="idx" class="flex items-start gap-2">
-                  <span class="text-sky-600 mt-1">✓</span>
-                  <span class="text-gray-700">{{ item }}</span>
+              <ul class="space-y-2 mb-6">
+                <li v-for="(item, idx) in pkg.includes" :key="idx" class="flex items-start gap-2 text-sm">
+                  <i class="fas fa-check text-slate-900 mt-0.5 text-xs"></i>
+                  <span class="text-slate-700">{{ item }}</span>
                 </li>
               </ul>
-              <button class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-lg transition">
+              <button class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
                 Chọn Gói Này
               </button>
             </div>
@@ -81,11 +81,12 @@
     </section>
 
     <!-- Process -->
-    <section class="py-20 bg-white">
+    <section class="py-16 bg-white">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16 scroll-animate">
-          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Quy Trình Phục Vụ</h2>
-          <p class="text-xl text-gray-600">4 bước đơn giản để có bữa tiệc hoàn hảo</p>
+        <div class="text-center mb-12 scroll-animate">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Quy Trình Phục Vụ</h2>
+          <div class="w-16 h-0.5 bg-slate-900 mx-auto mb-3"></div>
+          <p class="text-slate-600">4 bước đơn giản để có bữa tiệc hoàn hảo</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -96,13 +97,13 @@
             :style="{ animationDelay: `${index * 100}ms` }"
           >
             <div class="relative mb-6">
-              <div class="w-24 h-24 bg-gradient-to-br from-sky-500 to-sky-600 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto transform hover:scale-110 transition-transform">
+              <div class="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto">
                 {{ index + 1 }}
               </div>
-              <div v-if="index < 3" class="hidden md:block absolute top-1/2 left-full w-full h-1 bg-gradient-to-r from-sky-600 to-sky-300 -translate-y-1/2"></div>
+              <div v-if="index < 3" class="hidden md:block absolute top-1/2 left-full w-full h-0.5 bg-slate-300 -translate-y-1/2"></div>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ step.title }}</h3>
-            <p class="text-gray-600">{{ step.description }}</p>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">{{ step.title }}</h3>
+            <p class="text-slate-600 text-sm">{{ step.description }}</p>
           </div>
         </div>
       </div>
@@ -115,7 +116,7 @@ import { onMounted } from 'vue'
 
 const services = [
   {
-    icon: '🍽️',
+    icon: 'fa-utensils',
     title: 'Tiệc Gia Đình & Bạn Bè',
     description: 'Không gian ấm cúng, riêng tư dành cho các buổi họp mặt gia đình, bạn bè. Phục vụ chu đáo, tận tình.',
     features: [
@@ -126,7 +127,7 @@ const services = [
     ]
   },
   {
-    icon: '💼',
+    icon: 'fa-briefcase',
     title: 'Tiệc Công Ty & Sự Kiện',
     description: 'Tổ chức các sự kiện công ty, hội nghị, team building với quy mô lớn, chuyên nghiệp.',
     features: [
@@ -137,7 +138,7 @@ const services = [
     ]
   },
   {
-    icon: '🎂',
+    icon: 'fa-birthday-cake',
     title: 'Tiệc Sinh Nhật & Kỷ Niệm',
     description: 'Tổ chức tiệc sinh nhật, kỷ niệm đáng nhớ với không gian lãng mạn, ấm áp.',
     features: [
@@ -148,7 +149,7 @@ const services = [
     ]
   },
   {
-    icon: '🚗',
+    icon: 'fa-truck',
     title: 'Giao Hàng Tận Nơi',
     description: 'Phục vụ giao hàng nhanh chóng, đảm bảo chất lượng món ăn như tại nhà hàng.',
     features: [

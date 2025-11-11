@@ -46,6 +46,10 @@ public class Customer {
     @Column(length = 500)
     private String notes; // Ghi chú về khách hàng
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user; // Liên kết với User (nếu có tài khoản)
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

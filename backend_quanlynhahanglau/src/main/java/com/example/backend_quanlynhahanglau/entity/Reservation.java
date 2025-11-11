@@ -28,10 +28,6 @@ public class Reservation {
     @JoinColumn(name = "table_id")
     private RestaurantTable table;
 
-    @ManyToOne
-    @JoinColumn(name = "room_id")
-    private Room room;
-
     @Column(nullable = false)
     private LocalDateTime reservationTime; // Thời gian đặt bàn
 
