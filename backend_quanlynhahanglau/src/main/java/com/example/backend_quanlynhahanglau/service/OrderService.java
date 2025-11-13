@@ -101,8 +101,8 @@ public class OrderService {
             if (reservation.getTable() != null) {
                 RestaurantTable table = reservation.getTable();
                 // Kiểm tra bàn có khả dụng không
-                if (table.getStatus() == TableStatus.MAINTENANCE) {
-                    throw new BadRequestException("Bàn đang trong quá trình bảo trì");
+                if (table.getActive() == null || !table.getActive()) {
+                    throw new BadRequestException("Bàn không khả dụng");
                 }
                 // Nếu bàn đang RESERVED hoặc AVAILABLE, có thể sử dụng cho reservation này
                 if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {

@@ -383,6 +383,91 @@ public class ReservationService {
     }
 
     @Transactional
+    public ReservationResponse updateReservationTable(Long id, Long tableId) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
+
+        // Lưu reservation ID để dùng trong lambda
+        final Long reservationId = reservation.getId();
+
+        // Kiểm tra reservation chưa bị hủy
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new BadRequestException("Không thể cập nhật bàn cho đặt bàn đã bị hủy");
+        }
+
+        // Nếu tableId là null, xóa bàn khỏi reservation
+        if (tableId == null) {
+            // Cập nhật lại trạng thái bàn cũ nếu có
+            if (reservation.getTable() != null && reservation.getTable().getStatus() == TableStatus.RESERVED) {
+                reservation.getTable().setStatus(TableStatus.AVAILABLE);
+                tableRepository.save(reservation.getTable());
+            }
+            reservation.setTable(null);
+            Reservation savedReservation = reservationRepository.save(reservation);
+            log.info("Removed table from reservation ID: {}", savedReservation.getId());
+            return mapToResponse(savedReservation);
+        }
+
+        // Tìm bàn mới
+        RestaurantTable newTable = tableRepository.findById(tableId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", tableId));
+
+        // Kiểm tra bàn có active không
+        if (newTable.getActive() == null || !newTable.getActive()) {
+            throw new BadRequestException("Bàn không khả dụng");
+        }
+
+        // Kiểm tra bàn có status phù hợp
+        if (newTable.getStatus() != TableStatus.AVAILABLE && newTable.getStatus() != TableStatus.RESERVED) {
+            throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + newTable.getStatus());
+        }
+
+        // Kiểm tra conflict với các reservation khác (trừ chính reservation hiện tại)
+        LocalDateTime reservationTime = reservation.getReservationTime();
+        LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
+        LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
+        
+        List<Reservation> conflictingReservations = reservationRepository
+                .findConflictingReservationsByTable(newTable.getId(), startTime, endTime);
+        
+        // Loại bỏ chính reservation hiện tại khỏi danh sách conflict
+        conflictingReservations = conflictingReservations.stream()
+                .filter(r -> !r.getId().equals(reservationId))
+                .collect(Collectors.toList());
+        
+        if (!conflictingReservations.isEmpty()) {
+            Reservation conflict = conflictingReservations.get(0);
+            throw new BadRequestException(
+                    String.format("Bàn %s đã được đặt vào lúc %s. Không thể đặt trong khoảng ±3 giờ (từ %s đến %s)",
+                            newTable.getTableNumber(),
+                            conflict.getReservationTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                            startTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                            endTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
+        }
+
+        // Cập nhật lại trạng thái bàn cũ nếu có và khác với bàn mới
+        if (reservation.getTable() != null && !reservation.getTable().getId().equals(tableId)) {
+            if (reservation.getTable().getStatus() == TableStatus.RESERVED) {
+                reservation.getTable().setStatus(TableStatus.AVAILABLE);
+                tableRepository.save(reservation.getTable());
+            }
+        }
+
+        // Gán bàn mới
+        reservation.setTable(newTable);
+        
+        // Cập nhật trạng thái bàn mới thành RESERVED nếu chưa phải
+        if (newTable.getStatus() == TableStatus.AVAILABLE) {
+            newTable.setStatus(TableStatus.RESERVED);
+            tableRepository.save(newTable);
+        }
+
+        Reservation savedReservation = reservationRepository.save(reservation);
+        log.info("Updated table for reservation ID: {} to table ID: {}", savedReservation.getId(), tableId);
+        return mapToResponse(savedReservation);
+    }
+
+    @Transactional
     public ReservationResponse cancelPublicReservation(Long id, Long userId) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));

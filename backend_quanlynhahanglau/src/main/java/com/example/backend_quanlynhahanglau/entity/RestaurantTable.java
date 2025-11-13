@@ -34,4 +34,10 @@ public class RestaurantTable {
 
     @Column(length = 500)
     private String notes;
+
+    @Column(name = "position_x")
+    private Integer positionX; // Vị trí X trên bản đồ (pixels)
+
+    @Column(name = "position_y")
+    private Integer positionY; // Vị trí Y trên bản đồ (pixels)
 }

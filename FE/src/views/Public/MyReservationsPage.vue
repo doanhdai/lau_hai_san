@@ -193,8 +193,8 @@
                       </div>
                     </div>
 
-                    <!-- Cancel Button - Only show for PENDING status -->
-                    <template v-if="reservation.status === 'PENDING'">
+                    <!-- Cancel Button - Show for PENDING and CONFIRMED status -->
+                    <template v-if="reservation.status === 'PENDING' || reservation.status === 'CONFIRMED'">
                       <button
                         @click="cancelReservation(reservation)"
                         class="px-4 py-2 bg-white border-2 border-red-300 text-red-600 hover:bg-red-50 text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
@@ -205,7 +205,7 @@
                     </template>
                     
                     <!-- Info message for non-cancellable reservations (only show if no rating button) -->
-                    <template v-else-if="!canRate(reservation) && reservation.status !== 'CANCELLED' && reservation.status !== 'PENDING'">
+                    <template v-else-if="!canRate(reservation) && reservation.status !== 'CANCELLED' && reservation.status !== 'PENDING' && reservation.status !== 'CONFIRMED'">
                       <div class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-600 text-sm rounded-lg flex items-center justify-center gap-2">
                         <i class="fas fa-info-circle"></i>
                         <span>{{ getCancelMessage(reservation.status) }}</span>
@@ -393,7 +393,6 @@ function getStatusText(status) {
 
 function getCancelMessage(status) {
   const messages = {
-    CONFIRMED: 'Đã xác nhận, không thể hủy',
     COMPLETED: 'Đã hoàn thành, không thể hủy',
     CANCELLED: 'Đã hủy'
   }
@@ -510,13 +509,13 @@ async function submitRating() {
 }
 
 async function cancelReservation(reservation) {
-  // Validate: Only PENDING reservations can be cancelled
+  // Validate: PENDING and CONFIRMED reservations can be cancelled
   if (!reservation) {
     notification.error('Không tìm thấy thông tin đặt bàn')
     return
   }
 
-  if (reservation.status !== 'PENDING') {
+  if (reservation.status !== 'PENDING' && reservation.status !== 'CONFIRMED') {
     notification.error(`Không thể hủy đặt bàn với trạng thái "${getStatusText(reservation.status)}"`)
     return
   }

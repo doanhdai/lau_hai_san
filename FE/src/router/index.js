@@ -93,7 +93,7 @@ const router = createRouter({
         {
           path: 'tables',
           name: 'Tables',
-          component: () => import('@/views/Tables/TableList.vue'),
+          component: () => import('@/views/Tables/TableMap.vue'),
           meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
         },
         {
@@ -124,6 +124,12 @@ const router = createRouter({
           path: 'reservations',
           name: 'Reservations',
           component: () => import('@/views/Reservations/ReservationList.vue'),
+          meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
+        },
+        {
+          path: 'reservations/checkin',
+          name: 'TableCheckIn',
+          component: () => import('@/views/Reservations/TableCheckIn.vue'),
           meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
         },
         {

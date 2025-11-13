@@ -19,7 +19,96 @@
               <p class="text-slate-600 text-sm">Vui lòng điền đầy đủ thông tin</p>
             </div>
 
-            <form @submit.prevent="submitReservation" class="space-y-6">
+            <!-- Step 1: Check Availability -->
+            <div v-if="!isTableAvailable" class="space-y-6">
+              <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-blue-800">
+                  <i class="fas fa-info-circle mr-2"></i>
+                  Vui lòng chọn số người, ngày và giờ để kiểm tra bàn còn trống
+                </p>
+              </div>
+
+              <!-- Reservation Details for Check -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Số người <span class="text-red-600">*</span>
+                  </label>
+                  <select v-model="form.guests" required class="input-field">
+                    <option value="">Chọn số người</option>
+                    <option v-for="n in 20" :key="n" :value="n">{{ n }} người</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Ngày <span class="text-red-600">*</span>
+                  </label>
+                  <input
+                    v-model="form.date"
+                    type="date"
+                    required
+                    :min="minDate"
+                    class="input-field"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Giờ <span class="text-red-600">*</span>
+                </label>
+                <select v-model="form.time" required class="input-field">
+                  <option value="">Chọn giờ</option>
+                  <option v-for="time in availableTimeSlots" :key="time" :value="time">{{ time }}</option>
+                </select>
+              </div>
+
+              <!-- Check Availability Button -->
+              <button
+                @click="checkAvailability"
+                :disabled="checkingAvailability || !form.guests || !form.date || !form.time"
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white px-5 py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
+              >
+                <span v-if="!checkingAvailability" class="flex items-center justify-center gap-2">
+                  <i class="fas fa-search"></i>
+                  <span>Kiểm tra bàn</span>
+                </span>
+                <span v-else class="flex items-center justify-center gap-2">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <span>Đang kiểm tra...</span>
+                </span>
+              </button>
+
+              <!-- Availability Message -->
+              <div v-if="availabilityChecked && !isTableAvailable" class="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-times-circle text-red-600"></i>
+                  <p class="text-sm font-medium text-red-800">
+                    Rất tiếc, không còn bàn trống cho thời gian này. Vui lòng chọn thời gian khác.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Full Form (only show if table is available) -->
+            <form v-else @submit.prevent="submitReservation" novalidate class="space-y-6">
+              <!-- Success Message for Availability -->
+              <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-check-circle text-green-600"></i>
+                  <p class="text-sm font-medium text-green-800">
+                    Còn bàn trống! Vui lòng điền thông tin để hoàn tất đặt bàn.
+                  </p>
+                </div>
+                <button
+                  @click="resetAvailabilityCheck"
+                  type="button"
+                  class="mt-2 text-xs text-green-700 hover:text-green-900 underline"
+                >
+                  Chọn thời gian khác
+                </button>
+              </div>
+
               <!-- Personal Info -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -58,41 +147,26 @@
                 />
               </div>
 
-              <!-- Reservation Details -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày <span class="text-red-600">*</span>
-                  </label>
-                  <input
-                    v-model="form.date"
-                    type="date"
-                    required
-                    :min="minDate"
-                    class="input-field"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Giờ <span class="text-red-600">*</span>
-                  </label>
-                  <select v-model="form.time" required class="input-field">
-                    <option value="">Chọn giờ</option>
-                    <option v-for="time in availableTimeSlots" :key="time" :value="time">{{ time }}</option>
-                  </select>
+              <!-- Reservation Details (Read-only) -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p class="text-xs text-gray-600 mb-3 font-semibold">Thông tin đặt bàn đã chọn:</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p class="text-xs text-gray-500 mb-1">Số người</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ form.guests }} người</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 mb-1">Ngày</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ formatDate(form.date) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 mb-1">Giờ</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ form.time }}</p>
+                  </div>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Số người <span class="text-red-600">*</span>
-                  </label>
-                  <select v-model="form.guests" required class="input-field">
-                    <option value="">Chọn số người</option>
-                    <option v-for="n in 20" :key="n" :value="n">{{ n }} người</option>
-                  </select>
-                </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Loại bàn</label>
                   <select v-model="form.tableType" class="input-field">
@@ -132,7 +206,7 @@
               <button
                 type="submit"
                 :disabled="submitting"
-                class="w-full btn-primary py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full btn-primary py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 hover:bg-slate-800 text-white px-5 rounded-lg shadow-sm"
               >
                 <span v-if="!submitting" class="flex items-center justify-center gap-2">
                   <i class="fas fa-check-circle"></i>
@@ -213,6 +287,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
+import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
 import { validateEmail, validatePhone } from '@/utils/validation'
 
@@ -234,6 +309,9 @@ const form = ref({
 const submitting = ref(false)
 const showSuccess = ref(false)
 const reservationCode = ref('')
+const isTableAvailable = ref(false)
+const checkingAvailability = ref(false)
+const availabilityChecked = ref(false)
 
 const minDate = computed(() => {
   const today = new Date()
@@ -288,11 +366,83 @@ watch(() => form.value.date, (newDate) => {
       form.value.time = ''
     }
   }
+  // Reset availability check when date changes
+  if (isTableAvailable.value) {
+    resetAvailabilityCheck()
+  }
 })
 
-async function submitReservation() {
+// Watch for time or guests changes and reset availability check
+watch([() => form.value.time, () => form.value.guests], () => {
+  if (isTableAvailable.value) {
+    resetAvailabilityCheck()
+  }
+})
+
+async function checkAvailability() {
   // Validate required fields
-  if (!form.value.name.trim()) {
+  if (!form.value.guests || !form.value.date || !form.value.time) {
+    notification.error('Vui lòng điền đầy đủ số người, ngày và giờ')
+    return
+  }
+
+  checkingAvailability.value = true
+  availabilityChecked.value = false
+  isTableAvailable.value = false
+
+  try {
+    // Format reservation time
+    const reservationTime = `${form.value.date}T${form.value.time}:00`
+    const numberOfGuests = parseInt(form.value.guests)
+
+    const response = await tableService.checkAvailability(reservationTime, numberOfGuests)
+    
+    availabilityChecked.value = true
+
+    if (response.success && response.data === true) {
+      isTableAvailable.value = true
+      notification.success('Còn bàn trống! Vui lòng điền thông tin để hoàn tất đặt bàn.')
+    } else {
+      isTableAvailable.value = false
+      notification.error('Rất tiếc, không còn bàn trống cho thời gian này. Vui lòng chọn thời gian khác.')
+    }
+  } catch (error) {
+    console.error('Check availability error:', error)
+    availabilityChecked.value = true
+    isTableAvailable.value = false
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể kiểm tra bàn. Vui lòng thử lại!'
+    notification.error(errorMessage)
+  } finally {
+    checkingAvailability.value = false
+  }
+}
+
+function resetAvailabilityCheck() {
+  isTableAvailable.value = false
+  availabilityChecked.value = false
+}
+
+function formatDate(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+async function submitReservation(e) {
+  // Prevent default form submission
+  if (e) {
+    e.preventDefault()
+  }
+  
+  console.log('submitReservation called', form.value)
+  
+  // Validate required fields
+  if (!form.value.name || !form.value.name.trim()) {
     notification.error('Vui lòng nhập họ và tên')
     return
   }
@@ -325,20 +475,23 @@ async function submitReservation() {
     return
   }
 
+  console.log('Validation passed, submitting...')
   submitting.value = true
   
   try {
     const reservationData = {
-      customerName: form.value.name,
-      customerPhone: form.value.phone,
-      customerEmail: form.value.email,
+      customerName: form.value.name.trim(),
+      customerPhone: form.value.phone.trim(),
+      customerEmail: form.value.email ? form.value.email.trim() : '',
       reservationDateTime: `${form.value.date}T${form.value.time}:00`,
       numberOfGuests: parseInt(form.value.guests),
       tableType: form.value.tableType,
-      notes: form.value.notes
+      notes: form.value.notes ? form.value.notes.trim() : ''
     }
 
+    console.log('Sending reservation data:', reservationData)
     const response = await reservationService.createPublic(reservationData)
+    console.log('Reservation response:', response)
     
     if (response.success) {
       notification.success('Đặt bàn thành công!')
@@ -361,10 +514,17 @@ async function submitReservation() {
       setTimeout(() => {
         router.push('/home')
       }, 1000)
+    } else {
+      notification.error(response.message || 'Có lỗi xảy ra, vui lòng thử lại!')
     }
   } catch (error) {
     console.error('Reservation error:', error)
-    const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại!'
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response,
+      data: error.response?.data
+    })
+    const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra, vui lòng thử lại!'
     notification.error(errorMessage)
   } finally {
     submitting.value = false
@@ -384,6 +544,7 @@ function resetForm() {
     acceptPromo: true
   }
   showSuccess.value = false
+  resetAvailabilityCheck()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 </script>

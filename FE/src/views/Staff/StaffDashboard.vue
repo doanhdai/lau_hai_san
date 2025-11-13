@@ -85,7 +85,7 @@
               class="bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-4 text-center transition-colors"
             >
               <div class="text-2xl mb-2">🪑</div>
-              <p class="text-sm font-medium text-green-700">Quản lý bàn</p>
+              <p class="text-sm font-medium text-green-700">Quản lý đặt bàn</p>
             </router-link>
             <router-link 
               to="/staff/customers"

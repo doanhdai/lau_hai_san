@@ -1,0 +1,896 @@
+<template>
+  <div class="space-y-3 animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">Sơ đồ bàn - Check-in</h1>
+        <p class="text-slate-600 mt-1 text-xs">Quản lý và check-in bàn</p>
+      </div>
+      
+      <!-- Legend - Chú thích màu sắc -->
+      <div class="bg-white border border-gray-200 rounded-lg p-3">
+        <p class="text-xs font-semibold text-slate-700 mb-2">Chú thích:</p>
+        <div class="flex flex-wrap gap-3">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded border-2 bg-green-500 border-green-300"></div>
+            <span class="text-xs text-slate-600">Trống</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded border-2 bg-red-400 border-red-400"></div>
+            <span class="text-xs text-slate-600">Có khách</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded border-2 bg-amber-500 border-amber-600"></div>
+            <span class="text-xs text-slate-600">Đã đặt</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
+            <span class="text-xs text-slate-600">Đang dọn</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center justify-center h-64">
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Content -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <!-- Table Map (Left - 2 columns) -->
+      <div class="lg:col-span-2">
+        <div class="bg-white border border-gray-200 rounded-lg p-3">
+          <div
+            ref="mapContainer"
+            class="relative bg-gray-50 rounded-lg border-2 border-dashed border-gray-300"
+            style="height: calc(100vh - 350px); min-height: 600px; background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px); background-size: 50px 50px;"
+          >
+            <!-- Tables with reservation info -->
+            <div
+              v-for="table in tablesWithReservations"
+              :key="table.id"
+              :style="{
+                position: 'absolute',
+                left: table.positionX + 'px',
+                top: table.positionY + 'px',
+                zIndex: selectedTable?.id === table.id ? 100 : 1
+              }"
+              class="cursor-pointer transition-all duration-200 hover:shadow-xl"
+              :class="{ 'ring-2 ring-blue-500 ring-offset-2': selectedTable?.id === table.id }"
+              @click="selectTable(table)"
+            >
+              <!-- Table Block -->
+              <div 
+                class="relative rounded-lg shadow-md border-2 min-w-[110px] min-h-[90px] flex flex-col items-center justify-center p-3"
+                :class="getTableBlockClass(table)"
+              >
+                <!-- Table Label (Top) -->
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                  <span class="bg-white px-2 py-0.5 rounded border-2 font-bold text-sm inline-block" :class="getTableLabelClass(table)">
+                    {{ table.tableNumber }}
+                  </span>
+                </div>
+
+                <!-- Check-in status (OCCUPIED) -->
+                <div v-if="table.status === 'OCCUPIED'" class="text-center mt-1">
+                  <p class="text-xs font-bold text-white">
+                    Có khách
+                  </p>
+                  <p class="text-xs text-white/90 mt-0.5">
+                    ({{ table.capacity }} chỗ)
+                  </p>
+                </div>
+                <!-- Bàn trống hoặc có reservation - chỉ hiển thị sức chứa -->
+                <div v-else class="text-center mt-1">
+                  <p class="text-xs text-white/90">
+                    ({{ table.capacity }} chỗ)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-if="tablesWithReservations.length === 0" class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center text-gray-400">
+                <i class="fas fa-chair text-6xl mb-3 opacity-50"></i>
+                <p class="text-lg font-medium">Chưa có bàn nào</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khách chờ check-in (Right - 1 column) -->
+      <div class="lg:col-span-1">
+        <div class="bg-white border border-gray-200 rounded-lg">
+          <div class="p-3 border-b border-gray-200 bg-slate-50">
+            <h3 class="text-base font-bold text-slate-900">
+              Khách chờ check-in
+            </h3>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="loading" class="p-6 text-center">
+            <div class="inline-block w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+
+          <!-- Reservations List -->
+          <div v-else class="p-3 space-y-2 max-h-[calc(100vh-350px)] overflow-y-auto">
+            <div
+              v-for="reservation in upcomingReservations"
+              :key="reservation.id"
+              class="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
+            >
+              <!-- Customer Name -->
+              <div class="flex items-start justify-between mb-1.5">
+                <h4 class="text-sm font-bold text-slate-900">{{ reservation.customerName }}</h4>
+                <span v-if="reservation.tableNumber" class="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  Bàn {{ reservation.tableNumber }}
+                </span>
+              </div>
+
+              <!-- Reservation Details -->
+              <div class="text-xs text-slate-600 mb-2">
+                <p>
+                  {{ formatReservationTime(reservation.reservationTime || reservation.reservationDateTime) }} 
+                  ({{ reservation.numberOfGuests }} khách)
+                </p>
+              </div>
+
+              <!-- Countdown Timer -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-500">Khách hàng sẽ đến sau</span>
+                <div class="bg-orange-100 border border-orange-200 rounded px-2 py-1">
+                  <span class="text-base font-bold text-orange-600 font-mono">
+                    {{ getCountdown(reservation.reservationTime || reservation.reservationDateTime) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="upcomingReservations.length === 0" class="text-center py-8">
+              <i class="fas fa-calendar-check text-3xl text-gray-300 mb-2"></i>
+              <p class="text-xs text-slate-600">Không có khách chờ check-in</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Management Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showTableModal && tableModalTable"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+        @click.self="closeTableModal"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-auto">
+          <!-- Modal Header -->
+          <div class="bg-slate-900 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+            <h3 class="text-lg font-bold">Quản lý bàn {{ tableModalTable.tableNumber }}</h3>
+            <button @click="closeTableModal" class="text-white/80 hover:text-white transition-colors">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+
+          <div class="p-6 space-y-6">
+            <!-- Thông tin bàn -->
+            <div>
+              <h4 class="text-sm font-semibold text-slate-900 mb-3">Thông tin bàn</h4>
+              <div class="bg-slate-50 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">Số bàn:</span>
+                  <span class="text-sm font-semibold text-slate-900">{{ tableModalTable.tableNumber }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">Sức chứa:</span>
+                  <span class="text-sm font-semibold text-slate-900">{{ tableModalTable.capacity }} người</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">Trạng thái hiện tại:</span>
+                  <span :class="getTableStatusBadgeClass(tableModalTable.status)" class="text-xs font-semibold px-2 py-1 rounded-full">
+                    {{ getTableStatusLabel(tableModalTable.status) }}
+                  </span>
+                </div>
+                <div v-if="tableModalTable.location" class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">Vị trí:</span>
+                  <span class="text-sm font-semibold text-slate-900">{{ tableModalTable.location }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nút điều hướng đến Order (nếu bàn đã check-in) -->
+            <div v-if="tableModalTable.status === 'OCCUPIED'" class="border-t border-gray-200 pt-6">
+              <button
+                @click="goToOrderPage"
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-utensils"></i>
+                <span>Xem đơn hàng</span>
+              </button>
+            </div>
+
+            <!-- Chỉnh trạng thái bàn -->
+            <div class="border-t border-gray-200 pt-6">
+              <h4 class="text-sm font-semibold text-slate-900 mb-3">Chỉnh trạng thái bàn</h4>
+              <div class="space-y-3">
+                <div class="flex gap-2">
+                  <label
+                    :class="[
+                      'flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all flex items-center justify-center gap-2',
+                      tableStatus === 'AVAILABLE'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                    ]"
+                  >
+                    <input
+                      type="radio"
+                      value="AVAILABLE"
+                      v-model="tableStatus"
+                      class="w-3 h-3 text-green-600 focus:ring-1 focus:ring-green-500"
+                    />
+                    <span>Trống</span>
+                  </label>
+                  <label
+                    :class="[
+                      'flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all flex items-center justify-center gap-2',
+                      tableStatus === 'OCCUPIED'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                    ]"
+                  >
+                    <input
+                      type="radio"
+                      value="OCCUPIED"
+                      v-model="tableStatus"
+                      class="w-3 h-3 text-red-600 focus:ring-1 focus:ring-red-500"
+                    />
+                    <span>Check-in</span>
+                  </label>
+                  <label
+                    :class="[
+                      'flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all flex items-center justify-center gap-2',
+                      tableStatus === 'CLEANING'
+                        ? 'bg-gray-500 text-white'
+                        : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                    ]"
+                  >
+                    <input
+                      type="radio"
+                      value="CLEANING"
+                      v-model="tableStatus"
+                      class="w-3 h-3 text-gray-600 focus:ring-1 focus:ring-gray-500"
+                    />
+                    <span>Đang dọn</span>
+                  </label>
+                </div>
+                <button
+                  @click="handleUpdateStatus"
+                  :disabled="updatingStatus || tableStatus === tableModalTable.status"
+                  class="w-full bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="!updatingStatus">Cập nhật trạng thái</span>
+                  <span v-else class="flex items-center justify-center gap-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Đang cập nhật...
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Reservation Detail Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showDetailModal && selectedReservation"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="showDetailModal = false"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-slate-900">Chi tiết đặt bàn</h3>
+              <button @click="showDetailModal = false" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Khách hàng</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ selectedReservation.customerName }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Số điện thoại</p>
+                  <p class="text-sm text-slate-700">{{ selectedReservation.customerPhone }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Ngày giờ</p>
+                  <p class="text-sm text-slate-700">{{ formatDateTime(selectedReservation.reservationTime || selectedReservation.reservationDateTime) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Số người</p>
+                  <p class="text-sm text-slate-700">{{ selectedReservation.numberOfGuests }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Bàn</p>
+                  <p class="text-sm text-slate-700">{{ selectedReservation.tableNumber || 'Chưa chọn' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Trạng thái</p>
+                  <span :class="getStatusBadgeClass(selectedReservation.status)">
+                    {{ getStatusLabel(selectedReservation.status) }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="selectedReservation.notes">
+                <p class="text-xs text-slate-500 mb-1">Ghi chú</p>
+                <p class="text-sm text-slate-700">{{ selectedReservation.notes }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { reservationService } from '@/services/reservationService'
+import { tableService } from '@/services/tableService'
+import { useNotificationStore } from '@/stores/notification'
+
+const router = useRouter()
+const notification = useNotificationStore()
+
+const loading = ref(false)
+const reservations = ref([])
+const tables = ref([])
+const selectedTable = ref(null)
+const selectedReservation = ref(null)
+const showDetailModal = ref(false)
+const showTableModal = ref(false)
+const tableModalTable = ref(null)
+const tableStatus = ref('AVAILABLE')
+const updatingStatus = ref(false)
+const mapContainer = ref(null)
+const currentTime = ref(new Date())
+
+// Merge tables with reservations
+const tablesWithReservations = computed(() => {
+  if (!Array.isArray(tables.value) || tables.value.length === 0) {
+    return []
+  }
+  
+  if (!Array.isArray(reservations.value)) {
+    return tables.value.map(table => ({
+      ...table,
+      reservation: null
+    }))
+  }
+  
+  const now = new Date()
+  
+  return tables.value.map(table => {
+    if (!table || !table.id) {
+      return null
+    }
+    
+    // Find active reservation for this table that is not in the past
+    const reservation = reservations.value.find(r => {
+      if (!r || r.tableId !== table.id) {
+        return false
+      }
+      
+      // Only show PENDING or CONFIRMED reservations
+      if (r.status !== 'PENDING' && r.status !== 'CONFIRMED') {
+        return false
+      }
+      
+      // Check if reservation time is in the future or today
+      const reservationTime = r.reservationTime || r.reservationDateTime
+      if (!reservationTime) {
+        return false
+      }
+      
+      try {
+        const reservationDate = new Date(reservationTime)
+        // Only show reservations that are today or in the future
+        return reservationDate >= now
+      } catch (error) {
+        console.error('Error parsing reservation time:', error)
+        return false
+      }
+    })
+    
+    return {
+      ...table,
+      reservation: reservation || null
+    }
+  }).filter(Boolean) // Remove any null entries
+})
+
+// Get upcoming reservations (future reservations)
+const upcomingReservations = computed(() => {
+  if (!Array.isArray(reservations.value)) {
+    return []
+  }
+  
+  const now = currentTime.value
+  
+  return reservations.value
+    .filter(r => {
+      if (!r) return false
+      
+      // Only show PENDING or CONFIRMED reservations
+      if (r.status !== 'PENDING' && r.status !== 'CONFIRMED') {
+        return false
+      }
+      
+      // Only show future reservations
+      const reservationTime = r.reservationTime || r.reservationDateTime
+      if (!reservationTime) return false
+      
+      try {
+        const reservationDate = new Date(reservationTime)
+        return reservationDate >= now
+      } catch (error) {
+        return false
+      }
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.reservationTime || a.reservationDateTime)
+      const timeB = new Date(b.reservationTime || b.reservationDateTime)
+      return timeA - timeB
+    })
+})
+
+onMounted(() => {
+  loadData()
+  
+  // Update current time every second for countdown
+  const timer = setInterval(() => {
+    currentTime.value = new Date()
+  }, 1000)
+  
+  // Cleanup on unmount
+  onUnmounted(() => {
+    clearInterval(timer)
+  })
+})
+
+async function loadData() {
+  loading.value = true
+  try {
+    const [reservationsRes, tablesRes] = await Promise.all([
+      reservationService.getAll(),
+      tableService.getAll()
+    ])
+    
+    // Handle reservations response - ensure it's always an array
+    if (reservationsRes && reservationsRes.success && reservationsRes.data) {
+      reservations.value = Array.isArray(reservationsRes.data) ? reservationsRes.data : []
+    } else if (Array.isArray(reservationsRes?.data)) {
+      reservations.value = reservationsRes.data
+    } else {
+      reservations.value = []
+    }
+    
+    // Handle tables response - ensure it's always an array
+    let tablesData = []
+    if (tablesRes && tablesRes.success && tablesRes.data) {
+      tablesData = Array.isArray(tablesRes.data) ? tablesRes.data : []
+    } else if (Array.isArray(tablesRes?.data)) {
+      tablesData = tablesRes.data
+    } else if (tablesRes?.data?.data && Array.isArray(tablesRes.data.data)) {
+      tablesData = tablesRes.data.data
+    } else {
+      tablesData = []
+    }
+    
+    // Initialize table positions if not set
+    tables.value = tablesData.map((table, index) => {
+      if (!table || !table.id) {
+        return null
+      }
+      
+      let positionX = table.positionX
+      let positionY = table.positionY
+      
+      if (positionX === null || positionX === undefined || positionY === null || positionY === undefined) {
+        const cols = 5
+        const row = Math.floor(index / cols)
+        const col = index % cols
+        const spacing = 140
+        positionX = 50 + (col * spacing)
+        positionY = 50 + (row * spacing)
+      }
+      
+      return {
+        ...table,
+        positionX,
+        positionY,
+        allowOnlineReservation: table.allowOnlineReservation ?? false
+      }
+    }).filter(Boolean) // Remove any null entries
+  } catch (error) {
+    console.error('Error loading data in TableCheckIn:', error)
+    notification.error('Không thể tải dữ liệu: ' + (error.response?.data?.message || error.message))
+    // Set empty arrays on error to prevent blank screen
+    reservations.value = []
+    tables.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function selectTable(table) {
+  // Open table management modal when clicking on table
+  openTableModal(table)
+}
+
+function viewReservationDetail(reservation) {
+  selectedReservation.value = { ...reservation }
+  showDetailModal.value = true
+}
+
+async function confirmReservation(reservation) {
+  if (!confirm(`Xác nhận đặt bàn cho "${reservation.customerName}"?`)) return
+  
+  try {
+    await reservationService.confirm(reservation.id)
+    notification.success('Đã xác nhận đặt bàn')
+    loadData()
+  } catch (error) {
+    notification.error('Không thể xác nhận đặt bàn')
+  }
+}
+
+async function cancelReservation(reservation) {
+  if (!confirm(`Bạn có chắc muốn hủy đặt bàn cho "${reservation.customerName}"?`)) return
+  
+  try {
+    await reservationService.cancel(reservation.id)
+    notification.success('Đã hủy đặt bàn')
+    loadData()
+  } catch (error) {
+    notification.error('Không thể hủy đặt bàn')
+  }
+}
+
+function createOrderForTable(table) {
+  if (!table.reservation) {
+    notification.error('Bàn chưa có đặt bàn')
+    return
+  }
+  createOrder(table.reservation)
+}
+
+function createOrder(reservation) {
+  // Navigate to create order page with reservation pre-selected
+  router.push({
+    path: '/admin/orders/create',
+    query: { reservationId: reservation.id }
+  })
+}
+
+function goToOrderPage() {
+  if (!tableModalTable.value) {
+    notification.error('Không tìm thấy thông tin bàn')
+    return
+  }
+  
+  // Navigate to orders page, optionally filter by tableId if needed
+  router.push({
+    path: '/admin/orders/create',
+    query: { tableId: tableModalTable.value.id }
+  })
+  
+  // Close modal after navigation
+  closeTableModal()
+}
+
+function openTableModal(table) {
+  tableModalTable.value = { ...table }
+  tableStatus.value = table.status || 'AVAILABLE'
+  showTableModal.value = true
+}
+
+function closeTableModal() {
+  showTableModal.value = false
+  tableModalTable.value = null
+  tableStatus.value = 'AVAILABLE'
+}
+
+async function handleUpdateStatus() {
+  if (!tableModalTable.value) {
+    notification.error('Không tìm thấy thông tin bàn')
+    return
+  }
+
+  if (tableStatus.value === tableModalTable.value.status) {
+    notification.info('Trạng thái bàn không thay đổi')
+    return
+  }
+
+  updatingStatus.value = true
+  try {
+    await tableService.updateStatus(tableModalTable.value.id, tableStatus.value)
+    
+    const statusLabel = getTableStatusLabel(tableStatus.value)
+    notification.success(`Đã cập nhật trạng thái bàn thành "${statusLabel}"`)
+    closeTableModal()
+    loadData()
+  } catch (error) {
+    console.error('Update status error:', error)
+    notification.error('Không thể cập nhật trạng thái: ' + (error.response?.data?.message || error.message))
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+function getTableStatusLabel(status) {
+  const labels = {
+    'AVAILABLE': 'Trống',
+    'RESERVED': 'Đã đặt',
+    'OCCUPIED': 'Check-in',
+    'CLEANING': 'Đang dọn',
+    'ONLINE': 'Online'
+  }
+  return labels[status] || status
+}
+
+function getTableStatusBadgeClass(status) {
+  const classes = {
+    'AVAILABLE': 'bg-green-100 text-green-800',
+    'RESERVED': 'bg-amber-100 text-amber-800',
+    'OCCUPIED': 'bg-red-100 text-red-800',
+    'CLEANING': 'bg-gray-100 text-gray-800',
+    'ONLINE': 'bg-blue-100 text-blue-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+async function checkInTable(table) {
+  if (!table.reservation) {
+    notification.error('Bàn chưa có đặt bàn')
+    return
+  }
+  
+  if (table.reservation.status !== 'CONFIRMED') {
+    notification.error('Chỉ có thể check-in bàn đã được xác nhận')
+    return
+  }
+  
+  if (!confirm(`Check-in bàn ${table.tableNumber} cho khách "${table.reservation.customerName}"?`)) return
+  
+  try {
+    // Update table status to OCCUPIED
+    await tableService.updateStatus(table.id, 'OCCUPIED')
+    
+    notification.success(`Đã check-in bàn ${table.tableNumber}`)
+    loadData()
+  } catch (error) {
+    console.error('Check-in error:', error)
+    notification.error('Không thể check-in bàn')
+  }
+}
+
+/**
+ * Table styling based on table status
+ * Mỗi status có một màu riêng để dễ phân biệt:
+ * - AVAILABLE (Trống): Xanh lá - Bàn trống, chưa có khách
+ * - OCCUPIED (Có khách/Check-in): Đỏ nhạt - Bàn đã check-in, đang có khách
+ * - RESERVED (Đã đặt): Vàng - Bàn đã được đặt nhưng chưa check-in
+ * - CLEANING (Đang dọn): Xám đậm - Bàn đang được dọn dẹp
+ * - ONLINE (Online): Xanh dương - Bàn cho phép đặt online
+ */
+function getTableBlockClass(table) {
+  // Kiểm tra status của bàn trước
+  const tableStatus = table.status
+  
+  // AVAILABLE: Trống - Màu xanh lá
+  if (tableStatus === 'AVAILABLE') {
+    return 'bg-green-500 border-green-300'
+  }
+  
+  // OCCUPIED: Có khách/Check-in - Màu đỏ nhạt
+  if (tableStatus === 'OCCUPIED') {
+    return 'bg-red-400 border-red-400'
+  }
+  
+  // RESERVED: Đã đặt - Màu vàng
+  if (tableStatus === 'RESERVED') {
+    return 'bg-amber-500 border-amber-600'
+  }
+  
+  // CLEANING: Đang dọn - Màu xám đậm
+  if (tableStatus === 'CLEANING') {
+    return 'bg-gray-600 border-gray-700'
+  }
+  
+  // ONLINE: Online - Màu xanh dương
+  if (tableStatus === 'ONLINE') {
+    return 'bg-blue-500 border-blue-600'
+  }
+  
+  // Nếu bàn có reservation nhưng chưa có status rõ ràng, dựa vào reservation status
+  if (table.reservation) {
+    const reservationStatus = table.reservation.status
+    const classes = {
+      PENDING: 'bg-amber-500 border-amber-600',    // Chờ xác nhận - Vàng
+      CONFIRMED: 'bg-blue-500 border-blue-600',    // Đã xác nhận - Xanh dương
+      COMPLETED: 'bg-green-500 border-green-600',   // Hoàn thành - Xanh lá
+      CANCELLED: 'bg-gray-400 border-gray-500'      // Đã hủy - Xám
+    }
+    return classes[reservationStatus] || 'bg-green-700 border-green-300'
+  }
+  
+  // Mặc định: Bàn trống - Xanh lá nhạt
+  return 'bg-green-700 border-green-300'
+}
+
+/**
+ * Table label styling based on table status
+ * Màu label phải khớp với màu block của bàn
+ */
+function getTableLabelClass(table) {
+  // Kiểm tra status của bàn trước
+  const tableStatus = table.status
+  
+  // AVAILABLE: Trống - Xanh lá
+  if (tableStatus === 'AVAILABLE') {
+    return 'border-green-400 text-green-700'
+  }
+  
+  // OCCUPIED: Có khách/Check-in - Đỏ nhạt
+  if (tableStatus === 'OCCUPIED') {
+    return 'border-red-400 text-red-700'
+  }
+  
+  // RESERVED: Đã đặt - Vàng
+  if (tableStatus === 'RESERVED') {
+    return 'border-amber-600 text-amber-700'
+  }
+  
+  // CLEANING: Đang dọn - Xám đậm
+  if (tableStatus === 'CLEANING') {
+    return 'border-gray-700 text-gray-800'
+  }
+  
+  // ONLINE: Online - Xanh dương
+  if (tableStatus === 'ONLINE') {
+    return 'border-blue-600 text-blue-700'
+  }
+  
+  // Nếu bàn có reservation nhưng chưa có status rõ ràng, dựa vào reservation status
+  if (table.reservation) {
+    const reservationStatus = table.reservation.status
+    const classes = {
+      PENDING: 'border-amber-600 text-amber-700',    // Chờ xác nhận - Vàng
+      CONFIRMED: 'border-blue-600 text-blue-700',    // Đã xác nhận - Xanh dương
+      COMPLETED: 'border-green-600 text-green-700',  // Hoàn thành - Xanh lá
+      CANCELLED: 'border-gray-500 text-gray-700'     // Đã hủy - Xám
+    }
+    return classes[reservationStatus] || 'border-green-400 text-green-700'
+  }
+  
+  // Mặc định: Xanh lá
+  return 'border-green-400 text-green-700'
+}
+
+function getReservationBadgeColor(status) {
+  const colors = {
+    PENDING: 'text-amber-700',
+    CONFIRMED: 'text-blue-700',
+    COMPLETED: 'text-green-700',
+    CANCELLED: 'text-gray-700'
+  }
+  return colors[status] || 'text-gray-700'
+}
+
+function getStatusBadgeClass(status) {
+  const classes = {
+    'PENDING': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800',
+    'CONFIRMED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800',
+    'COMPLETED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800',
+    'CANCELLED': 'px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800'
+  }
+  return classes[status] || 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'PENDING': 'Chờ xác nhận',
+    'CONFIRMED': 'Đã xác nhận',
+    'COMPLETED': 'Hoàn thành',
+    'CANCELLED': 'Đã hủy'
+  }
+  return labels[status] || status
+}
+
+function formatDateTime(datetime) {
+  if (!datetime) return '-'
+  try {
+    const date = new Date(datetime)
+    if (isNaN(date.getTime())) return '-'
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('Error formatting datetime:', error)
+    return '-'
+  }
+}
+
+function formatTime(datetime) {
+  if (!datetime) return ''
+  try {
+    const date = new Date(datetime)
+    if (isNaN(date.getTime())) return ''
+    return date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('Error formatting time:', error)
+    return ''
+  }
+}
+
+function formatReservationTime(datetime) {
+  if (!datetime) return ''
+  try {
+    const date = new Date(datetime)
+    if (isNaN(date.getTime())) return ''
+    const timeStr = date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    const dateStr = date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+    return `${timeStr} ${dateStr}`
+  } catch (error) {
+    console.error('Error formatting reservation time:', error)
+    return ''
+  }
+}
+
+function getCountdown(reservationTime) {
+  if (!reservationTime) return '00:00:00'
+  
+  try {
+    const target = new Date(reservationTime)
+    const now = currentTime.value
+    const diff = target - now
+    
+    if (diff <= 0) {
+      return '00:00:00'
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+    
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  } catch (error) {
+    console.error('Error calculating countdown:', error)
+    return '00:00:00'
+  }
+}
+</script>
+

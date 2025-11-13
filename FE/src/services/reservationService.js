@@ -72,5 +72,10 @@ export const reservationService = {
       console.error('Error in getByUserId:', error)
       throw error
     }
+  },
+
+  async assignTable(id, tableId) {
+    const response = await api.put(`/reservations/${id}/table?tableId=${tableId}`)
+    return response.data
   }
 }

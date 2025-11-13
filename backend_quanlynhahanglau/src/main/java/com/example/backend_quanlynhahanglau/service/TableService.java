@@ -50,23 +50,16 @@ public class TableService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy danh sách bàn khả dụng theo thời gian, loại bỏ các bàn đã có reservation trong khoảng ±3 giờ
-     * Ví dụ: Nếu bàn 1 đã được đặt lúc 7h, thì từ 4h01 đến 9h59 bàn 1 sẽ không được hiển thị
-     * @param reservationTime Thời gian đặt bàn
-     * @param numberOfGuests Số lượng khách (optional, để lọc bàn phù hợp)
-     * @return Danh sách bàn khả dụng
-     */
+
     @Transactional(readOnly = true)
     public List<TableResponse> getAvailableTablesByTime(LocalDateTime reservationTime, Integer numberOfGuests) {
-        // Tính khoảng thời gian kiểm tra: ±3 giờ từ thời gian đặt bàn
-        // Ví dụ: đặt lúc 7h thì kiểm tra từ 4h01 đến 9h59
+
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Lấy tất cả bàn có trạng thái AVAILABLE và active
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
-                .filter(table -> table.getActive() && table.getStatus() == TableStatus.AVAILABLE)
+                .filter(table -> table.getActive() && 
+                        (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED || table.getStatus() == TableStatus.ONLINE))
                 .collect(Collectors.toList());
 
         // Lọc các bàn không có conflict với reservation và phù hợp với số lượng khách
@@ -77,7 +70,6 @@ public class TableService {
                         return false;
                     }
                     
-                    // Kiểm tra xem bàn này có reservation nào trong khoảng thời gian ±3h không
                     List<com.example.backend_quanlynhahanglau.entity.Reservation> conflicts = 
                             reservationRepository.findConflictingReservationsByTable(
                                     table.getId(), startTime, endTime);
@@ -101,6 +93,8 @@ public class TableService {
                 .status(request.getStatus() != null ? request.getStatus() : TableStatus.AVAILABLE)
                 .location(request.getLocation())
                 .notes(request.getNotes())
+                .positionX(request.getPositionX())
+                .positionY(request.getPositionY())
                 .active(true)
                 .build();
 
@@ -123,6 +117,8 @@ public class TableService {
         table.setStatus(request.getStatus());
         table.setLocation(request.getLocation());
         table.setNotes(request.getNotes());
+        table.setPositionX(request.getPositionX());
+        table.setPositionY(request.getPositionY());
 
         table = tableRepository.save(table);
         return mapToResponse(table);
@@ -143,6 +139,46 @@ public class TableService {
         tableRepository.save(table);
     }
 
+    @Transactional
+    public TableResponse updateTablePosition(Long id, Integer positionX, Integer positionY) {
+        RestaurantTable table = tableRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
+        table.setPositionX(positionX);
+        table.setPositionY(positionY);
+        table = tableRepository.save(table);
+        return mapToResponse(table);
+    }
+
+    @Transactional(readOnly = true)
+    public Boolean checkTableAvailability(LocalDateTime reservationTime, Integer numberOfGuests) {
+        // Tính khoảng thời gian kiểm tra: ±3 giờ từ thời gian đặt bàn
+        LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
+        LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
+
+        // Lấy tất cả bàn có trạng thái AVAILABLE hoặc RESERVED và active
+        List<RestaurantTable> allTables = tableRepository.findAll().stream()
+                .filter(table -> table.getActive() && 
+                        (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED))
+                .collect(Collectors.toList());
+
+        // Kiểm tra xem có ít nhất 1 bàn khả dụng không
+        return allTables.stream()
+                .anyMatch(table -> {
+                    // Kiểm tra số lượng khách nếu có
+                    if (numberOfGuests != null && table.getCapacity() < numberOfGuests) {
+                        return false;
+                    }
+                    
+                    // Kiểm tra xem bàn này có reservation nào trong khoảng thời gian ±3h không
+                    List<com.example.backend_quanlynhahanglau.entity.Reservation> conflicts = 
+                            reservationRepository.findConflictingReservationsByTable(
+                                    table.getId(), startTime, endTime);
+                    
+                    // Trả về true nếu không có conflict
+                    return conflicts.isEmpty();
+                });
+    }
+
     private TableResponse mapToResponse(RestaurantTable table) {
         return TableResponse.builder()
                 .id(table.getId())
@@ -152,6 +188,8 @@ public class TableService {
                 .location(table.getLocation())
                 .active(table.getActive())
                 .notes(table.getNotes())
+                .positionX(table.getPositionX())
+                .positionY(table.getPositionY())
                 .build();
     }
 }

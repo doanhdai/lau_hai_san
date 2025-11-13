@@ -45,6 +45,14 @@ public class TableController {
         return ResponseEntity.ok(ApiResponse.success(tables));
     }
 
+    @GetMapping("/check-availability")
+    public ResponseEntity<ApiResponse<Boolean>> checkTableAvailability(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reservationTime,
+            @RequestParam(required = false) Integer numberOfGuests) {
+        Boolean isAvailable = tableService.checkTableAvailability(reservationTime, numberOfGuests);
+        return ResponseEntity.ok(ApiResponse.success(isAvailable));
+    }
+
     @GetMapping("/suitable")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<TableResponse>>> getSuitableTables(@RequestParam Integer numberOfGuests) {
@@ -91,5 +99,15 @@ public class TableController {
             @RequestParam TableStatus status) {
         tableService.updateTableStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái bàn thành công", null));
+    }
+
+    @PutMapping("/{id:\\d+}/position")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<TableResponse>> updateTablePosition(
+            @PathVariable Long id,
+            @RequestParam Integer positionX,
+            @RequestParam Integer positionY) {
+        TableResponse table = tableService.updateTablePosition(id, positionX, positionY);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật vị trí bàn thành công", table));
     }
 }

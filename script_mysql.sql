@@ -395,5 +395,18 @@ ALTER TABLE customers
 MODIFY COLUMN user_id BIGINT NULL 
 COMMENT 'Liên kết với bảng users - User ID của khách hàng (nếu có tài khoản)';
 
+ALTER TABLE restaurant_tables 
+ADD COLUMN position_x INTEGER DEFAULT NULL,
+ADD COLUMN position_y INTEGER DEFAULT NULL;
+
+-- Comment cho các cột
+ALTER TABLE restaurant_tables 
+MODIFY COLUMN position_x INTEGER DEFAULT NULL 
+COMMENT 'Vị trí X trên bản đồ (pixels)';
+
+ALTER TABLE restaurant_tables 
+MODIFY COLUMN position_y INTEGER DEFAULT NULL 
+COMMENT 'Vị trí Y trên bản đồ (pixels)';
+
 
 

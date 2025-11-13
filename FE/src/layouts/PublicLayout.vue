@@ -38,12 +38,19 @@
             >
               Lịch sử
             </router-link>
+            <router-link 
+              to="/reservation" 
+              class="font-medium text-sm transition-all duration-200"
+              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
+            >
+              Đặt Bàn Ngay
+            </router-link>
             
             <!-- Login/Logout buttons -->
             <router-link 
               v-if="!isAuthenticated"
               to="/login" 
-              class="font-medium text-sm transition-all duration-200"
+              class="font-medium text-sm transition-all duration-200 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg shadow-sm"
               :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               Đăng nhập
@@ -58,12 +65,7 @@
               Đăng xuất
             </button>
             
-            <router-link 
-              to="/reservation" 
-              class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-            >
-              Đặt Bàn Ngay
-            </router-link>
+
           </div>
 
           <!-- Mobile Menu Button -->

@@ -9,7 +9,7 @@
       <div class="flex items-center justify-center h-16 border-b border-slate-800 flex-shrink-0">
         <h1 class="text-xl font-bold flex items-center gap-2">
           <i class="fas fa-bowl-food text-2xl"></i>
-          <span>Hotpot Manager</span>
+          <span>HN DHD</span>
         </h1>
       </div>
 
@@ -133,6 +133,7 @@ const menuItems = computed(() => {
       { path: '/admin/categories', label: 'Danh mục', icon: 'fa-tags' },
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
       { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
       { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
       { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },
@@ -149,6 +150,7 @@ const menuItems = computed(() => {
       { path: '/admin/categories', label: 'Danh mục', icon: 'fa-tags' },
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
       { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
       { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
       { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },
@@ -162,6 +164,7 @@ const menuItems = computed(() => {
       { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
       { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
+      { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
     ]
   }
@@ -182,6 +185,14 @@ const userRole = computed(() => {
 })
 
 function isActive(path) {
+  // Exact match for check-in path to avoid activating both reservations and check-in
+  if (path === '/admin/reservations/checkin') {
+    return route.path === path
+  }
+  // For other paths, use startsWith but ensure it's not a sub-path conflict
+  if (path === '/admin/reservations') {
+    return route.path.startsWith(path) && route.path !== '/admin/reservations/checkin'
+  }
   return route.path.startsWith(path)
 }
 

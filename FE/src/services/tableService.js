@@ -44,5 +44,15 @@ export const tableService = {
   async updateStatus(id, status) {
     const response = await api.put(`/tables/${id}/status?status=${status}`)
     return response.data
+  },
+
+  async updatePosition(id, positionX, positionY) {
+    const response = await api.put(`/tables/${id}/position?positionX=${positionX}&positionY=${positionY}`)
+    return response.data
+  },
+
+  async checkAvailability(reservationTime, numberOfGuests) {
+    const response = await api.get(`/tables/check-availability?reservationTime=${reservationTime}&numberOfGuests=${numberOfGuests}`)
+    return response.data
   }
 }

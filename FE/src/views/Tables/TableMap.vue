@@ -1,166 +1,314 @@
 <template>
-  <div class="space-y-6 animate-fade-in">
+  <div class="space-y-3 animate-fade-in">
     <!-- Header -->
     <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Sơ đồ Bàn ăn</h1>
-        <p class="text-gray-600 mt-1">Quản lý vị trí và trạng thái bàn trực quan</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button @click="resetView" class="btn-secondary">
-          <ArrowPathIcon class="w-5 h-5 mr-2" />
-          Reset View
+      <h1 class="text-xl font-bold text-slate-900">Cài đặt Sơ đồ Bàn</h1>
+      <div class="flex items-center gap-2">
+        <button 
+          @click="showCreateModal = true" 
+          class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors"
+        >
+          <i class="fas fa-plus text-xs"></i>
+          <span>Thêm Bàn</span>
         </button>
-        <button @click="saveLayout" class="btn-primary">
-          <CheckIcon class="w-5 h-5 mr-2" />
-          Lưu bố cục
+        <button 
+          @click="toggleEditMode" 
+          class="bg-white hover:bg-gray-50 border border-gray-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors"
+          :class="{ 'bg-blue-50 border-blue-300 text-blue-700': editMode }"
+        >
+          <i class="fas fa-edit text-xs"></i>
+          <i class="fas fa-times text-xs"></i>
+          <span>Chỉnh sửa Vị trí</span>
         </button>
       </div>
     </div>
 
-    <!-- Legend & Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <CheckCircleIcon class="w-6 h-6" />
+    <!-- Filter and Summary Section -->
+    <div class="space-y-2">
+      <!-- Filters -->
+      <!-- <div class="bg-white border border-gray-200 rounded-lg p-2">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Lọc theo khu vực:</label>
+            <select v-model="filterArea" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-xs">
+              <option value="">Tất cả khu vực</option>
+              <option value="VIP">Phòng VIP</option>
+              <option value="NORMAL">Bàn thường</option>
+              <option value="OUTDOOR">Ngoài trời</option>
+            </select>
           </div>
           <div>
-            <p class="text-sm text-green-100">Trống</p>
-            <p class="text-2xl font-bold">{{ availableCount }}</p>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Đặt bàn online:</label>
+            <select v-model="filterOnline" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-xs">
+              <option value="">Tất cả</option>
+              <option value="true">Cho phép</option>
+              <option value="false">Không cho phép</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Tìm bàn:</label>
+            <div class="flex gap-1.5">
+              <input 
+                v-model="searchTable" 
+                type="text" 
+                placeholder="Nhập số bàn..." 
+                class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-xs"
+              />
+              <button 
+                @click="loadTables" 
+                class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              >
+                Tìm
+              </button>
+            </div>
+          </div>
+          <div class="flex items-end">
+            <button 
+              @click="resetFilters" 
+              class="w-full bg-gray-100 hover:bg-gray-200 text-slate-700 px-2 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <i class="fas fa-sync-alt text-xs"></i>
+              <span>Làm mới</span>
+            </button>
+          </div>
+        </div>
+      </div> -->
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+        <div class="bg-white border border-gray-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-chair text-slate-600 text-sm"></i>
+          </div>
+          <div>
+              <p class="text-xs text-slate-500 mb-0.5">Tổng bàn</p>
+              <p class="text-lg font-bold text-slate-900">{{ tables.length }}</p>
           </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <UsersIcon class="w-6 h-6" />
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-wifi text-blue-600 text-sm"></i>
           </div>
           <div>
-            <p class="text-sm text-red-100">Phục vụ</p>
-            <p class="text-2xl font-bold">{{ occupiedCount }}</p>
+              <p class="text-xs text-blue-600 mb-0.5">Cho phép đặt online</p>
+              <p class="text-lg font-bold text-slate-900">{{ onlineReservationCount }}</p>
           </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <ClockIcon class="w-6 h-6" />
+        <div class="bg-green-50 border border-green-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-check-circle text-green-600 text-sm"></i>
           </div>
           <div>
-            <p class="text-sm text-yellow-100">Đã đặt</p>
-            <p class="text-2xl font-bold">{{ reservedCount }}</p>
+              <p class="text-xs text-green-600 mb-0.5">Trống</p>
+              <p class="text-lg font-bold text-slate-900">{{ availableCount }}</p>
           </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-gray-500 to-gray-600 text-white">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <WrenchIcon class="w-6 h-6" />
+        <div class="bg-red-50 border border-red-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-users text-red-600 text-sm"></i>
           </div>
           <div>
-            <p class="text-sm text-gray-100">Bảo trì</p>
-            <p class="text-2xl font-bold">{{ maintenanceCount }}</p>
+              <p class="text-xs text-red-600 mb-0.5">Có khách</p>
+              <p class="text-lg font-bold text-slate-900">{{ occupiedCount }}</p>
           </div>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <TableCellsIcon class="w-6 h-6" />
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-clock text-amber-600 text-sm"></i>
           </div>
           <div>
-            <p class="text-sm text-blue-100">Tổng số</p>
-            <p class="text-2xl font-bold">{{ tables.length }}</p>
+              <p class="text-xs text-amber-600 mb-0.5">Đã đặt</p>
+              <p class="text-lg font-bold text-slate-900">{{ reservedCount }}</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Instructions -->
-    <div class="card bg-blue-50 border-l-4 border-blue-500">
-      <div class="flex items-start gap-3">
-        <InformationCircleIcon class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <h3 class="font-semibold text-blue-900 mb-1">Hướng dẫn sử dụng</h3>
-          <ul class="text-sm text-blue-700 space-y-1">
-            <li>• <strong>Kéo thả</strong> bàn để sắp xếp lại vị trí</li>
-            <li>• <strong>Click</strong> vào bàn để xem chi tiết và thay đổi trạng thái</li>
-            <li>• <strong>Nhấn "Lưu bố cục"</strong> để lưu vị trí mới</li>
-          </ul>
+      <!-- Legend -->
+      <div class="bg-white border border-gray-200 rounded-lg p-2">
+        <p class="text-xs font-semibold text-slate-700 mb-1.5">Chú thích:</p>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div class="flex items-center gap-1.5">
+            <div class="w-4 h-4 bg-green-500 rounded border border-green-600"></div>
+            <span class="text-xs text-slate-700">Trống</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-4 h-4 bg-red-500 rounded border border-red-600"></div>
+            <span class="text-xs text-slate-700">Có khách</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-4 h-4 bg-blue-500 rounded border border-blue-600"></div>
+            <span class="text-xs text-slate-700">Đã đặt</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-4 h-4 bg-yellow-500 rounded border border-yellow-600"></div>
+            <span class="text-xs text-slate-700">Đang dọn</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <i class="fas fa-wifi text-blue-600 text-xs"></i>
+            <span class="text-xs text-slate-700">Đặt Online</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Restaurant Floor Map -->
-    <div class="card p-0 overflow-hidden">
-      <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <!-- Main Content: Map and Table List -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <!-- Visual Table Layout Area (Left - 2 columns) -->
+      <div class="lg:col-span-2">
+        <div class="bg-white border border-gray-200 rounded-lg p-3">
+          <!-- Edit Mode Instruction -->
+          <div v-if="editMode" class="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-xs text-blue-700">
+              <i class="fas fa-info-circle mr-1.5 text-xs"></i>
+              Chế độ chỉnh sửa đang bật. Kéo thả để sắp xếp vị trí các bàn.
+            </p>
+          </div>
+
         <div
           ref="mapContainer"
-          class="relative bg-white rounded-lg shadow-inner"
-          style="height: 600px; border: 2px dashed #cbd5e1"
-          @dragover.prevent
-          @drop="onDrop"
-        >
-          <!-- Grid lines -->
-          <div class="absolute inset-0 pointer-events-none" style="background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px); background-size: 50px 50px;" />
-
+            class="relative bg-white rounded-lg border-2 border-dashed border-gray-300"
+            style="height: calc(100vh - 400px); min-height: 500px; background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px); background-size: 50px 50px;"
+            @mousemove="onMouseMove"
+            @mouseup="onMouseUp"
+            @mouseleave="onMouseUp"
+          >
           <!-- Tables -->
           <div
-            v-for="table in tables"
+              v-for="table in filteredTables"
             :key="table.id"
             :style="{
               position: 'absolute',
               left: table.positionX + 'px',
               top: table.positionY + 'px',
-              transform: isDragging && draggedTable?.id === table.id ? 'scale(1.1)' : 'scale(1)',
-              zIndex: isDragging && draggedTable?.id === table.id ? 1000 : 1
+                  transform: isDragging && draggedTable?.id === table.id ? 'scale(1.05)' : 'scale(1)',
+                  zIndex: isDragging && draggedTable?.id === table.id ? 1000 : (selectedTable?.id === table.id ? 100 : 1),
+                  transition: isDragging && draggedTable?.id === table.id ? 'none' : 'all 0.2s',
+                  cursor: editMode ? 'move' : 'pointer'
             }"
             :class="[
-              'table-item cursor-move transition-all duration-200',
-              getTableClass(table.status),
-              isDragging && draggedTable?.id === table.id ? 'opacity-75 shadow-2xl' : 'hover:shadow-xl'
-            ]"
-            draggable="true"
-            @dragstart="onDragStart(table, $event)"
-            @dragend="onDragEnd"
-            @click="selectTable(table)"
-          >
-            <!-- Table visual -->
-            <div class="relative">
-              <!-- Table number badge -->
-              <div class="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2" :class="getBorderClass(table.status)">
-                <span class="text-xs font-bold" :class="getTextClass(table.status)">{{ table.tableNumber }}</span>
+                  'table-block',
+                  isDragging && draggedTable?.id === table.id ? 'opacity-80 shadow-2xl' : 'hover:shadow-lg',
+                  selectedTable?.id === table.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                ]"
+                @mousedown="editMode ? onMouseDown(table, $event) : selectTable(table)"
+                @click.stop="!editMode && selectTable(table)"
+              >
+                <!-- Table Block (Rectangular) -->
+                <div 
+                  class="relative rounded-lg shadow-md border-2 min-w-[100px] min-h-[80px] flex flex-col items-center justify-center p-3 pointer-events-none"
+                  :class="getTableBlockClass(table.status)"
+                >
+                  <!-- Table Label (Top) -->
+                  <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                    <span class="bg-white px-2 py-0.5 rounded border-2 font-bold text-sm inline-block" :class="getTableLabelClass(table.status)">
+                      {{ table.tableNumber }}
+                    </span>
               </div>
 
-              <!-- Table icon -->
-              <div class="w-20 h-20 rounded-lg flex items-center justify-center" :class="getTableBgClass(table.status)">
-                <TableCellsIcon class="w-10 h-10" :class="getTableIconClass(table.status)" />
+                  <!-- Capacity (Center) -->
+                  <div class="text-center mt-2">
+                    <p class="text-xs font-semibold" :class="getTableTextClass(table.status)">
+                      ({{ table.capacity }} chỗ)
+                    </p>
               </div>
 
-              <!-- Capacity -->
-              <div class="mt-2 text-center">
-                <div class="flex items-center justify-center gap-1 text-xs font-semibold" :class="getTextClass(table.status)">
-                  <UsersIcon class="w-3 h-3" />
-                  <span>{{ table.capacity }}</span>
-                </div>
+                  <!-- Online reservation icon (Top Right) -->
+                  <div v-if="table.allowOnlineReservation" class="absolute top-1 right-1">
+                    <i class="fas fa-wifi text-blue-600 text-xs bg-white rounded-full p-1 shadow-sm"></i>
               </div>
 
-              <!-- Status badge -->
-              <div class="mt-1">
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="getStatusBadgeClass(table.status)">
-                  {{ getStatusText(table.status) }}
-                </span>
+                  <!-- Edit icon when selected -->
+                  <div v-if="selectedTable?.id === table.id && editMode" class="absolute bottom-1 right-1">
+                    <i class="fas fa-pencil-alt text-blue-600 text-xs"></i>
               </div>
             </div>
           </div>
 
           <!-- Empty state -->
-          <div v-if="tables.length === 0" class="absolute inset-0 flex items-center justify-center">
+            <div v-if="filteredTables.length === 0" class="absolute inset-0 flex items-center justify-center">
             <div class="text-center text-gray-400">
-              <TableCellsIcon class="w-16 h-16 mx-auto mb-3 opacity-50" />
+                <i class="fas fa-chair text-6xl mb-3 opacity-50"></i>
               <p class="text-lg font-medium">Chưa có bàn nào</p>
-              <p class="text-sm">Thêm bàn từ trang Quản lý Bàn</p>
+                <p class="text-sm">Thêm bàn từ nút "Thêm Bàn"</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table List Section (Right - 1 column) -->
+      <div class="lg:col-span-1">
+        <div class="bg-white border border-gray-200 rounded-lg">
+          <div class="p-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-slate-900">Danh sách Bàn</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      BÀN
+                      <i class="fas fa-sort text-xs text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">GHẾ</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">TRẠNG THÁI</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">ĐẶT ONLINE</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">THAO TÁC</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr 
+                  v-for="table in filteredTables" 
+                  :key="table.id"
+                  class="hover:bg-gray-50 transition-colors"
+                  :class="{ 'bg-blue-50': selectedTable?.id === table.id }"
+                  @click="selectTable(table)"
+                >
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <div class="font-semibold text-slate-900">{{ table.tableNumber }}</div>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {{ table.capacity }}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getStatusBadgeClass(table.status)">
+                      {{ getStatusText(table.status) }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span v-if="table.allowOnlineReservation" class="text-green-600 text-sm">
+                      <i class="fas fa-check-circle"></i> Cho phép
+                    </span>
+                    <span v-else class="text-gray-500 text-sm">
+                      Không cho phép
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <button 
+                      @click.stop="editTable(table)"
+                      class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Sửa
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="filteredTables.length === 0" class="p-8 text-center text-gray-400">
+              <i class="fas fa-chair text-4xl mb-2 opacity-50"></i>
+              <p class="text-sm">Không có bàn nào</p>
             </div>
           </div>
         </div>
@@ -171,26 +319,26 @@
     <Teleport to="body">
       <div
         v-if="selectedTable"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
         @click.self="selectedTable = null"
       >
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-2xl font-bold text-gray-900">Bàn {{ selectedTable.tableNumber }}</h3>
+            <h3 class="text-2xl font-bold text-slate-900">Bàn {{ selectedTable.tableNumber }}</h3>
             <button @click="selectedTable = null" class="text-gray-400 hover:text-gray-600">
-              <XMarkIcon class="w-6 h-6" />
+              <i class="fas fa-times"></i>
             </button>
           </div>
 
           <div class="space-y-4">
             <!-- Status -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-              <select v-model="selectedTable.status" class="input-field" @change="updateTableStatus">
+              <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
+              <select v-model="selectedTable.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent" @change="updateTableStatus">
                 <option value="AVAILABLE">Trống</option>
-                <option value="OCCUPIED">Đang phục vụ</option>
+                <option value="OCCUPIED">Có khách</option>
                 <option value="RESERVED">Đã đặt</option>
-                <option value="MAINTENANCE">Bảo trì</option>
+                <option value="MAINTENANCE">Đang dọn</option>
               </select>
             </div>
 
@@ -198,26 +346,124 @@
             <div class="grid grid-cols-2 gap-4">
               <div class="bg-gray-50 rounded-lg p-3">
                 <p class="text-xs text-gray-600 mb-1">Sức chứa</p>
-                <div class="flex items-center gap-1 text-lg font-bold text-gray-900">
-                  <UsersIcon class="w-5 h-5" />
+                <div class="flex items-center gap-1 text-lg font-bold text-slate-900">
+                  <i class="fas fa-users"></i>
                   <span>{{ selectedTable.capacity }} người</span>
                 </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-3">
                 <p class="text-xs text-gray-600 mb-1">Vị trí</p>
-                <div class="text-lg font-bold text-gray-900">
+                <div class="text-lg font-bold text-slate-900">
                   <span>{{ selectedTable.location || 'Chưa rõ' }}</span>
                 </div>
               </div>
             </div>
 
+            <!-- Online Reservation -->
+            <div>
+              <label class="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  v-model="selectedTable.allowOnlineReservation"
+                  @change="updateTableOnlineReservation"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
+              </label>
+            </div>
+
             <!-- Notes -->
-            <div v-if="selectedTable.notes" class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
-              <p class="text-sm text-yellow-700">
+            <div v-if="selectedTable.notes" class="bg-amber-50 border-l-4 border-amber-400 p-3">
+              <p class="text-sm text-amber-700">
                 <strong>Ghi chú:</strong> {{ selectedTable.notes }}
               </p>
             </div>
           </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Create Table Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showCreateModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="showCreateModal = false"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-2xl font-bold text-slate-900">Thêm Bàn Mới</h3>
+            <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <form @submit.prevent="createTable" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Số bàn <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="newTable.tableNumber"
+                type="text"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                placeholder="T01"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Sức chứa <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model.number="newTable.capacity"
+                type="number"
+                required
+                min="1"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                placeholder="4"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">Loại bàn</label>
+              <select v-model="newTable.tableType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent">
+                <option value="NORMAL">Bàn thường</option>
+                <option value="VIP">Phòng VIP</option>
+                <option value="OUTDOOR">Ngoài trời</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  v-model="newTable.allowOnlineReservation"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
+              </label>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+              <button
+                type="button"
+                @click="showCreateModal = false"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                :disabled="creating"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="!creating">Thêm Bàn</span>
+                <span v-else>Đang thêm...</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </Teleport>
@@ -226,18 +472,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import {
-  TableCellsIcon,
-  UsersIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  WrenchIcon,
-  XMarkIcon,
-  InformationCircleIcon,
-  ArrowPathIcon,
-  CheckIcon
-} from '@heroicons/vue/24/outline'
-import tableService from '@/services/tableService'
+import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
@@ -247,6 +482,24 @@ const selectedTable = ref(null)
 const isDragging = ref(false)
 const draggedTable = ref(null)
 const dragOffset = ref({ x: 0, y: 0 })
+const editMode = ref(false)
+const showCreateModal = ref(false)
+const creating = ref(false)
+const mapContainer = ref(null)
+
+// Filters
+const filterArea = ref('')
+const filterOnline = ref('')
+const searchTable = ref('')
+
+// New table form
+const newTable = ref({
+  tableNumber: '',
+  capacity: 4,
+  tableType: 'NORMAL',
+  allowOnlineReservation: true,
+  status: 'AVAILABLE'
+})
 
 // Computed
 const availableCount = computed(() => 
@@ -261,57 +514,184 @@ const reservedCount = computed(() =>
   tables.value.filter(t => t.status === 'RESERVED').length
 )
 
-const maintenanceCount = computed(() => 
-  tables.value.filter(t => t.status === 'MAINTENANCE').length
+const onlineReservationCount = computed(() => 
+  tables.value.filter(t => t.allowOnlineReservation === true).length
 )
+
+const filteredTables = computed(() => {
+  let result = [...tables.value]
+
+  // Filter by area/table type
+  if (filterArea.value) {
+    result = result.filter(t => {
+      if (filterArea.value === 'VIP') return t.tableType === 'VIP'
+      if (filterArea.value === 'NORMAL') return t.tableType === 'NORMAL'
+      if (filterArea.value === 'OUTDOOR') return t.tableType === 'OUTDOOR'
+      return true
+    })
+  }
+
+  // Filter by online reservation
+  if (filterOnline.value !== '') {
+    const allowOnline = filterOnline.value === 'true'
+    result = result.filter(t => t.allowOnlineReservation === allowOnline)
+  }
+
+  // Search by table number
+  if (searchTable.value) {
+    const search = searchTable.value.toLowerCase()
+    result = result.filter(t => 
+      t.tableNumber?.toLowerCase().includes(search)
+    )
+  }
+
+  return result
+})
+
+// Group tables by area/prefix (A, B, VIP, etc.)
+const groupedTables = computed(() => {
+  const groups = {}
+  
+  filteredTables.value.forEach(table => {
+    // Extract prefix from table number (e.g., "A1" -> "A", "VIP1" -> "VIP", "T01" -> "T")
+    const match = table.tableNumber?.match(/^([A-Z]+)/i)
+    const prefix = match ? match[1].toUpperCase() : 'OTHER'
+    
+    if (!groups[prefix]) {
+      groups[prefix] = []
+    }
+    groups[prefix].push(table)
+  })
+  
+  return groups
+})
 
 // Methods
 const loadTables = async () => {
   try {
     const response = await tableService.getAll()
-    tables.value = response.data.data.map(table => ({
+    
+    // Handle different response structures
+    let tablesData = []
+    if (response.success && response.data) {
+      tablesData = Array.isArray(response.data) ? response.data : []
+    } else if (Array.isArray(response.data)) {
+      tablesData = response.data
+    } else if (response.data?.data) {
+      tablesData = response.data.data
+    }
+    
+    console.log('Loaded tables:', tablesData.length)
+    
+    // Initialize positions in a grid layout if not set
+    tables.value = tablesData.map((table, index) => {
+      let positionX = table.positionX
+      let positionY = table.positionY
+      
+      // If position not set (null or undefined), arrange in a grid
+      if (positionX === null || positionX === undefined || positionY === null || positionY === undefined) {
+        const cols = 5 // 5 columns
+        const row = Math.floor(index / cols)
+        const col = index % cols
+        const spacing = 140 // spacing between tables (increased from 120)
+        const startX = 60
+        const startY = 60
+        
+        positionX = startX + (col * spacing)
+        positionY = startY + (row * spacing)
+        
+        console.log(`Table ${table.tableNumber}: initialized position (${positionX}, ${positionY})`)
+      } else {
+        console.log(`Table ${table.tableNumber}: using saved position (${positionX}, ${positionY})`)
+      }
+      
+      return {
       ...table,
-      positionX: table.positionX || Math.random() * 700 + 50,
-      positionY: table.positionY || Math.random() * 400 + 50
-    }))
+        positionX,
+        positionY,
+        allowOnlineReservation: table.allowOnlineReservation ?? false
+      }
+    })
+    
+    console.log('Tables after positioning:', tables.value.length)
   } catch (error) {
-    notificationStore.error('Không thể tải danh sách bàn')
+    console.error('Error loading tables:', error)
+    notificationStore.error('Không thể tải danh sách bàn: ' + (error.response?.data?.message || error.message))
   }
 }
 
-const onDragStart = (table, event) => {
+const resetFilters = () => {
+  filterArea.value = ''
+  filterOnline.value = ''
+  searchTable.value = ''
+  loadTables()
+}
+
+const toggleEditMode = () => {
+  editMode.value = !editMode.value
+  // Reset dragging when toggling edit mode
+  if (!editMode.value) {
+    isDragging.value = false
+    draggedTable.value = null
+  }
+}
+
+// Mouse-based drag and drop
+const dragStartPos = ref({ x: 0, y: 0 })
+
+const onMouseDown = (table, event) => {
+  if (!editMode.value) return
+  
+  event.preventDefault()
+  event.stopPropagation()
+  
   isDragging.value = true
   draggedTable.value = table
   
-  const rect = event.target.getBoundingClientRect()
+  // Get the table block element
+  const tableElement = event.currentTarget
+  const rect = tableElement.getBoundingClientRect()
+  
+  // Get map container
+  const container = mapContainer.value
+  const mapRect = container?.getBoundingClientRect() || { left: 0, top: 0 }
+  
+  // Calculate offset from mouse position to element's top-left corner
   dragOffset.value = {
     x: event.clientX - rect.left,
     y: event.clientY - rect.top
   }
-}
-
-const onDragEnd = () => {
-  isDragging.value = false
-  draggedTable.value = null
-}
-
-const onDrop = (event) => {
-  if (!draggedTable.value) return
-
-  const mapContainer = event.currentTarget
-  const rect = mapContainer.getBoundingClientRect()
   
+  // Store initial mouse position relative to map container
+  dragStartPos.value = {
+    x: event.clientX - mapRect.left,
+    y: event.clientY - mapRect.top
+  }
+}
+
+const onMouseMove = (event) => {
+  if (!isDragging.value || !draggedTable.value || !editMode.value) return
+  
+  event.preventDefault()
+  
+  const container = mapContainer.value
+  if (!container) return
+  
+  const rect = container.getBoundingClientRect()
+  
+  // Calculate new position
   let newX = event.clientX - rect.left - dragOffset.value.x
   let newY = event.clientY - rect.top - dragOffset.value.y
 
   // Constrain within bounds
   newX = Math.max(10, Math.min(newX, rect.width - 110))
-  newY = Math.max(10, Math.min(newY, rect.height - 110))
+  newY = Math.max(10, Math.min(newY, rect.height - 90))
 
   // Snap to grid (50px)
   newX = Math.round(newX / 50) * 50
   newY = Math.round(newY / 50) * 50
 
+  // Update table position in real-time
   const tableIndex = tables.value.findIndex(t => t.id === draggedTable.value.id)
   if (tableIndex !== -1) {
     tables.value[tableIndex].positionX = newX
@@ -319,7 +699,70 @@ const onDrop = (event) => {
   }
 }
 
+const onMouseUp = (event) => {
+  if (!isDragging.value || !draggedTable.value) return
+  
+  // Save position when mouse is released
+  const table = draggedTable.value
+  saveTablePosition(table)
+  
+  // Reset dragging state
+  isDragging.value = false
+  draggedTable.value = null
+  dragStartPos.value = { x: 0, y: 0 }
+}
+
+// Debounce timer for saving positions
+let saveTimer = null
+const pendingSaves = new Set()
+
+const saveTablePosition = async (table) => {
+  if (!table || !table.id) return
+  
+  // Add to pending saves
+  pendingSaves.add(table.id)
+  
+  // Clear existing timer
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+  }
+  
+  // Debounce: wait 500ms before saving to avoid too many API calls
+  saveTimer = setTimeout(async () => {
+    try {
+      // Use new position API with query params
+      const response = await tableService.updatePosition(
+        table.id, 
+        table.positionX, 
+        table.positionY
+      )
+      
+      if (response.success !== false) {
+        // Only show notification if there are multiple pending saves
+        if (pendingSaves.size > 1) {
+          notificationStore.success(`Đã lưu vị trí ${pendingSaves.size} bàn`)
+        } else {
+          notificationStore.success(`Đã lưu vị trí bàn ${table.tableNumber}`)
+        }
+      } else {
+        notificationStore.error(response.message || 'Không thể lưu vị trí bàn')
+      }
+      
+      pendingSaves.clear()
+    } catch (error) {
+      console.error('Error saving table position:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu vị trí bàn'
+      notificationStore.error(errorMessage)
+      pendingSaves.clear()
+    }
+  }, 500)
+}
+
 const selectTable = (table) => {
+  selectedTable.value = { ...table }
+}
+
+const editTable = (table) => {
   selectedTable.value = { ...table }
 }
 
@@ -336,20 +779,44 @@ const updateTableStatus = async () => {
   }
 }
 
-const saveLayout = () => {
-  const layout = tables.value.map(t => ({
-    id: t.id,
-    positionX: t.positionX,
-    positionY: t.positionY
-  }))
-  localStorage.setItem('tableLayout', JSON.stringify(layout))
-  notificationStore.success('Lưu bố cục thành công!')
+const updateTableOnlineReservation = async () => {
+  try {
+    await tableService.update(selectedTable.value.id, {
+      allowOnlineReservation: selectedTable.value.allowOnlineReservation
+    })
+    const tableIndex = tables.value.findIndex(t => t.id === selectedTable.value.id)
+    if (tableIndex !== -1) {
+      tables.value[tableIndex].allowOnlineReservation = selectedTable.value.allowOnlineReservation
+    }
+    notificationStore.success('Cập nhật thành công')
+  } catch (error) {
+    notificationStore.error('Cập nhật thất bại')
+  }
 }
 
-const resetView = () => {
-  localStorage.removeItem('tableLayout')
+const createTable = async () => {
+  creating.value = true
+  try {
+    const response = await tableService.create(newTable.value)
+    if (response.success) {
+      notificationStore.success('Thêm bàn thành công')
+      showCreateModal.value = false
+      newTable.value = {
+        tableNumber: '',
+        capacity: 4,
+        tableType: 'NORMAL',
+        allowOnlineReservation: true,
+        status: 'AVAILABLE'
+      }
   loadTables()
-  notificationStore.success('Đã reset bố cục')
+    } else {
+      notificationStore.error(response.message || 'Thêm bàn thất bại')
+    }
+  } catch (error) {
+    notificationStore.error(error.response?.data?.message || 'Thêm bàn thất bại')
+  } finally {
+    creating.value = false
+  }
 }
 
 // Styling helpers
@@ -357,38 +824,48 @@ const getTableClass = (status) => {
   const classes = {
     AVAILABLE: 'bg-green-50 border-2 border-green-300',
     OCCUPIED: 'bg-red-50 border-2 border-red-300',
-    RESERVED: 'bg-yellow-50 border-2 border-yellow-300',
-    MAINTENANCE: 'bg-gray-50 border-2 border-gray-300'
+    RESERVED: 'bg-blue-50 border-2 border-blue-300',
+    MAINTENANCE: 'bg-yellow-50 border-2 border-yellow-300'
   }
   return classes[status] || 'bg-gray-50 border-2 border-gray-300'
 }
 
 const getTableBgClass = (status) => {
   const classes = {
-    AVAILABLE: 'bg-green-100',
-    OCCUPIED: 'bg-red-100',
-    RESERVED: 'bg-yellow-100',
-    MAINTENANCE: 'bg-gray-100'
+    AVAILABLE: 'bg-green-500',
+    OCCUPIED: 'bg-red-500',
+    RESERVED: 'bg-blue-500',
+    MAINTENANCE: 'bg-yellow-500'
   }
-  return classes[status] || 'bg-gray-100'
+  return classes[status] || 'bg-gray-500'
 }
 
-const getTableIconClass = (status) => {
-  const classes = {
-    AVAILABLE: 'text-green-600',
-    OCCUPIED: 'text-red-600',
-    RESERVED: 'text-yellow-600',
-    MAINTENANCE: 'text-gray-600'
+const getTableIcon = (status) => {
+  const icons = {
+    AVAILABLE: 'fa-check-circle',
+    OCCUPIED: 'fa-users',
+    RESERVED: 'fa-clock',
+    MAINTENANCE: 'fa-broom'
   }
-  return classes[status] || 'text-gray-600'
+  return icons[status] || 'fa-chair'
+}
+
+const getTableIconColor = (status) => {
+  const colors = {
+    AVAILABLE: 'text-white',
+    OCCUPIED: 'text-white',
+    RESERVED: 'text-white',
+    MAINTENANCE: 'text-white'
+  }
+  return colors[status] || 'text-white'
 }
 
 const getBorderClass = (status) => {
   const classes = {
     AVAILABLE: 'border-green-500',
     OCCUPIED: 'border-red-500',
-    RESERVED: 'border-yellow-500',
-    MAINTENANCE: 'border-gray-500'
+    RESERVED: 'border-blue-500',
+    MAINTENANCE: 'border-yellow-500'
   }
   return classes[status] || 'border-gray-500'
 }
@@ -397,30 +874,61 @@ const getTextClass = (status) => {
   const classes = {
     AVAILABLE: 'text-green-700',
     OCCUPIED: 'text-red-700',
-    RESERVED: 'text-yellow-700',
-    MAINTENANCE: 'text-gray-700'
+    RESERVED: 'text-blue-700',
+    MAINTENANCE: 'text-yellow-700'
   }
   return classes[status] || 'text-gray-700'
 }
 
 const getStatusBadgeClass = (status) => {
   const classes = {
-    AVAILABLE: 'bg-green-200 text-green-800',
-    OCCUPIED: 'bg-red-200 text-red-800',
-    RESERVED: 'bg-yellow-200 text-yellow-800',
-    MAINTENANCE: 'bg-gray-200 text-gray-800'
+    AVAILABLE: 'bg-green-100 text-green-700 border border-green-200',
+    OCCUPIED: 'bg-red-100 text-red-700 border border-red-200',
+    RESERVED: 'bg-blue-100 text-blue-700 border border-blue-200',
+    MAINTENANCE: 'bg-yellow-100 text-yellow-700 border border-yellow-200'
   }
-  return classes[status] || 'bg-gray-200 text-gray-800'
+  return classes[status] || 'bg-gray-100 text-gray-700 border border-gray-200'
 }
 
 const getStatusText = (status) => {
   const texts = {
     AVAILABLE: 'Trống',
-    OCCUPIED: 'Phục vụ',
+    OCCUPIED: 'Có khách',
     RESERVED: 'Đã đặt',
-    MAINTENANCE: 'Bảo trì'
+    MAINTENANCE: 'Đang dọn'
   }
   return texts[status] || status
+}
+
+// New styling methods for table blocks
+const getTableBlockClass = (status) => {
+  const classes = {
+    AVAILABLE: 'bg-green-500 border-green-600',
+    OCCUPIED: 'bg-red-500 border-red-600',
+    RESERVED: 'bg-blue-500 border-blue-600',
+    MAINTENANCE: 'bg-yellow-500 border-yellow-600'
+  }
+  return classes[status] || 'bg-gray-500 border-gray-600'
+}
+
+const getTableLabelClass = (status) => {
+  const classes = {
+    AVAILABLE: 'border-green-600 text-green-700',
+    OCCUPIED: 'border-red-600 text-red-700',
+    RESERVED: 'border-blue-600 text-blue-700',
+    MAINTENANCE: 'border-yellow-600 text-yellow-700'
+  }
+  return classes[status] || 'border-gray-600 text-gray-700'
+}
+
+const getTableTextClass = (status) => {
+  const classes = {
+    AVAILABLE: 'text-white',
+    OCCUPIED: 'text-white',
+    RESERVED: 'text-white',
+    MAINTENANCE: 'text-white'
+  }
+  return classes[status] || 'text-white'
 }
 
 onMounted(() => {
@@ -446,6 +954,28 @@ onMounted(() => {
   padding: 12px;
   border-radius: 12px;
   user-select: none;
+}
+
+.table-block {
+  user-select: none;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.table-block:active {
+  cursor: grabbing !important;
+}
+
+/* Prevent table label from wrapping */
+.table-block > div > div:first-child {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.table-block > div > div:first-child > span {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: none;
 }
 
 .animate-slide-up {

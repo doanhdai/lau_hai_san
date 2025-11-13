@@ -115,4 +115,13 @@ public class ReservationController {
         ReservationResponse reservation = reservationService.cancelReservation(id);
         return ResponseEntity.ok(ApiResponse.success("Hủy đặt bàn thành công", reservation));
     }
+
+    @PutMapping("/{id}/table")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<ReservationResponse>> updateReservationTable(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long tableId) {
+        ReservationResponse reservation = reservationService.updateReservationTable(id, tableId);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật bàn cho đặt bàn thành công", reservation));
+    }
 }
