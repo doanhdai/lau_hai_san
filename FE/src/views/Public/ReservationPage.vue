@@ -34,10 +34,18 @@
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     Số người <span class="text-red-600">*</span>
                   </label>
-                  <select v-model="form.guests" required class="input-field">
-                    <option value="">Chọn số người</option>
-                    <option v-for="n in 20" :key="n" :value="n">{{ n }} người</option>
-                  </select>
+                  <input
+                    v-model="form.guests"
+                    @input="clearError('guests')"
+                    type="number"
+                    min="1"
+                    max="50"
+                    required
+                    class="input-field"
+                    :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.guests }"
+                    placeholder="Nhập số người"
+                  />
+                  <p v-if="errors.guests" class="mt-1 text-xs text-red-600">{{ errors.guests }}</p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -45,11 +53,14 @@
                   </label>
                   <input
                     v-model="form.date"
+                    @change="clearError('date')"
                     type="date"
                     required
                     :min="minDate"
                     class="input-field"
+                    :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.date }"
                   />
+                  <p v-if="errors.date" class="mt-1 text-xs text-red-600">{{ errors.date }}</p>
                 </div>
               </div>
 
@@ -57,10 +68,17 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Giờ <span class="text-red-600">*</span>
                 </label>
-                <select v-model="form.time" required class="input-field">
+                <select 
+                  v-model="form.time"
+                  @change="clearError('time')"
+                  required 
+                  class="input-field"
+                  :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.time }"
+                >
                   <option value="">Chọn giờ</option>
                   <option v-for="time in availableTimeSlots" :key="time" :value="time">{{ time }}</option>
                 </select>
+                <p v-if="errors.time" class="mt-1 text-xs text-red-600">{{ errors.time }}</p>
               </div>
 
               <!-- Check Availability Button -->
@@ -117,11 +135,14 @@
                   </label>
                   <input
                     v-model="form.name"
+                    @input="clearError('name')"
                     type="text"
                     required
                     class="input-field"
+                    :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.name }"
                     placeholder="Nguyễn Văn A"
                   />
+                  <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -129,11 +150,14 @@
                   </label>
                   <input
                     v-model="form.phone"
+                    @input="clearError('phone')"
                     type="tel"
                     required
                     class="input-field"
+                    :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.phone }"
                     placeholder="0123456789"
                   />
+                  <p v-if="errors.phone" class="mt-1 text-xs text-red-600">{{ errors.phone }}</p>
                 </div>
               </div>
 
@@ -141,10 +165,13 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input
                   v-model="form.email"
+                  @input="clearError('email')"
                   type="email"
                   class="input-field"
+                  :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.email }"
                   placeholder="email@example.com"
                 />
+                <p v-if="errors.email" class="mt-1 text-xs text-red-600">{{ errors.email }}</p>
               </div>
 
               <!-- Reservation Details (Read-only) -->
@@ -163,16 +190,6 @@
                     <p class="text-xs text-gray-500 mb-1">Giờ</p>
                     <p class="text-sm font-semibold text-slate-900">{{ form.time }}</p>
                   </div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Loại bàn</label>
-                  <select v-model="form.tableType" class="input-field">
-                    <option value="normal">Bàn thường</option>
-                    <option value="vip">Phòng VIP</option>
-                  </select>
                 </div>
               </div>
 
@@ -301,7 +318,6 @@ const form = ref({
   date: '',
   time: '',
   guests: '',
-  tableType: 'normal',
   notes: '',
   acceptPromo: true
 })
@@ -312,6 +328,23 @@ const reservationCode = ref('')
 const isTableAvailable = ref(false)
 const checkingAvailability = ref(false)
 const availabilityChecked = ref(false)
+
+// Validation errors
+const errors = ref({
+  name: '',
+  phone: '',
+  email: '',
+  guests: '',
+  date: '',
+  time: ''
+})
+
+// Clear errors when user types
+function clearError(field) {
+  if (errors.value[field]) {
+    errors.value[field] = ''
+  }
+}
 
 const minDate = computed(() => {
   const today = new Date()
@@ -380,9 +413,44 @@ watch([() => form.value.time, () => form.value.guests], () => {
 })
 
 async function checkAvailability() {
+  // Clear previous errors
+  errors.value = {
+    name: '',
+    phone: '',
+    email: '',
+    guests: '',
+    date: '',
+    time: ''
+  }
+
   // Validate required fields
-  if (!form.value.guests || !form.value.date || !form.value.time) {
-    notification.error('Vui lòng điền đầy đủ số người, ngày và giờ')
+  let hasError = false
+
+  if (!form.value.guests || form.value.guests === '') {
+    errors.value.guests = 'Vui lòng nhập số người'
+    hasError = true
+  } else {
+    const guestsNum = parseInt(form.value.guests)
+    if (isNaN(guestsNum) || guestsNum < 1) {
+      errors.value.guests = 'Số người phải lớn hơn 0'
+      hasError = true
+    } else if (guestsNum > 50) {
+      errors.value.guests = 'Số người không được vượt quá 50'
+      hasError = true
+    }
+  }
+
+  if (!form.value.date) {
+    errors.value.date = 'Vui lòng chọn ngày'
+    hasError = true
+  }
+
+  if (!form.value.time) {
+    errors.value.time = 'Vui lòng chọn giờ'
+    hasError = true
+  }
+
+  if (hasError) {
     return
   }
 
@@ -441,37 +509,72 @@ async function submitReservation(e) {
   
   console.log('submitReservation called', form.value)
   
-  // Validate required fields
+  // Clear previous errors
+  errors.value = {
+    name: '',
+    phone: '',
+    email: '',
+    guests: '',
+    date: '',
+    time: ''
+  }
+
+  let hasError = false
+
+  // Validate name
   if (!form.value.name || !form.value.name.trim()) {
-    notification.error('Vui lòng nhập họ và tên')
-    return
+    errors.value.name = 'Vui lòng nhập họ và tên'
+    hasError = true
   }
 
   // Validate phone (required)
   const phoneError = validatePhone(form.value.phone, true)
   if (phoneError) {
-    notification.error(phoneError)
-    return
+    errors.value.phone = phoneError
+    hasError = true
   }
 
   // Validate email (optional but validate if provided)
   if (form.value.email && form.value.email.trim()) {
     const emailError = validateEmail(form.value.email, false)
     if (emailError) {
-      notification.error(emailError)
-      return
+      errors.value.email = emailError
+      hasError = true
     }
   }
 
   // Validate date and time
-  if (!form.value.date || !form.value.time) {
-    notification.error('Vui lòng chọn ngày và giờ đặt bàn')
-    return
+  if (!form.value.date) {
+    errors.value.date = 'Vui lòng chọn ngày đặt bàn'
+    hasError = true
+  }
+
+  if (!form.value.time) {
+    errors.value.time = 'Vui lòng chọn giờ đặt bàn'
+    hasError = true
   }
 
   // Validate number of guests
-  if (!form.value.guests || parseInt(form.value.guests) < 1) {
-    notification.error('Vui lòng chọn số người hợp lệ')
+  if (!form.value.guests || form.value.guests === '') {
+    errors.value.guests = 'Vui lòng nhập số người'
+    hasError = true
+  } else {
+    const guestsNum = parseInt(form.value.guests)
+    if (isNaN(guestsNum) || guestsNum < 1) {
+      errors.value.guests = 'Số người phải lớn hơn 0'
+      hasError = true
+    } else if (guestsNum > 50) {
+      errors.value.guests = 'Số người không được vượt quá 50'
+      hasError = true
+    }
+  }
+
+  if (hasError) {
+    // Scroll to first error
+    const firstErrorField = document.querySelector('.border-red-500')
+    if (firstErrorField) {
+      firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
     return
   }
 
@@ -485,7 +588,6 @@ async function submitReservation(e) {
       customerEmail: form.value.email ? form.value.email.trim() : '',
       reservationDateTime: `${form.value.date}T${form.value.time}:00`,
       numberOfGuests: parseInt(form.value.guests),
-      tableType: form.value.tableType,
       notes: form.value.notes ? form.value.notes.trim() : ''
     }
 
@@ -504,9 +606,16 @@ async function submitReservation(e) {
         date: '',
         time: '',
         guests: '',
-        tableType: 'normal',
         notes: '',
         acceptPromo: true
+      }
+      errors.value = {
+        name: '',
+        phone: '',
+        email: '',
+        guests: '',
+        date: '',
+        time: ''
       }
       showSuccess.value = false
       
@@ -539,9 +648,16 @@ function resetForm() {
     date: '',
     time: '',
     guests: '',
-    tableType: 'normal',
     notes: '',
     acceptPromo: true
+  }
+  errors.value = {
+    name: '',
+    phone: '',
+    email: '',
+    guests: '',
+    date: '',
+    time: ''
   }
   showSuccess.value = false
   resetAvailabilityCheck()

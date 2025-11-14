@@ -249,12 +249,12 @@
             </div>
 
             <!-- Table Type Radio Buttons -->
-            <div class="flex gap-2 mb-6">
+            <div class="flex gap-2 mb-3">
               <label
                 :class="[
                   'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2',
                   tableTypeFilter === 'online'
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-green-500 text-white'
                     : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
                 ]"
               >
@@ -265,22 +265,6 @@
                   class="w-3 h-3 text-slate-900 focus:ring-1 focus:ring-slate-500"
                 />
                 <span>Bàn Online</span>
-              </label>
-              <label
-                :class="[
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2',
-                  tableTypeFilter === 'regular'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                ]"
-              >
-                <input
-                  type="radio"
-                  value="regular"
-                  v-model="tableTypeFilter"
-                  class="w-3 h-3 text-slate-900 focus:ring-1 focus:ring-slate-500"
-                />
-                <span>Bàn Thường</span>
               </label>
             </div>
 

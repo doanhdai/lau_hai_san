@@ -53,13 +53,13 @@ public class TableService {
 
     @Transactional(readOnly = true)
     public List<TableResponse> getAvailableTablesByTime(LocalDateTime reservationTime, Integer numberOfGuests) {
-
+        // Tính khoảng thời gian kiểm tra: ±3 giờ từ thời gian đặt bàn
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
+        // Chỉ lấy các bàn có trạng thái ONLINE (có thể đặt online) và active
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
-                .filter(table -> table.getActive() && 
-                        (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED || table.getStatus() == TableStatus.ONLINE))
+                .filter(table -> table.getActive() && table.getStatus() == TableStatus.ONLINE)
                 .collect(Collectors.toList());
 
         // Lọc các bàn không có conflict với reservation và phù hợp với số lượng khách
@@ -155,10 +155,9 @@ public class TableService {
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Lấy tất cả bàn có trạng thái AVAILABLE hoặc RESERVED và active
+        // Chỉ kiểm tra các bàn có trạng thái ONLINE (có thể đặt online) và active
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
-                .filter(table -> table.getActive() && 
-                        (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED))
+                .filter(table -> table.getActive() && table.getStatus() == TableStatus.ONLINE)
                 .collect(Collectors.toList());
 
         // Kiểm tra xem có ít nhất 1 bàn khả dụng không

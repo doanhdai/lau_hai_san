@@ -42,7 +42,11 @@ export const tableService = {
   },
 
   async updateStatus(id, status) {
-    const response = await api.put(`/tables/${id}/status?status=${status}`)
+    const response = await api.put(`/tables/${id}/status`, null, {
+      params: {
+        status: status
+      }
+    })
     return response.data
   },
 

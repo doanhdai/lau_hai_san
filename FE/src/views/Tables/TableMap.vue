@@ -223,8 +223,10 @@
               </div>
 
                   <!-- Online reservation icon (Top Right) -->
-                  <div v-if="table.allowOnlineReservation" class="absolute top-1 right-1">
-                    <i class="fas fa-wifi text-blue-600 text-xs bg-white rounded-full p-1 shadow-sm"></i>
+                  <div v-if="table.allowOnlineReservation" class="absolute -top-2 -right-2 z-10">
+                    <div class="bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white">
+                      <i class="fas fa-wifi text-white text-xs"></i>
+                    </div>
               </div>
 
                   <!-- Edit icon when selected -->
@@ -332,15 +334,6 @@
 
           <div class="space-y-4">
             <!-- Status -->
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
-              <select v-model="selectedTable.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent" @change="updateTableStatus">
-                <option value="AVAILABLE">Trống</option>
-                <option value="OCCUPIED">Có khách</option>
-                <option value="RESERVED">Đã đặt</option>
-                <option value="MAINTENANCE">Đang dọn</option>
-              </select>
-            </div>
 
             <!-- Info -->
             <div class="grid grid-cols-2 gap-4">
@@ -359,17 +352,20 @@
               </div>
             </div>
 
-            <!-- Online Reservation -->
+            <!-- Online Reservation / Status Toggle -->
             <div>
               <label class="flex items-center gap-2">
                 <input 
                   type="checkbox" 
-                  v-model="selectedTable.allowOnlineReservation"
-                  @change="updateTableOnlineReservation"
+                  :checked="selectedTable.status === 'ONLINE'"
+                  @change="toggleOnlineStatus"
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
+              <p class="text-xs text-gray-500 mt-1 ml-6">
+                {{ selectedTable.status === 'ONLINE' ? 'Trạng thái: Có thể đặt online' : 'Trạng thái: Trống' }}
+              </p>
             </div>
 
             <!-- Notes -->
@@ -377,6 +373,17 @@
               <p class="text-sm text-amber-700">
                 <strong>Ghi chú:</strong> {{ selectedTable.notes }}
               </p>
+            </div>
+
+            <!-- Delete Button -->
+            <div class="pt-4 border-t border-gray-200">
+              <button
+                @click="confirmDeleteTable(selectedTable)"
+                class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-trash"></i>
+                <span>Xóa bàn</span>
+              </button>
             </div>
           </div>
         </div>
@@ -427,15 +434,6 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-slate-700 mb-2">Loại bàn</label>
-              <select v-model="newTable.tableType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent">
-                <option value="NORMAL">Bàn thường</option>
-                <option value="VIP">Phòng VIP</option>
-                <option value="OUTDOOR">Ngoài trời</option>
-              </select>
-            </div>
-
-            <div>
               <label class="flex items-center gap-2">
                 <input 
                   type="checkbox" 
@@ -467,11 +465,54 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showDeleteModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="closeDeleteModal"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-slate-900">Xác nhận xóa bàn</h3>
+            <button @click="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-slate-700 mb-2">
+              Bạn có chắc chắn muốn xóa bàn <strong>{{ tableToDelete?.tableNumber }}</strong>?
+            </p>
+            <p class="text-sm text-red-600">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              Hành động này không thể hoàn tác.
+            </p>
+          </div>
+
+          <div class="flex gap-3 justify-end">
+            <button
+              @click="closeDeleteModal"
+              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              @click="deleteTable"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Xóa bàn
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -486,6 +527,8 @@ const editMode = ref(false)
 const showCreateModal = ref(false)
 const creating = ref(false)
 const mapContainer = ref(null)
+const tableToDelete = ref(null)
+const showDeleteModal = ref(false)
 
 // Filters
 const filterArea = ref('')
@@ -496,9 +539,17 @@ const searchTable = ref('')
 const newTable = ref({
   tableNumber: '',
   capacity: 4,
-  tableType: 'NORMAL',
-  allowOnlineReservation: true,
+  allowOnlineReservation: false,
   status: 'AVAILABLE'
+})
+
+// Watch allowOnlineReservation to update status
+watch(() => newTable.value.allowOnlineReservation, (isOnline) => {
+  if (isOnline) {
+    newTable.value.status = 'ONLINE'
+  } else {
+    newTable.value.status = 'AVAILABLE'
+  }
 })
 
 // Computed
@@ -515,7 +566,7 @@ const reservedCount = computed(() =>
 )
 
 const onlineReservationCount = computed(() => 
-  tables.value.filter(t => t.allowOnlineReservation === true).length
+  tables.value.filter(t => t.allowOnlineReservation === true || t.status === 'ONLINE').length
 )
 
 const filteredTables = computed(() => {
@@ -779,14 +830,25 @@ const updateTableStatus = async () => {
   }
 }
 
-const updateTableOnlineReservation = async () => {
+const toggleOnlineStatus = async (event) => {
+  if (!selectedTable.value) return
+  
+  const isChecked = event.target.checked
+  const newStatus = isChecked ? 'ONLINE' : 'AVAILABLE'
+  
   try {
-    await tableService.update(selectedTable.value.id, {
-      allowOnlineReservation: selectedTable.value.allowOnlineReservation
-    })
+    // Update status using updateStatus API with status in query parameter
+    await tableService.updateStatus(selectedTable.value.id, newStatus)
+    selectedTable.value.status = newStatus
+    
+    // Update allowOnlineReservation to match status locally
+    selectedTable.value.allowOnlineReservation = isChecked
+    
+    // Update local state
     const tableIndex = tables.value.findIndex(t => t.id === selectedTable.value.id)
     if (tableIndex !== -1) {
-      tables.value[tableIndex].allowOnlineReservation = selectedTable.value.allowOnlineReservation
+      tables.value[tableIndex].status = newStatus
+      tables.value[tableIndex].allowOnlineReservation = isChecked
     }
     notificationStore.success('Cập nhật thành công')
   } catch (error) {
@@ -804,8 +866,7 @@ const createTable = async () => {
       newTable.value = {
         tableNumber: '',
         capacity: 4,
-        tableType: 'NORMAL',
-        allowOnlineReservation: true,
+        allowOnlineReservation: false,
         status: 'AVAILABLE'
       }
   loadTables()
@@ -816,6 +877,34 @@ const createTable = async () => {
     notificationStore.error(error.response?.data?.message || 'Thêm bàn thất bại')
   } finally {
     creating.value = false
+  }
+}
+
+function confirmDeleteTable(table) {
+  tableToDelete.value = table
+  showDeleteModal.value = true
+  selectedTable.value = null // Close detail modal
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  tableToDelete.value = null
+}
+
+async function deleteTable() {
+  if (!tableToDelete.value) return
+  
+  try {
+    const response = await tableService.delete(tableToDelete.value.id)
+    if (response.success) {
+      notificationStore.success('Xóa bàn thành công')
+      closeDeleteModal()
+      loadTables()
+    } else {
+      notificationStore.error(response.message || 'Không thể xóa bàn')
+    }
+  } catch (error) {
+    notificationStore.error('Không thể xóa bàn')
   }
 }
 
@@ -906,7 +995,8 @@ const getTableBlockClass = (status) => {
     AVAILABLE: 'bg-green-500 border-green-600',
     OCCUPIED: 'bg-red-500 border-red-600',
     RESERVED: 'bg-blue-500 border-blue-600',
-    MAINTENANCE: 'bg-yellow-500 border-yellow-600'
+    MAINTENANCE: 'bg-yellow-500 border-yellow-600',
+    ONLINE: 'bg-gray-500 border-gray-600'
   }
   return classes[status] || 'bg-gray-500 border-gray-600'
 }
@@ -916,7 +1006,8 @@ const getTableLabelClass = (status) => {
     AVAILABLE: 'border-green-600 text-green-700',
     OCCUPIED: 'border-red-600 text-red-700',
     RESERVED: 'border-blue-600 text-blue-700',
-    MAINTENANCE: 'border-yellow-600 text-yellow-700'
+    MAINTENANCE: 'border-yellow-600 text-yellow-700',
+    ONLINE: 'border-gray-600 text-gray-700'
   }
   return classes[status] || 'border-gray-600 text-gray-700'
 }
@@ -926,7 +1017,8 @@ const getTableTextClass = (status) => {
     AVAILABLE: 'text-white',
     OCCUPIED: 'text-white',
     RESERVED: 'text-white',
-    MAINTENANCE: 'text-white'
+    MAINTENANCE: 'text-white',
+    ONLINE: 'text-white'
   }
   return classes[status] || 'text-white'
 }

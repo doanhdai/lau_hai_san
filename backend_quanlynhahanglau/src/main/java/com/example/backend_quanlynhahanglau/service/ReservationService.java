@@ -13,6 +13,7 @@ import com.example.backend_quanlynhahanglau.security.UserDetailsImpl;
 import com.example.backend_quanlynhahanglau.util.CodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,6 +99,15 @@ public class ReservationService {
     public ReservationResponse createPublicReservation(PublicReservationRequest request) {
         log.info("Creating public reservation for phone: {}", request.getCustomerPhone());
         
+        // Lấy userId: ưu tiên từ request, nếu không có thì lấy từ SecurityContext (nếu user đã đăng nhập)
+        Long userId = request.getUserId();
+        if (userId == null) {
+            userId = getCurrentUserId();
+        }
+        
+        // Tạo biến final để sử dụng trong lambda
+        final Long finalUserId = userId;
+        
         // Tìm hoặc tạo customer
         Customer customer = customerRepository.findByPhone(request.getCustomerPhone())
                 .orElseGet(() -> {
@@ -112,23 +122,24 @@ public class ReservationService {
                             .active(true)
                             .blocked(false);
                     
-                    // Liên kết với User nếu có userId được truyền vào
-                    if (request.getUserId() != null) {
-                        User user = userRepository.findById(request.getUserId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", request.getUserId()));
+                    // Liên kết với User nếu có userId
+                    if (finalUserId != null) {
+                        User user = userRepository.findById(finalUserId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", finalUserId));
                         customerBuilder.user(user);
+                        log.info("Linking new customer with user {}", finalUserId);
                     }
                     
                     return customerRepository.save(customerBuilder.build());
                 });
 
-        // Nếu customer đã tồn tại nhưng chưa có user và request có userId, cập nhật liên kết
-        if (customer.getUser() == null && request.getUserId() != null) {
-            User user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", request.getUserId()));
+        // Nếu customer đã tồn tại nhưng chưa có user và có userId, cập nhật liên kết
+        if (customer.getUser() == null && finalUserId != null) {
+            User user = userRepository.findById(finalUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", finalUserId));
             customer.setUser(user);
             customer = customerRepository.save(customer);
-            log.info("Linked customer {} with user {}", customer.getId(), user.getId());
+            log.info("Linked existing customer {} with user {}", customer.getId(), finalUserId);
         }
 
         if (customer.getBlocked()) {
@@ -141,8 +152,9 @@ public class ReservationService {
             table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
             
-            if (table.getStatus() != TableStatus.AVAILABLE) {
-                throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
+            // Chỉ cho phép đặt bàn online các bàn có trạng thái ONLINE
+            if (table.getStatus() != TableStatus.ONLINE) {
+                throw new BadRequestException("Bàn này không thể đặt online. Chỉ các bàn có trạng thái ONLINE mới có thể đặt online. Trạng thái hiện tại: " + table.getStatus());
             }
 
             // Kiểm tra conflict với các reservation khác trong khoảng ±3 giờ (chỉ khi có table)
@@ -417,8 +429,10 @@ public class ReservationService {
             throw new BadRequestException("Bàn không khả dụng");
         }
 
-        // Kiểm tra bàn có status phù hợp
-        if (newTable.getStatus() != TableStatus.AVAILABLE && newTable.getStatus() != TableStatus.RESERVED) {
+        // Kiểm tra bàn có status phù hợp (admin/manager có thể gán bàn AVAILABLE, RESERVED hoặc ONLINE)
+        if (newTable.getStatus() != TableStatus.AVAILABLE 
+                && newTable.getStatus() != TableStatus.RESERVED 
+                && newTable.getStatus() != TableStatus.ONLINE) {
             throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + newTable.getStatus());
         }
 
@@ -456,8 +470,8 @@ public class ReservationService {
         // Gán bàn mới
         reservation.setTable(newTable);
         
-        // Cập nhật trạng thái bàn mới thành RESERVED nếu chưa phải
-        if (newTable.getStatus() == TableStatus.AVAILABLE) {
+        // Cập nhật trạng thái bàn mới thành RESERVED nếu đang là AVAILABLE hoặc ONLINE
+        if (newTable.getStatus() == TableStatus.AVAILABLE || newTable.getStatus() == TableStatus.ONLINE) {
             newTable.setStatus(TableStatus.RESERVED);
             tableRepository.save(newTable);
         }
@@ -511,6 +525,24 @@ public class ReservationService {
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Public reservation {} cancelled by user {}", id, userId);
         return mapToResponse(savedReservation);
+    }
+
+    /**
+     * Lấy userId từ SecurityContext nếu user đã đăng nhập
+     * @return userId nếu user đã đăng nhập, null nếu chưa đăng nhập
+     */
+    private Long getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() 
+                    && authentication.getPrincipal() instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+                return userDetails.getId();
+            }
+        } catch (Exception e) {
+            log.debug("Could not get current user from SecurityContext: {}", e.getMessage());
+        }
+        return null;
     }
 
     private String generateUniqueCustomerCode() {

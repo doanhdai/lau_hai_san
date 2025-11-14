@@ -145,6 +145,10 @@
               <i class="fas fa-edit text-xs"></i>
               <span>Sửa</span>
             </button>
+            <button @click.stop="confirmDeleteTable(table)" class="flex-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
+              <i class="fas fa-trash text-xs"></i>
+              <span>Xóa</span>
+            </button>
           </div>
         </div>
       </div>
@@ -163,6 +167,49 @@
       @close="closeModal"
       @save="handleSave"
     />
+
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showDeleteModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        @click.self="closeDeleteModal"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-slate-900">Xác nhận xóa bàn</h3>
+            <button @click="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-slate-700 mb-2">
+              Bạn có chắc chắn muốn xóa bàn <strong>{{ tableToDelete?.tableNumber }}</strong>?
+            </p>
+            <p class="text-sm text-red-600">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              Hành động này không thể hoàn tác.
+            </p>
+          </div>
+
+          <div class="flex gap-3 justify-end">
+            <button
+              @click="closeDeleteModal"
+              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              @click="deleteTable"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Xóa bàn
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -181,6 +228,8 @@ const filterStatus = ref('')
 const minCapacity = ref(0)
 const showCreateModal = ref(false)
 const selectedTable = ref(null)
+const tableToDelete = ref(null)
+const showDeleteModal = ref(false)
 
 const availableCount = computed(() => tables.value.filter(t => t.status === 'AVAILABLE').length)
 const occupiedCount = computed(() => tables.value.filter(t => t.status === 'OCCUPIED').length)
@@ -258,6 +307,33 @@ async function changeStatus(table) {
 function closeModal() {
   showCreateModal.value = false
   selectedTable.value = null
+}
+
+function confirmDeleteTable(table) {
+  tableToDelete.value = table
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  tableToDelete.value = null
+}
+
+async function deleteTable() {
+  if (!tableToDelete.value) return
+  
+  try {
+    const response = await tableService.delete(tableToDelete.value.id)
+    if (response.success) {
+      notification.success('Xóa bàn thành công')
+      closeDeleteModal()
+      loadTables()
+    } else {
+      notification.error(response.message || 'Không thể xóa bàn')
+    }
+  } catch (error) {
+    notification.error('Không thể xóa bàn')
+  }
 }
 
 async function handleSave(tableData) {
