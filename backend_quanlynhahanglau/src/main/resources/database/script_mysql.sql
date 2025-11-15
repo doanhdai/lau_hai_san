@@ -133,7 +133,7 @@ CREATE TABLE `reservations`(
 	`room_id` BIGINT NULL,
 	`table_id` BIGINT NULL,
 	PRIMARY KEY (`id`),
-	CONSTRAINT `CHK_reservations_status` CHECK (`status`='NO_SHOW' OR `status`='COMPLETED' OR `status`='CANCELLED' OR `status`='CONFIRMED' OR `status`='PENDING')
+	CONSTRAINT `CHK_reservations_status` CHECK (`status`='NO_SHOW' OR `status`='COMPLETED' OR `status`='CANCELLED' OR `status`='CONFIRMED' OR `status`='PENDING' OR `status`='CHECKED_IN')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: restaurant_tables

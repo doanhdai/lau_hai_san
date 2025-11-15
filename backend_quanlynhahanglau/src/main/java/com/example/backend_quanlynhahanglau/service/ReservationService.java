@@ -395,6 +395,24 @@ public class ReservationService {
     }
 
     @Transactional
+    public ReservationResponse checkInReservation(Long id) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+        
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userDetails.getId()));
+
+        reservation.setStatus(ReservationStatus.CHECKED_IN);
+        reservation.setConfirmedBy(user);
+
+        reservation = reservationRepository.save(reservation);
+        return mapToResponse(reservation);
+    }
+
+    @Transactional
     public ReservationResponse cancelReservation(Long id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
