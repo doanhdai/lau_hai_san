@@ -3,7 +3,7 @@
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto animate-slide-in">
       <!-- Header -->
       <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-6 py-4 rounded-t-2xl">
-        <h3 class="text-xl font-bold">{{ reservation ? 'Chỉnh sửa đặt bàn' : 'Thêm đặt bàn mới' }}</h3>
+        <h3 class="text-xl font-bold">{{ reservation ? 'Xem đặt bàn' : 'Thêm đặt bàn mới' }}</h3>
       </div>
 
       <!-- Form -->
@@ -17,7 +17,8 @@
               v-model="form.customerName"
               type="text"
               required
-              class="input-field"
+              disabled
+              class="input-field opacity-60 cursor-not-allowed"
               placeholder="Nguyễn Văn A"
             />
           </div>
@@ -30,7 +31,8 @@
               v-model="form.customerPhone"
               type="tel"
               required
-              class="input-field"
+              disabled
+              class="input-field opacity-60 cursor-not-allowed"
               placeholder="0912345678"
             />
           </div>
@@ -44,7 +46,8 @@
               type="date"
               required
               :min="minDate"
-              class="input-field"
+              disabled
+              class="input-field opacity-60 cursor-not-allowed"
             />
           </div>
 
@@ -57,7 +60,8 @@
               type="time"
               required
               :min="minTime"
-              class="input-field"
+              disabled
+              class="input-field opacity-60 cursor-not-allowed"
             />
           </div>
 
@@ -70,28 +74,17 @@
               type="number"
               required
               min="1"
-              class="input-field"
+              disabled
+              class="input-field opacity-60 cursor-not-allowed"
               placeholder="4"
             />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Bàn <span class="text-red-500">*</span>
-            </label>
-            <select v-model="form.tableId" required class="input-field" :disabled="loadingTables || !form.reservationDate || !form.reservationTime">
-              <option value="">{{ loadingTables ? 'Đang tải...' : (!form.reservationDate || !form.reservationTime ? 'Vui lòng chọn ngày và giờ trước' : '-- Chọn bàn --') }}</option>
-              <option v-for="table in availableTables" :key="table.id" :value="table.id">
-                {{ table.tableNumber }} ({{ table.capacity }} người)
-              </option>
-            </select>
           </div>
 
           <div v-if="reservation">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Trạng thái
             </label>
-            <select v-model="form.status" class="input-field">
+            <select v-model="form.status" disabled class="input-field opacity-60 cursor-not-allowed">
               <option value="PENDING">Chờ xác nhận</option>
               <option value="CONFIRMED">Đã xác nhận</option>
               <option value="CANCELLED">Đã hủy</option>
@@ -107,18 +100,16 @@
           <textarea
             v-model="form.notes"
             rows="3"
-            class="input-field"
+            disabled
+            class="input-field opacity-60 cursor-not-allowed"
             placeholder="Yêu cầu đặc biệt..."
           ></textarea>
         </div>
 
         <!-- Actions -->
         <div class="flex items-center justify-end gap-3 pt-4 border-t">
-          <button type="button" @click="$emit('close')" class="btn-secondary">
-            Hủy
-          </button>
-          <button type="submit" class="btn-primary">
-            {{ reservation ? 'Cập nhật' : 'Thêm mới' }}
+          <button type="button" @click="$emit('close')" class="btn-primary">
+            Đóng
           </button>
         </div>
       </form>

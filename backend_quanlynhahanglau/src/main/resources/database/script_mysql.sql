@@ -1,6 +1,6 @@
 -- MySQL Script converted from SQL Server
 -- Database: QuanLyNhaHangLau
-
+drop database if exists QuanLyNhaHangLau;
 CREATE DATABASE IF NOT EXISTS QuanLyNhaHangLau CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE QuanLyNhaHangLau;
 
@@ -133,7 +133,7 @@ CREATE TABLE `reservations`(
 	`room_id` BIGINT NULL,
 	`table_id` BIGINT NULL,
 	PRIMARY KEY (`id`),
-	CONSTRAINT `CHK_reservations_status` CHECK (`status`='NO_SHOW' OR `status`='COMPLETED' OR `status`='CANCELLED' OR `status`='CONFIRMED' OR `status`='PENDING')
+	CONSTRAINT `CHK_reservations_status` CHECK (`status`='NO_SHOW' OR `status`='COMPLETED' OR `status`='CANCELLED' OR `status`='CHECKED_IN' OR `status`='CONFIRMED' OR `status`='PENDING')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: restaurant_tables

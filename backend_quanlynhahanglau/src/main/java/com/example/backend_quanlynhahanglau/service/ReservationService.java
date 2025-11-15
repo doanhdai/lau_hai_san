@@ -31,6 +31,7 @@ public class ReservationService {
     private final CustomerRepository customerRepository;
     private final RestaurantTableRepository tableRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getAllReservations() {
@@ -451,12 +452,6 @@ public class ReservationService {
             throw new BadRequestException("Bàn không khả dụng");
         }
 
-        // Kiểm tra bàn có status phù hợp (admin/manager có thể gán bàn AVAILABLE hoặc RESERVED)
-        // Lưu ý: type (ONLINE/OFFLINE) không ảnh hưởng đến việc admin/manager gán bàn
-        if (newTable.getStatus() != TableStatus.AVAILABLE 
-                && newTable.getStatus() != TableStatus.RESERVED) {
-            throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + newTable.getStatus());
-        }
 
         // Kiểm tra conflict với các reservation khác (trừ chính reservation hiện tại)
         LocalDateTime reservationTime = reservation.getReservationTime();
@@ -492,14 +487,27 @@ public class ReservationService {
         // Gán bàn mới
         reservation.setTable(newTable);
         
-        // Cập nhật trạng thái bàn mới thành RESERVED nếu đang là AVAILABLE
-        if (newTable.getStatus() == TableStatus.AVAILABLE) {
+        // Cập nhật trạng thái bàn mới thành RESERVED (trừ khi đã là RESERVED)
+        // Cho phép admin/manager gán bàn từ bất kỳ status nào (OCCUPIED, CLEANING, AVAILABLE)
+        if (newTable.getStatus() != TableStatus.RESERVED) {
             newTable.setStatus(TableStatus.RESERVED);
             tableRepository.save(newTable);
         }
 
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Updated table for reservation ID: {} to table ID: {}", savedReservation.getId(), tableId);
+        
+        // Gửi email thông báo bàn đã được chọn cho khách hàng
+        try {
+            emailService.sendTableAssignedEmail(savedReservation);
+            // Đánh dấu đã gửi email (chỉ khi gửi thành công)
+            savedReservation.setEmailSent(true);
+            reservationRepository.save(savedReservation);
+        } catch (Exception e) {
+            log.error("Không thể gửi email cho reservation ID: {}", savedReservation.getId(), e);
+            // Không throw exception để không ảnh hưởng đến flow chính
+        }
+        
         return mapToResponse(savedReservation);
     }
 

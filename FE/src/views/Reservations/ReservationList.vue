@@ -266,6 +266,22 @@
                 />
                 <span>Bàn Online</span>
               </label>
+              <label
+                :class="[
+                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2',
+                  tableTypeFilter === 'regular'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                ]"
+              >
+                <input
+                  type="radio"
+                  value="regular"
+                  v-model="tableTypeFilter"
+                  class="w-3 h-3 text-slate-900 focus:ring-1 focus:ring-slate-500"
+                />
+                <span>Bàn Thường</span>
+              </label>
             </div>
 
             <!-- Loading State -->
@@ -551,10 +567,11 @@ function formatDateTime(datetime) {
 
 async function openTableSelectModal(reservation) {
   selectedReservationForTable.value = { ...reservation }
-  selectedTableId.value = reservation.tableId || ''
   showTableSelectModal.value = true
   loadingTables.value = true
   availableTables.value = []
+  // Initialize selectedTableId based on reservation's tableId or tableNumber
+  selectedTableId.value = reservation.tableId ? reservation.tableId.toString() : ''
 
   try {
     // Get reservation time
@@ -630,7 +647,7 @@ async function openTableSelectModal(reservation) {
     if (reservation.tableId) {
       const currentTable = availableTables.value.find(t => t.id === reservation.tableId)
       if (!currentTable) {
-        // Load the current table info
+        // Load the current table info if not in available tables
         try {
           const tableRes = await tableService.getById(reservation.tableId)
           if (tableRes && tableRes.data) {
@@ -638,6 +655,39 @@ async function openTableSelectModal(reservation) {
           }
         } catch (error) {
           console.error('Error loading current table:', error)
+        }
+      }
+      
+      // Set selectedTableId to ensure it's active (in case it wasn't set correctly before)
+      const tableToSelect = availableTables.value.find(t => 
+        t.id === reservation.tableId || 
+        t.id === parseInt(reservation.tableId) ||
+        t.id.toString() === reservation.tableId.toString()
+      )
+      
+      if (tableToSelect) {
+        selectedTableId.value = tableToSelect.id.toString()
+        
+        // Auto-select the correct table type filter based on selected table
+        if (tableToSelect.type === 'ONLINE') {
+          tableTypeFilter.value = 'online'
+        } else {
+          tableTypeFilter.value = 'regular'
+        }
+      }
+    } else if (reservation.tableNumber) {
+      // If reservation has tableNumber but no tableId, try to find by tableNumber
+      const tableByNumber = availableTables.value.find(t => 
+        t.tableNumber === reservation.tableNumber
+      )
+      if (tableByNumber) {
+        selectedTableId.value = tableByNumber.id.toString()
+        
+        // Auto-select the correct table type filter based on selected table
+        if (tableByNumber.type === 'ONLINE') {
+          tableTypeFilter.value = 'online'
+        } else {
+          tableTypeFilter.value = 'regular'
         }
       }
     }
