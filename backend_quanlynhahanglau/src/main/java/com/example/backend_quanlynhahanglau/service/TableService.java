@@ -4,6 +4,7 @@ import com.example.backend_quanlynhahanglau.dto.table.TableRequest;
 import com.example.backend_quanlynhahanglau.dto.table.TableResponse;
 import com.example.backend_quanlynhahanglau.entity.RestaurantTable;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
+import com.example.backend_quanlynhahanglau.enums.TableType;
 import com.example.backend_quanlynhahanglau.exception.DuplicateResourceException;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.repository.ReservationRepository;
@@ -66,10 +67,10 @@ public class TableService {
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Chỉ lấy các bàn có trạng thái ONLINE (có thể đặt online), active và chưa bị xóa
+        // Chỉ lấy các bàn có type ONLINE (có thể đặt online), active và chưa bị xóa
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
                 .filter(table -> table.getActive() 
-                        && table.getStatus() == TableStatus.ONLINE
+                        && table.getType() == TableType.ONLINE
                         && (table.getIsDeleted() == null || !table.getIsDeleted()))
                 .collect(Collectors.toList());
 
@@ -102,6 +103,7 @@ public class TableService {
                 .tableNumber(request.getTableNumber())
                 .capacity(request.getCapacity())
                 .status(request.getStatus() != null ? request.getStatus() : TableStatus.AVAILABLE)
+                .type(request.getType() != null ? request.getType() : TableType.OFFLINE)
                 .location(request.getLocation())
                 .notes(request.getNotes())
                 .positionX(request.getPositionX())
@@ -132,6 +134,9 @@ public class TableService {
         table.setTableNumber(request.getTableNumber());
         table.setCapacity(request.getCapacity());
         table.setStatus(request.getStatus());
+        if (request.getType() != null) {
+            table.setType(request.getType());
+        }
         table.setLocation(request.getLocation());
         table.setNotes(request.getNotes());
         table.setPositionX(request.getPositionX());
@@ -192,10 +197,10 @@ public class TableService {
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Chỉ kiểm tra các bàn có trạng thái ONLINE (có thể đặt online), active và chưa bị xóa
+        // Chỉ kiểm tra các bàn có type ONLINE (có thể đặt online), active và chưa bị xóa
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
                 .filter(table -> table.getActive() 
-                        && table.getStatus() == TableStatus.ONLINE
+                        && table.getType() == TableType.ONLINE
                         && (table.getIsDeleted() == null || !table.getIsDeleted()))
                 .collect(Collectors.toList());
 
@@ -223,6 +228,7 @@ public class TableService {
                 .tableNumber(table.getTableNumber())
                 .capacity(table.getCapacity())
                 .status(table.getStatus())
+                .type(table.getType())
                 .location(table.getLocation())
                 .active(table.getActive())
                 .notes(table.getNotes())
