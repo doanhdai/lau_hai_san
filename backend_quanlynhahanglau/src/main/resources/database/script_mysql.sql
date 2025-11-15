@@ -410,16 +410,7 @@ ALTER TABLE restaurant_tables
 MODIFY COLUMN position_y INTEGER DEFAULT NULL 
 COMMENT 'Vị trí Y trên bản đồ (pixels)';
 
--- Thêm cột type để phân loại bàn (OFFLINE hoặc ONLINE)
-ALTER TABLE restaurant_tables 
-ADD COLUMN type VARCHAR(255) NOT NULL DEFAULT 'OFFLINE';
-
--- Thêm constraint cho type
-ALTER TABLE restaurant_tables 
-ADD CONSTRAINT CHK_restaurant_tables_type 
-CHECK (type='OFFLINE' OR type='ONLINE');
-
--- Comment cho cột type
+-- Comment cho cột type (cột đã được tạo trong CREATE TABLE)
 ALTER TABLE restaurant_tables 
 MODIFY COLUMN type VARCHAR(255) NOT NULL DEFAULT 'OFFLINE' 
 COMMENT 'Loại bàn: OFFLINE (chỉ đặt tại quầy) hoặc ONLINE (có thể đặt online)';
@@ -437,15 +428,3 @@ WHERE is_deleted IS NULL;
 ALTER TABLE restaurant_tables 
 MODIFY COLUMN is_deleted BIT DEFAULT 0 
 COMMENT 'Xóa mềm: 0 = chưa xóa, 1 = đã xóa';
-
--- Cập nhật các bàn có status = 'ONLINE' (cũ) thành 'AVAILABLE'
--- Vì ONLINE giờ là type, không phải status nữa
-UPDATE restaurant_tables 
-SET status = 'AVAILABLE' 
-WHERE status = 'ONLINE';
-
--- Cập nhật các bàn có status = 'MAINTENANCE' (nếu có) thành 'AVAILABLE'
--- Vì MAINTENANCE đã bị loại bỏ khỏi enum
-UPDATE restaurant_tables 
-SET status = 'AVAILABLE' 
-WHERE status = 'MAINTENANCE';
