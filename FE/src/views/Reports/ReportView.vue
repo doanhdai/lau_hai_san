@@ -10,8 +10,9 @@
 
     <!-- Filter Section -->
     <div class="bg-white border border-gray-200 rounded-lg p-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
+      <div class="flex flex-wrap items-end gap-4">
+        <!-- Combobox -->
+        <div class="flex-1 min-w-[200px]">
           <label class="block text-sm font-medium text-gray-700 mb-2">Loại lọc</label>
           <select 
             v-model="filterType" 
@@ -19,39 +20,53 @@
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
           >
             <option value="TODAY">Hôm nay</option>
-            <option value="THIS_MONTH">Tháng này</option>
+            <option value="THIS_MONTH">Tháng hiện tại</option>
             <option value="THIS_YEAR">Năm nay</option>
-            <option value="CUSTOM">Lựa chọn khác</option>
+            <option value="CUSTOM">Tùy chọn</option>
           </select>
         </div>
         
-        <div v-if="filterType === 'CUSTOM'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
-          <input
-            v-model="customStartDate"
-            type="date"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
-            placeholder="DD/MM/YYYY"
-          />
-        </div>
+        <!-- Date pickers - chỉ hiện khi chọn "Tùy chọn" -->
+        <template v-if="filterType === 'CUSTOM'">
+          <div class="flex-1 min-w-[200px]">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
+            <div class="relative">
+              <input
+                v-model="customStartDate"
+                type="date"
+                class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+              />
+              <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+              <div v-if="!customStartDate" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+                DD/MM/YYYY
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex-1 min-w-[200px]">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
+            <div class="relative">
+              <input
+                v-model="customEndDate"
+                type="date"
+                class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+              />
+              <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+              <div v-if="!customEndDate" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+                DD/MM/YYYY
+              </div>
+            </div>
+          </div>
+        </template>
         
-        <div v-if="filterType === 'CUSTOM'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
-          <input
-            v-model="customEndDate"
-            type="date"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
-            placeholder="DD/MM/YYYY"
-          />
-        </div>
-        
+        <!-- Button Tạo báo cáo -->
         <div v-if="filterType === 'CUSTOM'" class="flex items-end">
           <button 
             @click="loadReport" 
-            class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
           >
-            <i class="fas fa-filter"></i>
-            <span>Lọc</span>
+            <i class="fas fa-chart-bar"></i>
+            <span>Tạo báo cáo</span>
           </button>
         </div>
       </div>
@@ -79,8 +94,8 @@
             <p class="text-slate-500 text-xs font-medium mb-1">Tổng thực nhận</p>
             <p class="text-2xl font-bold text-slate-900">{{ formatCurrency(stats.totalReceived) }}</p>
           </div>
-          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <i class="fas fa-search text-green-600 text-xl"></i>
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-search text-purple-600 text-xl"></i>
           </div>
         </div>
       </div>
@@ -251,9 +266,10 @@ function formatCurrency(value) {
 
 function handleFilterChange() {
   if (filterType.value !== 'CUSTOM') {
+    // Tự động load khi chọn các option khác
     loadReport()
   } else {
-    // Reset custom dates
+    // Reset custom dates khi chọn "Tùy chọn"
     customStartDate.value = ''
     customEndDate.value = ''
   }

@@ -223,7 +223,6 @@ CREATE TABLE `payments`(
 	`amount` DECIMAL(10, 2) NOT NULL,
 	`payment_method` VARCHAR(50) NOT NULL,
 	`payment_status` VARCHAR(50) NOT NULL,
-	`transaction_id` VARCHAR(100) NULL,
 	`notes` VARCHAR(500) NULL,
 	`created_at` DATETIME(6) NOT NULL,
 	`updated_at` DATETIME(6) NULL,

@@ -37,8 +37,6 @@ public class Payment {
     @Column(nullable = false, length = 50)
     private PaymentStatus paymentStatus;
 
-    @Column(length = 100)
-    private String transactionId;
 
     @Column(length = 500)
     private String notes;

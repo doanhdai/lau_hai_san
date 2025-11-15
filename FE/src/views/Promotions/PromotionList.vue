@@ -89,7 +89,7 @@
         v-for="promotion in filteredPromotions" 
         :key="promotion.id"
         class="bg-white border rounded-lg p-5 hover:shadow-lg transition-all duration-200"
-        :class="promotion.active ? 'border-2 border-amber-200' : 'border-gray-200 opacity-70'"
+        :class="promotion.active ? 'border-2 border-amber-200' : 'border-gray-200'"
       >
         <div class="space-y-4">
           <!-- Header -->
@@ -279,7 +279,8 @@ async function confirmDelete(promotion) {
       notification.success('Xóa khuyến mãi thành công')
       loadPromotions()
     } catch (error) {
-      notification.error('Không thể xóa khuyến mãi')
+      console.log(error);
+      notification.error(error.response.message);
     }
   }
 }
