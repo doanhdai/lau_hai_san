@@ -37,8 +37,14 @@ public class Promotion {
     @Column(precision = 10, scale = 2)
     private BigDecimal discountAmount; // Số tiền giảm giá cố định
 
-    @Column(columnDefinition = "bit default 1")
-    private Boolean active = true;
+    @Column(precision = 10, scale = 2)
+    private BigDecimal minOrderValue; // Giá trị đơn hàng tối thiểu
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal maxDiscount; // Giảm giá tối đa (VND) - chỉ áp dụng khi discount_type là PERCENTAGE
+
+    @Column(nullable = false)
+    private Integer active = 1; // 0 = ngừng hoạt động, 1 = hoạt động, 2 = tắt
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

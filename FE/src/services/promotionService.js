@@ -17,12 +17,58 @@ export const promotionService = {
   },
 
   async create(promotion) {
-    const response = await api.post('/promotions', promotion)
+    // Map frontend format to backend format
+    // Format date as LocalDateTime: YYYY-MM-DDTHH:mm:ss (without timezone)
+    const formatDateForBackend = (dateString) => {
+      if (!dateString) return null
+      // If already in YYYY-MM-DD format, add time 00:00:00
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return `${dateString}T00:00:00`
+      }
+      // If it's a full datetime string, extract date and time
+      return dateString
+    }
+    
+    const request = {
+      name: promotion.promotionName || promotion.name,
+      description: promotion.description,
+      startDate: formatDateForBackend(promotion.startDate),
+      endDate: formatDateForBackend(promotion.endDate),
+      discountPercent: promotion.discountType === 'PERCENTAGE' ? promotion.discountValue : null,
+      discountAmount: promotion.discountType === 'FIXED' ? promotion.discountValue : null,
+      minOrderValue: promotion.minOrderValue || 0,
+      maxDiscount: promotion.maxDiscount || 0
+    }
+    
+    const response = await api.post('/promotions', request)
     return response.data
   },
 
   async update(id, promotion) {
-    const response = await api.put(`/promotions/${id}`, promotion)
+    // Map frontend format to backend format
+    // Format date as LocalDateTime: YYYY-MM-DDTHH:mm:ss (without timezone)
+    const formatDateForBackend = (dateString) => {
+      if (!dateString) return null
+      // If already in YYYY-MM-DD format, add time 00:00:00
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return `${dateString}T00:00:00`
+      }
+      // If it's a full datetime string, extract date and time
+      return dateString
+    }
+    
+    const request = {
+      name: promotion.promotionName || promotion.name,
+      description: promotion.description,
+      startDate: formatDateForBackend(promotion.startDate),
+      endDate: formatDateForBackend(promotion.endDate),
+      discountPercent: promotion.discountType === 'PERCENTAGE' ? promotion.discountValue : null,
+      discountAmount: promotion.discountType === 'FIXED' ? promotion.discountValue : null,
+      minOrderValue: promotion.minOrderValue || 0,
+      maxDiscount: promotion.maxDiscount || 0
+    }
+    
+    const response = await api.put(`/promotions/${id}`, request)
     return response.data
   },
 

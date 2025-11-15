@@ -40,7 +40,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-slate-500 text-xs font-medium mb-1">Tổng khuyến mãi</p>
-            <p class="text-2xl font-bold text-slate-900">{{ promotions.length }}</p>
+            <p class="text-2xl font-bold text-slate-900">{{ totalCount }}</p>
           </div>
           <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
             <i class="fas fa-gift text-amber-600 text-xl"></i>
@@ -70,7 +70,7 @@
           </select>
         </div>
         <div class="flex items-end">
-          <button @click="loadPromotions" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+          <button @click="refreshData" class="bg-gray-100 hover:bg-gray-200 text-slate-700 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
             <i class="fas fa-sync-alt"></i>
             <span>Làm mới</span>
           </button>
@@ -97,7 +97,7 @@
             <div class="flex-1">
               <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i class="fas fa-gift text-amber-600"></i>
-                <span>{{ promotion.promotionName }}</span>
+                <span>{{ promotion.promotionName || promotion.name }}</span>
               </h3>
               <p class="text-sm text-slate-600 mt-1 line-clamp-2">{{ promotion.description || '-' }}</p>
             </div>
@@ -110,7 +110,15 @@
           <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
             <p class="text-xs text-amber-700 mb-1 font-medium">Giảm giá</p>
             <p class="text-2xl font-bold text-amber-700">
-              {{ promotion.discountType === 'PERCENTAGE' ? promotion.discountValue + '%' : formatCurrency(promotion.discountValue) }}
+              <template v-if="promotion.discountType === 'PERCENTAGE' || promotion.discountPercent">
+                {{ (promotion.discountValue || promotion.discountPercent) + '%' }}
+              </template>
+              <template v-else-if="promotion.discountType === 'FIXED' || promotion.discountAmount">
+                {{ formatCurrency(promotion.discountValue || promotion.discountAmount) }}
+              </template>
+              <template v-else>
+                -
+              </template>
             </p>
           </div>
 
@@ -172,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { promotionService } from '@/services/promotionService'
 import { useNotificationStore } from '@/stores/notification'
 import PromotionModal from '@/components/modals/PromotionModal.vue'
@@ -186,24 +194,35 @@ const filterStatus = ref('')
 const showCreateModal = ref(false)
 const selectedPromotion = ref(null)
 
-const activeCount = computed(() => promotions.value.filter(p => p.active).length)
-const inactiveCount = computed(() => promotions.value.filter(p => !p.active).length)
+// Stats computed from promotions array (client-side)
+const activeCount = computed(() => {
+  return promotions.value.filter(p => p.status === 1 || (p.active === true && !p.status)).length
+})
 
+const inactiveCount = computed(() => {
+  return promotions.value.filter(p => p.status === 0 || p.status === 2 || (p.active === false && !p.status)).length
+})
+
+const totalCount = computed(() => promotions.value.length)
+
+// Client-side filtering
 const filteredPromotions = computed(() => {
   let result = promotions.value
 
+  // Filter by search query (name or description)
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(p => 
-      p.promotionName.toLowerCase().includes(query) ||
-      (p.description && p.description.toLowerCase().includes(query))
+      (p.promotionName || p.name || '').toLowerCase().includes(query) ||
+      (p.description || '').toLowerCase().includes(query)
     )
   }
 
+  // Filter by status (0 = ngừng hoạt động, 1 = hoạt động, 2 = tắt)
   if (filterStatus.value === 'active') {
-    result = result.filter(p => p.active)
+    result = result.filter(p => p.status === 1 || (p.active === true && !p.status))
   } else if (filterStatus.value === 'inactive') {
-    result = result.filter(p => !p.active)
+    result = result.filter(p => p.status === 0 || p.status === 2 || (p.active === false && !p.status))
   }
 
   return result
@@ -232,6 +251,13 @@ function editPromotion(promotion) {
 }
 
 async function toggleStatus(promotion) {
+  const action = promotion.active ? 'tắt' : 'bật'
+  const promotionName = promotion.promotionName || promotion.name
+  
+  if (!confirm(`Bạn có chắc muốn ${action} khuyến mãi "${promotionName}"?`)) {
+    return
+  }
+  
   try {
     if (promotion.active) {
       await promotionService.deactivate(promotion.id)
@@ -247,7 +273,7 @@ async function toggleStatus(promotion) {
 }
 
 async function confirmDelete(promotion) {
-  if (confirm(`Bạn có chắc muốn xóa khuyến mãi "${promotion.promotionName}"?`)) {
+  if (confirm(`Bạn có chắc muốn xóa khuyến mãi "${promotion.promotionName || promotion.name}"?`)) {
     try {
       await promotionService.delete(promotion.id)
       notification.success('Xóa khuyến mãi thành công')
@@ -264,18 +290,38 @@ function closeModal() {
 }
 
 async function handleSave(promotionData) {
+  const isUpdate = selectedPromotion.value && selectedPromotion.value.id
+  const action = isUpdate ? 'cập nhật' : 'thêm mới'
+  const promotionName = promotionData.promotionName || promotionData.name || 'khuyến mãi này'
+  
+  if (!confirm(`Bạn có chắc muốn ${action} khuyến mãi "${promotionName}"?`)) {
+    return
+  }
+  
   try {
-    if (selectedPromotion.value && selectedPromotion.value.id) {
-      await promotionService.update(selectedPromotion.value.id, promotionData)
-      notification.success('Cập nhật khuyến mãi thành công')
+    if (isUpdate) {
+      const response = await promotionService.update(selectedPromotion.value.id, promotionData)
+      if (response.success) {
+        notification.success('Cập nhật khuyến mãi thành công')
+      } else {
+        notification.error(response.message || 'Cập nhật khuyến mãi thất bại')
+        return
+      }
     } else {
-      await promotionService.create(promotionData)
-      notification.success('Thêm khuyến mãi thành công')
+      const response = await promotionService.create(promotionData)
+      if (response.success) {
+        notification.success('Thêm khuyến mãi thành công')
+      } else {
+        notification.error(response.message || 'Thêm khuyến mãi thất bại')
+        return
+      }
     }
     closeModal()
     loadPromotions()
   } catch (error) {
-    notification.error('Không thể lưu khuyến mãi')
+    console.error('Error saving promotion:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu khuyến mãi'
+    notification.error(errorMessage)
   }
 }
 
@@ -289,5 +335,9 @@ function formatCurrency(value) {
 function formatDate(date) {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('vi-VN')
+}
+
+function refreshData() {
+  loadPromotions()
 }
 </script>

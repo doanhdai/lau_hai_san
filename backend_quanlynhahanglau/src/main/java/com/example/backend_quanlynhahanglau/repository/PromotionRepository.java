@@ -10,10 +10,8 @@ import java.util.List;
 
 @Repository
 public interface PromotionRepository extends JpaRepository<Promotion, Long> {
-    List<Promotion> findByActiveTrue();
-    
-    // Tìm khuyến mãi đang hoạt động
-    @Query("SELECT p FROM Promotion p WHERE p.active = true " +
+    // Tìm khuyến mãi đang hoạt động (active = 1)
+    @Query("SELECT p FROM Promotion p WHERE p.active = 1 " +
            "AND p.startDate <= :now AND p.endDate >= :now")
     List<Promotion> findActivePromotions(LocalDateTime now);
 }

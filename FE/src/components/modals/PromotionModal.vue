@@ -1,8 +1,8 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in" @click.self="$emit('close')">
+  <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in" @click.self="$emit('close')">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto animate-slide-in">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-6 py-4 rounded-t-2xl">
+      <div class="bg-slate-900 text-white px-6 py-4 rounded-t-2xl">
         <h3 class="text-xl font-bold">{{ promotion ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới' }}</h3>
       </div>
 
@@ -67,6 +67,7 @@
               v-model="form.startDate"
               type="date"
               required
+              :min="minStartDate"
               class="input-field"
             />
           </div>
@@ -79,6 +80,7 @@
               v-model="form.endDate"
               type="date"
               required
+              :min="minEndDate"
               class="input-field"
             />
           </div>
@@ -96,7 +98,7 @@
             />
           </div>
 
-          <div>
+          <div v-if="form.discountType === 'PERCENTAGE'">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Giảm tối đa (VND)
             </label>
@@ -110,17 +112,6 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <input
-            v-model="form.active"
-            type="checkbox"
-            id="active"
-            class="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
-          />
-          <label for="active" class="text-sm font-medium text-gray-700">
-            Kích hoạt ngay
-          </label>
-        </div>
 
         <!-- Actions -->
         <div class="flex items-center justify-end gap-3 pt-4 border-t">
@@ -137,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   promotion: {
@@ -157,23 +148,110 @@ const form = ref({
   endDate: '',
   minOrderValue: 0,
   maxDiscount: 0,
-  active: true
+  active: true // Mặc định là true (hoạt động) khi tạo mới
 })
+
+// Computed min dates for validation
+const minStartDate = computed(() => {
+  const today = new Date()
+  // Get local date in Vietnam timezone (UTC+7)
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+})
+
+const minEndDate = computed(() => {
+  if (form.value.startDate) {
+    return form.value.startDate
+  }
+  return minStartDate.value
+})
+
+// Watch startDate to validate endDate
+watch(() => form.value.startDate, (newStartDate) => {
+  if (newStartDate && form.value.endDate) {
+    const startDate = new Date(newStartDate)
+    const endDate = new Date(form.value.endDate)
+    
+    // Nếu ngày kết thúc < ngày bắt đầu, reset ngày kết thúc
+    if (endDate < startDate) {
+      form.value.endDate = newStartDate
+    }
+  }
+})
+
+// Helper function to extract date from datetime string (avoid timezone issues)
+function extractDate(dateString) {
+  if (!dateString) return ''
+  
+  // If it's already in YYYY-MM-DD format, return as is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString
+  }
+  
+  // Extract date part from ISO string or datetime string
+  // Handle formats like: "2025-11-15T00:00:00" or "2025-11-15T00:00:00.000Z" or "2025-11-15 00:00:00"
+  const dateMatch = dateString.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateMatch) {
+    return dateMatch[1]
+  }
+  
+  // Fallback: try Date object but adjust for timezone
+  try {
+    const date = new Date(dateString)
+    // Get local date components to avoid timezone shift
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  } catch (e) {
+    return ''
+  }
+}
 
 watch(() => props.promotion, (newVal) => {
   if (newVal) {
-    form.value = { ...newVal }
-    // Format dates if needed
-    if (newVal.startDate) {
-      form.value.startDate = new Date(newVal.startDate).toISOString().split('T')[0]
+    // Map backend response to form format
+    form.value = {
+      promotionName: newVal.promotionName || newVal.name || '',
+      description: newVal.description || '',
+      discountType: newVal.discountType || (newVal.discountPercent ? 'PERCENTAGE' : 'FIXED') || 'PERCENTAGE',
+      discountValue: newVal.discountValue || newVal.discountPercent || newVal.discountAmount || 0,
+      startDate: extractDate(newVal.startDate),
+      endDate: extractDate(newVal.endDate),
+      minOrderValue: newVal.minOrderValue || 0,
+      maxDiscount: newVal.maxDiscount || 0,
+      active: newVal.active !== undefined ? newVal.active : true // Mặc định true khi edit
     }
-    if (newVal.endDate) {
-      form.value.endDate = new Date(newVal.endDate).toISOString().split('T')[0]
+  } else {
+    // Reset form when no promotion (create new)
+    form.value = {
+      promotionName: '',
+      description: '',
+      discountType: 'PERCENTAGE',
+      discountValue: 0,
+      startDate: '',
+      endDate: '',
+      minOrderValue: 0,
+      maxDiscount: 0,
+      active: true
     }
   }
 }, { immediate: true })
 
 function handleSubmit() {
+  // Validate: ngày bắt đầu phải <= ngày kết thúc
+  if (form.value.startDate && form.value.endDate) {
+    const startDate = new Date(form.value.startDate)
+    const endDate = new Date(form.value.endDate)
+    
+    if (startDate > endDate) {
+      alert('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc!')
+      return
+    }
+  }
+  
   emit('save', form.value)
 }
 </script>
