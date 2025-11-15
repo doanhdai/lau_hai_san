@@ -420,8 +420,9 @@
           <!-- Modal Content -->
           <div class="flex-1 overflow-y-auto p-6">
             <!-- Loading State -->
-            <div v-if="loadingOrder" class="flex items-center justify-center py-12">
-              <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+            <div v-if="loadingOrder" class="flex flex-col items-center justify-center py-12">
+              <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p class="text-sm text-slate-600 font-medium">Đang tải thông tin đơn hàng...</p>
             </div>
 
             <!-- No Order State -->
@@ -887,38 +888,45 @@ function createOrder(reservation) {
 }
 
 function goToOrderPage() {
-  console.log('goToOrderPage called', tableModalTable.value)
-  alert('goToOrderPage called!') // Test để xem hàm có được gọi không
-  
   if (!tableModalTable.value) {
     notification.error('Không tìm thấy thông tin bàn')
     return
   }
   
+  // Try to get reservation from tableModalTable first
+  let reservation = tableModalTable.value.reservation
+  
+  // If not found, try to find it from reservations list
+  if (!reservation && tableModalTable.value.id && Array.isArray(reservations.value)) {
+    reservation = reservations.value.find(r => 
+      r && r.tableId === tableModalTable.value.id && 
+      (r.status === 'CONFIRMED' || r.status === 'CHECKED_IN')
+    )
+  }
+  
+  // If still not found, try to find from tablesWithReservations
+  if (!reservation && tableModalTable.value.id) {
+    const tableWithReservation = tablesWithReservations.value.find(t => 
+      t && t.id === tableModalTable.value.id && t.reservation
+    )
+    if (tableWithReservation) {
+      reservation = tableWithReservation.reservation
+    }
+  }
+  
+  if (!reservation || !reservation.id) {
+    notification.error('Bàn chưa có đặt bàn')
+    return
+  }
+  
   // Navigate to create order page with reservationId
-  const query = {}
-  if (tableModalTable.value.reservation && tableModalTable.value.reservation.id) {
-    query.reservationId = tableModalTable.value.reservation.id
-    console.log('Reservation ID:', query.reservationId)
-  } else {
-    console.log('No reservation found in tableModalTable')
-    console.log('tableModalTable.value:', tableModalTable.value)
-  }
+  router.push({
+    path: '/admin/orders/create',
+    query: { reservationId: reservation.id }
+  })
   
-  console.log('Navigating to:', '/admin/orders/create', 'with query:', query)
-  
-  try {
-    router.push({
-      path: '/admin/orders/create',
-      query: query
-    })
-    
-    // Close modal after navigation
-    closeTableModal()
-  } catch (error) {
-    console.error('Error navigating:', error)
-    notification.error('Không thể điều hướng: ' + error.message)
-  }
+  // Close modal after navigation
+  closeTableModal()
 }
 
 async function viewOrderList() {
@@ -927,12 +935,19 @@ async function viewOrderList() {
     return
   }
   
-  // Load order theo tableId hoặc reservationId
-  await loadOrderForTable()
+  // Save tableModalTable value before closing modal (because closeTableModal sets it to null)
+  const savedTable = { ...tableModalTable.value }
   
-  // Close table modal and open order modal
+  // Close table modal and open order modal first (to show loading)
   closeTableModal()
   showOrderModal.value = true
+  selectedOrder.value = null // Clear previous order to show loading
+  
+  // Restore tableModalTable value for loadOrderForTable
+  tableModalTable.value = savedTable
+  
+  // Load order theo tableId hoặc reservationId
+  await loadOrderForTable()
 }
 
 async function loadOrderForTable() {
@@ -940,8 +955,33 @@ async function loadOrderForTable() {
   
   loadingOrder.value = true
   try {
-    // Lấy reservation_id từ reservation của bàn
-    const reservationId = tableModalTable.value.reservation?.id
+    let reservation = null
+    
+    // Priority 1: Try to find from tablesWithReservations (most reliable source)
+    if (tableModalTable.value.id) {
+      const tableWithReservation = tablesWithReservations.value.find(t => 
+        t && t.id === tableModalTable.value.id && t.reservation
+      )
+      if (tableWithReservation && tableWithReservation.reservation) {
+        reservation = tableWithReservation.reservation
+      }
+    }
+    
+    // Priority 2: Try to get reservation from tableModalTable
+    if (!reservation && tableModalTable.value.reservation) {
+      reservation = tableModalTable.value.reservation
+    }
+    
+    // Priority 3: Try to find it from reservations list
+    if (!reservation && tableModalTable.value.id && Array.isArray(reservations.value)) {
+      reservation = reservations.value.find(r => 
+        r && r.tableId === tableModalTable.value.id && 
+        (r.status === 'CONFIRMED' || r.status === 'CHECKED_IN')
+      )
+    }
+    
+    // Lấy reservation_id từ reservation
+    const reservationId = reservation?.id
     
     if (!reservationId) {
       selectedOrder.value = null
@@ -949,25 +989,37 @@ async function loadOrderForTable() {
       return
     }
     
-    // Load all orders
+    // Load all orders để tìm order_id theo reservation_id
     const ordersRes = await orderService.getAll()
     const allOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
     
-    // Tìm order theo reservationId
+    // Tìm order_id theo reservationId (so sánh cả number và string để đảm bảo khớp)
     const foundOrder = allOrders.find(order => {
-      return order.reservationId === reservationId
+      const orderReservationId = order.reservationId
+      // So sánh cả number và string
+      return orderReservationId === reservationId || 
+             orderReservationId === Number(reservationId) || 
+             Number(orderReservationId) === reservationId ||
+             String(orderReservationId) === String(reservationId)
     })
     
-    if (foundOrder) {
-      // Load full order details
-      const orderRes = await orderService.getById(foundOrder.id)
-      selectedOrder.value = orderRes.success ? orderRes.data : orderRes.data
+    if (!foundOrder || !foundOrder.id) {
+      selectedOrder.value = null
+      servedItems.value.clear()
+      notification.info('Chưa có đơn hàng cho đặt bàn này')
+      return
+    }
+    
+    // Lấy order theo order_id
+    const orderRes = await orderService.getById(foundOrder.id)
+    if (orderRes.success && orderRes.data) {
+      selectedOrder.value = orderRes.data
       // Reset served items khi load order mới
       servedItems.value.clear()
     } else {
       selectedOrder.value = null
       servedItems.value.clear()
-      notification.info('Chưa có đơn hàng cho đặt bàn này')
+      notification.error('Không thể tải thông tin đơn hàng')
     }
   } catch (error) {
     console.error('Error loading order:', error)
