@@ -191,7 +191,7 @@ public class ReservationService {
                 .numberOfGuests(request.getNumberOfGuests())
                 .specialRequests(request.getNotes())
                 .notes(request.getNotes())
-                .status(ReservationStatus.PENDING)
+                .status(ReservationStatus.CONFIRMED)
                 .emailSent(false)
                 .build();
 
@@ -236,13 +236,13 @@ public class ReservationService {
             throw new BadRequestException("Khách hàng này đã bị chặn");
         }
 
-        // Parse status if provided, otherwise use PENDING
-        ReservationStatus status = ReservationStatus.PENDING;
+        // Parse status if provided, otherwise use CONFIRMED
+        ReservationStatus status = ReservationStatus.CONFIRMED;
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             try {
                 status = ReservationStatus.valueOf(request.getStatus());
             } catch (IllegalArgumentException e) {
-                log.warn("Invalid status provided: {}, using PENDING", request.getStatus());
+                log.warn("Invalid status provided: {}, using CONFIRMED", request.getStatus());
             }
         }
 
@@ -396,6 +396,24 @@ public class ReservationService {
     }
 
     @Transactional
+    public ReservationResponse checkInReservation(Long id) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+        
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userDetails.getId()));
+
+        reservation.setStatus(ReservationStatus.CHECKED_IN);
+        reservation.setConfirmedBy(user);
+
+        reservation = reservationRepository.save(reservation);
+        return mapToResponse(reservation);
+    }
+
+    @Transactional
     public ReservationResponse cancelReservation(Long id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", id));
@@ -487,12 +505,6 @@ public class ReservationService {
         // Gán bàn mới
         reservation.setTable(newTable);
         
-        // Cập nhật trạng thái bàn mới thành RESERVED (trừ khi đã là RESERVED)
-        // Cho phép admin/manager gán bàn từ bất kỳ status nào (OCCUPIED, CLEANING, AVAILABLE)
-        if (newTable.getStatus() != TableStatus.RESERVED) {
-            newTable.setStatus(TableStatus.RESERVED);
-            tableRepository.save(newTable);
-        }
 
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Updated table for reservation ID: {} to table ID: {}", savedReservation.getId(), tableId);

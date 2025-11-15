@@ -47,6 +47,11 @@ export const reservationService = {
     return response.data
   },
 
+  async checkin(id) {
+    const response = await api.put(`/reservations/${id}/checkin`)
+    return response.data
+  },
+
   async cancel(id) {
     const response = await api.put(`/reservations/${id}/cancel`)
     return response.data

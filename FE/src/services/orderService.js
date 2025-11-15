@@ -21,6 +21,11 @@ export const orderService = {
     return response.data
   },
 
+  async update(id, order) {
+    const response = await api.put(`/orders/${id}`, order)
+    return response.data
+  },
+
   async updateStatus(id, status) {
     const response = await api.put(`/orders/${id}/status?status=${status}`)
     return response.data

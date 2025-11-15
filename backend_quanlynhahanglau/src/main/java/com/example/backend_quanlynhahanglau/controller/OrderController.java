@@ -55,6 +55,15 @@ public class OrderController {
                 .body(ApiResponse.success("Tạo đơn hàng thành công", order));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrder(
+            @PathVariable Long id,
+            @Valid @RequestBody OrderRequest request) {
+        OrderResponse order = orderService.updateOrder(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật đơn hàng thành công", order));
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(

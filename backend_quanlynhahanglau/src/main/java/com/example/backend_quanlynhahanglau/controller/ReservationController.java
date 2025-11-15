@@ -109,6 +109,13 @@ public class ReservationController {
         return ResponseEntity.ok(ApiResponse.success("Xác nhận đặt bàn thành công", reservation));
     }
 
+    @PutMapping("/{id}/checkin")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<ReservationResponse>> checkInReservation(@PathVariable Long id) {
+        ReservationResponse reservation = reservationService.checkInReservation(id);
+        return ResponseEntity.ok(ApiResponse.success("Check-in thành công", reservation));
+    }
+
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<ReservationResponse>> cancelReservation(@PathVariable Long id) {

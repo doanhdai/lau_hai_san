@@ -136,9 +136,16 @@
                   <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">
                     <button
                       @click="openTableSelectModal(reservation)"
-                      class="font-mono font-semibold hover:underline transition-colors"
-                      :class="reservation.tableNumber ? 'text-blue-600 hover:text-blue-800' : 'text-orange-600 hover:text-orange-800'"
-                      title="Click để chọn bàn"
+                      :disabled="isReservationCheckedIn(reservation)"
+                      class="font-mono font-semibold transition-colors"
+                      :class="
+                        isReservationCheckedIn(reservation)
+                          ? 'text-gray-400 cursor-not-allowed opacity-60'
+                          : reservation.tableNumber
+                          ? 'text-blue-600 hover:text-blue-800 hover:underline'
+                          : 'text-orange-600 hover:text-orange-800 hover:underline'
+                      "
+                      :title="isReservationCheckedIn(reservation) ? 'Đã check-in, không thể thay đổi bàn' : 'Click để chọn bàn'"
                     >
                       {{ reservation.tableNumber || 'Chọn bàn' }}
                     </button>
@@ -162,14 +169,14 @@
                       <button @click="viewReservationDetail(reservation)" class="text-slate-600 hover:text-slate-900">
                         <i class="fas fa-eye text-xs"></i>
                   </button>
-                  <button 
+                  <!-- <button 
                     v-if="reservation.status === 'PENDING'"
                     @click="confirmReservation(reservation)" 
                         class="text-blue-600 hover:text-blue-800"
                         title="Xác nhận"
                   >
                         <i class="fas fa-check text-xs"></i>
-                  </button>
+                  </button> -->
                   <button 
                         v-if="reservation.status === 'PENDING' || reservation.status === 'CONFIRMED'"
                     @click="cancelReservation(reservation)" 
@@ -361,6 +368,7 @@ const notification = useNotificationStore()
 
 const loading = ref(false)
 const reservations = ref([])
+const tables = ref([]) // Store all tables to check status
 const searchQuery = ref('')
 const filterStatus = ref('')
 const filterDateFrom = ref('')
@@ -452,9 +460,13 @@ onMounted(() => {
 async function loadData() {
   loading.value = true
   try {
-    const reservationsRes = await reservationService.getAll()
+    // Load both reservations and tables in parallel
+    const [reservationsRes, tablesRes] = await Promise.all([
+      reservationService.getAll(),
+      tableService.getAll()
+    ])
     
-    // Handle different response structures
+    // Handle reservations response
     if (reservationsRes && reservationsRes.success && reservationsRes.data) {
       reservations.value = Array.isArray(reservationsRes.data) ? reservationsRes.data : []
     } else if (Array.isArray(reservationsRes?.data)) {
@@ -464,13 +476,34 @@ async function loadData() {
     } else {
       reservations.value = []
     }
+    
+    // Handle tables response
+    if (tablesRes && tablesRes.success && tablesRes.data) {
+      tables.value = Array.isArray(tablesRes.data) ? tablesRes.data : []
+    } else if (Array.isArray(tablesRes?.data)) {
+      tables.value = tablesRes.data
+    } else if (Array.isArray(tablesRes)) {
+      tables.value = tablesRes
+    } else {
+      tables.value = []
+    }
   } catch (error) {
-    console.error('Error loading reservations:', error)
+    console.error('Error loading data:', error)
     notification.error('Không thể tải dữ liệu: ' + (error.response?.data?.message || error.message))
     reservations.value = []
+    tables.value = []
   } finally {
     loading.value = false
   }
+}
+
+// Check if reservation is checked in
+function isReservationCheckedIn(reservation) {
+  if (!reservation) {
+    return false
+  }
+  
+  return reservation.status === 'CHECKED_IN'
 }
 
 function viewReservationDetail(reservation) {
@@ -566,6 +599,12 @@ function formatDateTime(datetime) {
 }
 
 async function openTableSelectModal(reservation) {
+  // Check if reservation is already checked in
+  if (isReservationCheckedIn(reservation)) {
+    notification.error('Đã check-in, không thể thay đổi bàn')
+    return
+  }
+  
   selectedReservationForTable.value = { ...reservation }
   showTableSelectModal.value = true
   loadingTables.value = true

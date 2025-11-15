@@ -3,10 +3,10 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Tạo Đơn hàng mới</h1>
-        <p class="text-gray-600 mt-1">Thêm đơn hàng cho khách hàng</p>
+        <h1 class="text-3xl font-bold text-gray-900">Thêm món</h1>
+        <p class="text-gray-600 mt-1">Thêm món vào đơn hàng</p>
       </div>
-      <router-link to="/orders" class="btn-secondary flex items-center gap-2">
+      <router-link to="/admin/reservations/checkin" class="btn-secondary flex items-center gap-2">
         <ArrowLeftIcon class="w-5 h-5" />
         Quay lại
       </router-link>
@@ -71,7 +71,7 @@
       <!-- Right Column: Order Summary -->
       <div class="lg:col-span-1">
         <div class="card sticky top-6">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Tóm tắt đơn hàng</h3>
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Tóm tắt</h3>
           
           <!-- Order Items -->
           <div class="space-y-3 mb-4 max-h-64 overflow-y-auto">
@@ -82,23 +82,33 @@
               v-else
               v-for="(item, index) in orderForm.items" 
               :key="index"
-              class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+              class="p-3 bg-gray-50 rounded-lg space-y-2"
             >
-              <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900">{{ item.dishName }}</p>
-                <p class="text-xs text-gray-600">{{ formatCurrency(item.price) }}</p>
-              </div>
               <div class="flex items-center gap-2">
-                <button @click="decreaseQuantity(index)" class="w-6 h-6 bg-gray-200 rounded hover:bg-gray-300">
-                  -
-                </button>
-                <span class="text-sm font-bold w-8 text-center">{{ item.quantity }}</span>
-                <button @click="increaseQuantity(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
-                  +
-                </button>
-                <button @click="removeItem(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
-                  ×
-                </button>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">{{ item.dishName }}</p>
+                  <p class="text-xs text-gray-600">{{ formatCurrency(item.price) }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button @click="decreaseQuantity(index)" class="w-6 h-6 bg-gray-200 rounded hover:bg-gray-300">
+                    -
+                  </button>
+                  <span class="text-sm font-bold w-8 text-center">{{ item.quantity }}</span>
+                  <button @click="increaseQuantity(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
+                    +
+                  </button>
+                  <button @click="removeItem(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div>
+                <input
+                  v-model="item.notes"
+                  type="text"
+                  placeholder="Ghi chú cho món này..."
+                  class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                />
               </div>
             </div>
           </div>
@@ -112,15 +122,6 @@
             <div class="flex justify-between text-sm">
               <span class="text-gray-600">Thuế (10%):</span>
               <span class="font-medium">{{ formatCurrency(tax) }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Giảm giá:</span>
-              <input 
-                v-model.number="orderForm.discount" 
-                type="number" 
-                min="0"
-                class="w-24 text-right border rounded px-2 py-1"
-              />
             </div>
             <div class="flex justify-between text-lg font-bold pt-2 border-t">
               <span>Tổng cộng:</span>
@@ -144,9 +145,9 @@
             <button 
               @click="createOrder" 
               :disabled="!canCreateOrder"
-              class="btn-primary w-full"
+              class="btn-primary w-full cursor-pointer"
             >
-              Tạo đơn hàng
+              Thêm món
             </button>
             <button @click="clearOrder" class="btn-secondary w-full">
               Xóa tất cả
@@ -160,7 +161,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { orderService } from '@/services/orderService'
 import { dishService } from '@/services/dishService'
 import { reservationService } from '@/services/reservationService'
@@ -168,6 +169,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
+const route = useRoute()
 const notification = useNotificationStore()
 
 const dishes = ref([])
@@ -177,10 +179,9 @@ const selectedReservationId = ref('')
 const dishSearchQuery = ref('')
 
 const orderForm = ref({
-  customerId: '',
+  orderId: null, // ID của order (null nếu tạo mới, có giá trị nếu update)
   reservationId: null,
   items: [],
-  discount: 0,
   notes: ''
 })
 
@@ -200,7 +201,7 @@ const subtotal = computed(() => {
 const tax = computed(() => subtotal.value * 0.1)
 
 const total = computed(() => {
-  return Math.max(0, subtotal.value + tax.value - (orderForm.value.discount || 0))
+  return subtotal.value + tax.value
 })
 
 const canCreateOrder = computed(() => {
@@ -210,7 +211,49 @@ const canCreateOrder = computed(() => {
 
 onMounted(() => {
   loadData()
+  handleQueryParams()
 })
+
+async function handleQueryParams() {
+  // Xử lý reservationId từ query params
+  const reservationId = route.query.reservationId || route.query.reservation_id
+  if (reservationId) {
+    const reservationIdNum = parseInt(reservationId)
+    orderForm.value.reservationId = reservationIdNum
+    
+    // Load orders để tìm order theo reservationId
+    await loadData()
+    const existingOrder = orders.value.find(o => o.reservationId === reservationIdNum)
+    
+    if (existingOrder) {
+      // Nếu có order, set orderId (để biết là update)
+      orderForm.value.orderId = existingOrder.id
+    } else {
+      // Nếu không có order, orderId = null (tạo mới)
+      orderForm.value.orderId = null
+    }
+  }
+
+  // Xử lý orderId từ query params (nếu có)
+  const orderId = route.query.orderId || route.query.order_id
+  if (orderId) {
+    orderForm.value.orderId = parseInt(orderId)
+    // Load order để lấy reservationId
+    try {
+      const orderRes = await orderService.getById(parseInt(orderId))
+      if (orderRes.success && orderRes.data) {
+        const order = orderRes.data
+        // Set reservationId từ order
+        if (order.reservationId) {
+          orderForm.value.reservationId = order.reservationId
+        }
+      }
+    } catch (error) {
+      console.error('Error loading order:', error)
+      notification.error('Không thể tải thông tin đơn hàng')
+    }
+  }
+}
 
 async function loadData() {
   try {
@@ -302,31 +345,55 @@ function removeItem(index) {
 function clearOrder() {
   if (confirm('Bạn có chắc muốn xóa tất cả?')) {
     selectedReservationId.value = ''
-    orderForm.value.customerId = ''
     orderForm.value.reservationId = null
     orderForm.value.items = []
-    orderForm.value.discount = 0
     orderForm.value.notes = ''
   }
 }
 
 async function createOrder() {
+  alert("hehehe");
   if (!canCreateOrder.value) return
 
   try {
-    const orderData = {
-      customerId: orderForm.value.customerId,
-      reservationId: orderForm.value.reservationId,
-      items: orderForm.value.items,
-      discount: orderForm.value.discount || 0,
-      notes: orderForm.value.notes
-    }
+    // Chuẩn bị items data cho order_details (chỉ gửi dishId, quantity, notes)
+    const itemsData = orderForm.value.items.map(item => ({
+      dishId: item.dishId,
+      quantity: item.quantity,
+      notes: item.notes || ''
+    }))
 
-    await orderService.create(orderData)
-    notification.success('Tạo đơn hàng thành công')
+    // Nếu có orderId, update order và order_details
+    if (orderForm.value.orderId) {
+      // Update order với notes, subtotal, tax, total, reservation_id
+      const updateData = {
+        notes: orderForm.value.notes || '',
+        subtotal: subtotal.value,
+        tax: tax.value,
+        total: total.value,
+        reservationId: orderForm.value.reservationId,
+        items: itemsData
+      }
+      await orderService.update(orderForm.value.orderId, updateData)
+      notification.success('Đã cập nhật đơn hàng')
+    } else {
+      // Tạo order mới với notes, subtotal, tax, total, reservation_id
+      const orderData = {
+        notes: orderForm.value.notes || '',
+        subtotal: subtotal.value,
+        tax: tax.value,
+        total: total.value,
+        reservationId: orderForm.value.reservationId,
+        items: itemsData
+      }
+
+      await orderService.create(orderData)
+      notification.success('Tạo đơn hàng thành công')
+    }
+    
     router.push('/admin/orders')
   } catch (error) {
-    notification.error('Không thể tạo đơn hàng')
+    notification.error('Không thể tạo/cập nhật đơn hàng: ' + (error.response?.data?.message || error.message))
   }
 }
 
