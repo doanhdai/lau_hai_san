@@ -25,6 +25,7 @@ public class TableService {
     @Transactional(readOnly = true)
     public List<TableResponse> getAllTables() {
         return tableRepository.findAll().stream()
+                .filter(table -> table.getIsDeleted() == null || !table.getIsDeleted())
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -33,12 +34,19 @@ public class TableService {
     public TableResponse getTableById(Long id) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
+        
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", id);
+        }
+        
         return mapToResponse(table);
     }
 
     @Transactional(readOnly = true)
     public List<TableResponse> getAvailableTables() {
         return tableRepository.findByStatus(TableStatus.AVAILABLE).stream()
+                .filter(table -> table.getIsDeleted() == null || !table.getIsDeleted())
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -46,6 +54,7 @@ public class TableService {
     @Transactional(readOnly = true)
     public List<TableResponse> getSuitableTables(Integer numberOfGuests) {
         return tableRepository.findSuitableTable(numberOfGuests).stream()
+                .filter(table -> table.getIsDeleted() == null || !table.getIsDeleted())
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -57,9 +66,11 @@ public class TableService {
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Chỉ lấy các bàn có trạng thái ONLINE (có thể đặt online) và active
+        // Chỉ lấy các bàn có trạng thái ONLINE (có thể đặt online), active và chưa bị xóa
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
-                .filter(table -> table.getActive() && table.getStatus() == TableStatus.ONLINE)
+                .filter(table -> table.getActive() 
+                        && table.getStatus() == TableStatus.ONLINE
+                        && (table.getIsDeleted() == null || !table.getIsDeleted()))
                 .collect(Collectors.toList());
 
         // Lọc các bàn không có conflict với reservation và phù hợp với số lượng khách
@@ -96,6 +107,7 @@ public class TableService {
                 .positionX(request.getPositionX())
                 .positionY(request.getPositionY())
                 .active(true)
+                .isDeleted(false)
                 .build();
 
         table = tableRepository.save(table);
@@ -106,6 +118,11 @@ public class TableService {
     public TableResponse updateTable(Long id, TableRequest request) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
+
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", id);
+        }
 
         if (!table.getTableNumber().equals(request.getTableNumber()) 
                 && tableRepository.existsByTableNumber(request.getTableNumber())) {
@@ -128,13 +145,27 @@ public class TableService {
     public void deleteTable(Long id) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
-        tableRepository.delete(table);
+        
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", id);
+        }
+        
+        // Xóa mềm: set is_deleted = true
+        table.setIsDeleted(true);
+        tableRepository.save(table);
     }
 
     @Transactional
     public void updateTableStatus(Long id, TableStatus status) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
+        
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", id);
+        }
+        
         table.setStatus(status);
         tableRepository.save(table);
     }
@@ -143,6 +174,12 @@ public class TableService {
     public TableResponse updateTablePosition(Long id, Integer positionX, Integer positionY) {
         RestaurantTable table = tableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", id));
+        
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", id);
+        }
+        
         table.setPositionX(positionX);
         table.setPositionY(positionY);
         table = tableRepository.save(table);
@@ -155,9 +192,11 @@ public class TableService {
         LocalDateTime startTime = reservationTime.minusHours(3).plusMinutes(1);
         LocalDateTime endTime = reservationTime.plusHours(3).minusMinutes(1);
 
-        // Chỉ kiểm tra các bàn có trạng thái ONLINE (có thể đặt online) và active
+        // Chỉ kiểm tra các bàn có trạng thái ONLINE (có thể đặt online), active và chưa bị xóa
         List<RestaurantTable> allTables = tableRepository.findAll().stream()
-                .filter(table -> table.getActive() && table.getStatus() == TableStatus.ONLINE)
+                .filter(table -> table.getActive() 
+                        && table.getStatus() == TableStatus.ONLINE
+                        && (table.getIsDeleted() == null || !table.getIsDeleted()))
                 .collect(Collectors.toList());
 
         // Kiểm tra xem có ít nhất 1 bàn khả dụng không

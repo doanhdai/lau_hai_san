@@ -7,10 +7,10 @@
         <p class="text-slate-600 mt-1 text-xs">Kiểm soát bàn và đặt đơn</p>
       </div>
       <div class="flex items-center gap-2">
-        <button @click="showCreateModal = true" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
+        <!-- <button @click="showCreateModal = true" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
           <i class="fas fa-plus text-xs"></i>
           <span>Thêm đặt bàn</span>
-      </button>
+      </button> -->
       </div>
     </div>
 

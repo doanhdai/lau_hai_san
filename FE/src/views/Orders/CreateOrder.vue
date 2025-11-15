@@ -16,7 +16,7 @@
       <!-- Left Column: Order Form -->
       <div class="lg:col-span-2 space-y-6">
         <!-- Reservation Selection -->
-        <div class="card bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200">
+        <!-- <div class="card bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200">
           <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span class="text-2xl">📅</span>
             Chọn từ đặt bàn đã xác nhận
@@ -32,7 +32,7 @@
               </option>
             </select>
           </div>
-        </div>
+        </div> -->
 
         <!-- Dish Selection -->
         <div class="card">

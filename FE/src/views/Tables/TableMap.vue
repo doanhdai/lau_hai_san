@@ -4,18 +4,14 @@
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-bold text-slate-900">Cài đặt Sơ đồ Bàn</h1>
       <div class="flex items-center gap-2">
-        <button 
-          @click="showCreateModal = true" 
-          class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors"
-        >
+        <button @click="showCreateModal = true"
+          class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
           <i class="fas fa-plus text-xs"></i>
           <span>Thêm Bàn</span>
         </button>
-        <button 
-          @click="toggleEditMode" 
+        <button @click="toggleEditMode"
           class="bg-white hover:bg-gray-50 border border-gray-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors"
-          :class="{ 'bg-blue-50 border-blue-300 text-blue-700': editMode }"
-        >
+          :class="{ 'bg-blue-50 border-blue-300 text-blue-700': editMode }">
           <i class="fas fa-edit text-xs"></i>
           <i class="fas fa-times text-xs"></i>
           <span>Chỉnh sửa Vị trí</span>
@@ -80,58 +76,58 @@
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-chair text-slate-600 text-sm"></i>
-          </div>
-          <div>
+            </div>
+            <div>
               <p class="text-xs text-slate-500 mb-0.5">Tổng bàn</p>
               <p class="text-lg font-bold text-slate-900">{{ tables.length }}</p>
+            </div>
           </div>
         </div>
-      </div>
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-wifi text-blue-600 text-sm"></i>
-          </div>
-          <div>
+            </div>
+            <div>
               <p class="text-xs text-blue-600 mb-0.5">Cho phép đặt online</p>
               <p class="text-lg font-bold text-slate-900">{{ onlineReservationCount }}</p>
+            </div>
           </div>
         </div>
-      </div>
         <div class="bg-green-50 border border-green-200 rounded-lg p-2">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-check-circle text-green-600 text-sm"></i>
-          </div>
-          <div>
+            </div>
+            <div>
               <p class="text-xs text-green-600 mb-0.5">Trống</p>
               <p class="text-lg font-bold text-slate-900">{{ availableCount }}</p>
+            </div>
           </div>
         </div>
-      </div>
         <div class="bg-red-50 border border-red-200 rounded-lg p-2">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-users text-red-600 text-sm"></i>
-          </div>
-          <div>
+            </div>
+            <div>
               <p class="text-xs text-red-600 mb-0.5">Có khách</p>
               <p class="text-lg font-bold text-slate-900">{{ occupiedCount }}</p>
+            </div>
           </div>
         </div>
-      </div>
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-2">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-clock text-amber-600 text-sm"></i>
-          </div>
-          <div>
+            </div>
+            <div>
               <p class="text-xs text-amber-600 mb-0.5">Đã đặt</p>
               <p class="text-lg font-bold text-slate-900">{{ reservedCount }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
       <!-- Legend -->
       <div class="bg-white border border-gray-200 rounded-lg p-2">
@@ -174,73 +170,63 @@
             </p>
           </div>
 
-        <div
-          ref="mapContainer"
-            class="relative bg-white rounded-lg border-2 border-dashed border-gray-300"
+          <div ref="mapContainer" class="relative bg-white rounded-lg border-2 border-dashed border-gray-300"
             style="height: calc(100vh - 400px); min-height: 500px; background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, #e2e8f0 49px, #e2e8f0 50px); background-size: 50px 50px;"
-            @mousemove="onMouseMove"
-            @mouseup="onMouseUp"
-            @mouseleave="onMouseUp"
-          >
-          <!-- Tables -->
-          <div
-              v-for="table in filteredTables"
-            :key="table.id"
-            :style="{
+            @mousemove="onMouseMove" @mouseup="onMouseUp" @mouseleave="onMouseUp">
+            <!-- Tables -->
+            <div v-for="table in filteredTables" :key="table.id" :style="{
               position: 'absolute',
               left: table.positionX + 'px',
               top: table.positionY + 'px',
-                  transform: isDragging && draggedTable?.id === table.id ? 'scale(1.05)' : 'scale(1)',
-                  zIndex: isDragging && draggedTable?.id === table.id ? 1000 : (selectedTable?.id === table.id ? 100 : 1),
-                  transition: isDragging && draggedTable?.id === table.id ? 'none' : 'all 0.2s',
-                  cursor: editMode ? 'move' : 'pointer'
-            }"
-            :class="[
-                  'table-block',
-                  isDragging && draggedTable?.id === table.id ? 'opacity-80 shadow-2xl' : 'hover:shadow-lg',
-                  selectedTable?.id === table.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''
-                ]"
-                @mousedown="editMode ? onMouseDown(table, $event) : selectTable(table)"
-                @click.stop="!editMode && selectTable(table)"
-              >
-                <!-- Table Block (Rectangular) -->
-                <div 
-                  class="relative rounded-lg shadow-md border-2 min-w-[100px] min-h-[80px] flex flex-col items-center justify-center p-3 pointer-events-none"
-                  :class="getTableBlockClass(table.status)"
-                >
-                  <!-- Table Label (Top) -->
-                  <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                    <span class="bg-white px-2 py-0.5 rounded border-2 font-bold text-sm inline-block" :class="getTableLabelClass(table.status)">
-                      {{ table.tableNumber }}
-                    </span>
-              </div>
+              transform: isDragging && draggedTable?.id === table.id ? 'scale(1.05)' : 'scale(1)',
+              zIndex: isDragging && draggedTable?.id === table.id ? 1000 : (selectedTable?.id === table.id ? 100 : 1),
+              transition: isDragging && draggedTable?.id === table.id ? 'none' : 'all 0.2s',
+              cursor: editMode ? 'move' : 'pointer'
+            }" :class="[
+              'table-block',
+              isDragging && draggedTable?.id === table.id ? 'opacity-80 shadow-2xl' : 'hover:shadow-lg',
+              selectedTable?.id === table.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+            ]" @mousedown="editMode ? onMouseDown(table, $event) : selectTable(table)"
+              @click.stop="!editMode && selectTable(table)">
+              <!-- Table Block (Rectangular) -->
+              <div
+                class="relative rounded-lg shadow-md border-2 min-w-[100px] min-h-[80px] flex flex-col items-center justify-center p-3 pointer-events-none"
+                :class="getTableBlockClass(table.status)">
+                <!-- Table Label (Top) -->
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                  <span class="bg-white px-2 py-0.5 rounded border-2 font-bold text-sm inline-block"
+                    :class="getTableLabelClass(table.status)">
+                    {{ table.tableNumber }}
+                  </span>
+                </div>
 
-                  <!-- Capacity (Center) -->
-                  <div class="text-center mt-2">
-                    <p class="text-xs font-semibold" :class="getTableTextClass(table.status)">
-                      ({{ table.capacity }} chỗ)
-                    </p>
-              </div>
+                <!-- Capacity (Center) -->
+                <div class="text-center mt-2">
+                  <p class="text-xs font-semibold" :class="getTableTextClass(table.status)">
+                    ({{ table.capacity }} chỗ)
+                  </p>
+                </div>
 
-                  <!-- Online reservation icon (Top Right) -->
-                  <div v-if="table.allowOnlineReservation" class="absolute -top-2 -right-2 z-10">
-                    <div class="bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white">
-                      <i class="fas fa-wifi text-white text-xs"></i>
-                    </div>
-              </div>
+                 <!-- Online reservation icon (Top Right) -->
+                 <div v-if="table.status === 'ONLINE'" class="absolute -top-2 -right-2 z-10">
+                   <div
+                     class="bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white">
+                     <i class="fas fa-wifi text-white text-xs"></i>
+                   </div>
+                 </div>
 
-                  <!-- Edit icon when selected -->
-                  <div v-if="selectedTable?.id === table.id && editMode" class="absolute bottom-1 right-1">
-                    <i class="fas fa-pencil-alt text-blue-600 text-xs"></i>
+                <!-- Edit icon when selected -->
+                <div v-if="selectedTable?.id === table.id && editMode" class="absolute bottom-1 right-1">
+                  <i class="fas fa-pencil-alt text-blue-600 text-xs"></i>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Empty state -->
+            <!-- Empty state -->
             <div v-if="filteredTables.length === 0" class="absolute inset-0 flex items-center justify-center">
-            <div class="text-center text-gray-400">
+              <div class="text-center text-gray-400">
                 <i class="fas fa-chair text-6xl mb-3 opacity-50"></i>
-              <p class="text-lg font-medium">Chưa có bàn nào</p>
+                <p class="text-lg font-medium">Chưa có bàn nào</p>
                 <p class="text-sm">Thêm bàn từ nút "Thêm Bàn"</p>
               </div>
             </div>
@@ -265,19 +251,17 @@
                     </div>
                   </th>
                   <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">GHẾ</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">TRẠNG THÁI</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">ĐẶT ONLINE</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">THAO TÁC</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">TRẠNG
+                    THÁI</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">ĐẶT
+                    ONLINE</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">THAO TÁC
+                  </th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr 
-                  v-for="table in filteredTables" 
-                  :key="table.id"
-                  class="hover:bg-gray-50 transition-colors"
-                  :class="{ 'bg-blue-50': selectedTable?.id === table.id }"
-                  @click="selectTable(table)"
-                >
+                <tr v-for="table in filteredTables" :key="table.id" class="hover:bg-gray-50 transition-colors"
+                  :class="{ 'bg-blue-50': selectedTable?.id === table.id }" @click="selectTable(table)">
                   <td class="px-4 py-3 whitespace-nowrap">
                     <div class="font-semibold text-slate-900">{{ table.tableNumber }}</div>
                   </td>
@@ -298,10 +282,8 @@
                     </span>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap">
-                    <button 
-                      @click.stop="editTable(table)"
-                      class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
+                    <button @click.stop="editTable(table)"
+                      class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                       Sửa
                     </button>
                   </td>
@@ -319,11 +301,8 @@
 
     <!-- Table Detail Modal -->
     <Teleport to="body">
-      <div
-        v-if="selectedTable"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
-        @click.self="selectedTable = null"
-      >
+      <div v-if="selectedTable" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="selectedTable = null">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-2xl font-bold text-slate-900">Bàn {{ selectedTable.tableNumber }}</h3>
@@ -355,12 +334,8 @@
             <!-- Online Reservation / Status Toggle -->
             <div>
               <label class="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  :checked="selectedTable.status === 'ONLINE'"
-                  @change="toggleOnlineStatus"
-                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
+                <input type="checkbox" :checked="selectedTable.status === 'ONLINE'" @change="toggleOnlineStatus"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
               <p class="text-xs text-gray-500 mt-1 ml-6">
@@ -377,10 +352,8 @@
 
             <!-- Delete Button -->
             <div class="pt-4 border-t border-gray-200">
-              <button
-                @click="confirmDeleteTable(selectedTable)"
-                class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              >
+              <button @click="confirmDeleteTable(selectedTable)"
+                class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
                 <i class="fas fa-trash"></i>
                 <span>Xóa bàn</span>
               </button>
@@ -392,11 +365,8 @@
 
     <!-- Create Table Modal -->
     <Teleport to="body">
-      <div
-        v-if="showCreateModal"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
-        @click.self="showCreateModal = false"
-      >
+      <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="showCreateModal = false">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-2xl font-bold text-slate-900">Thêm Bàn Mới</h3>
@@ -410,53 +380,35 @@
               <label class="block text-sm font-medium text-slate-700 mb-2">
                 Số bàn <span class="text-red-500">*</span>
               </label>
-              <input
-                v-model="newTable.tableNumber"
-                type="text"
-                required
+              <input v-model="newTable.tableNumber" type="text" required
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                placeholder="T01"
-              />
+                placeholder="T01" />
             </div>
 
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-2">
                 Sức chứa <span class="text-red-500">*</span>
               </label>
-              <input
-                v-model.number="newTable.capacity"
-                type="number"
-                required
-                min="1"
+              <input v-model.number="newTable.capacity" type="number" required min="1"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                placeholder="4"
-              />
+                placeholder="4" />
             </div>
 
             <div>
               <label class="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  v-model="newTable.allowOnlineReservation"
-                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
+                <input type="checkbox" v-model="newTable.allowOnlineReservation"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
             </div>
 
             <div class="flex gap-3 pt-4">
-              <button
-                type="button"
-                @click="showCreateModal = false"
-                class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
-              >
+              <button type="button" @click="showCreateModal = false"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors">
                 Hủy
               </button>
-              <button
-                type="submit"
-                :disabled="creating"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="submit" :disabled="creating"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span v-if="!creating">Thêm Bàn</span>
                 <span v-else>Đang thêm...</span>
               </button>
@@ -468,11 +420,8 @@
 
     <!-- Delete Confirmation Modal -->
     <Teleport to="body">
-      <div
-        v-if="showDeleteModal"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
-        @click.self="closeDeleteModal"
-      >
+      <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+        @click.self="closeDeleteModal">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-xl font-bold text-slate-900">Xác nhận xóa bàn</h3>
@@ -492,16 +441,12 @@
           </div>
 
           <div class="flex gap-3 justify-end">
-            <button
-              @click="closeDeleteModal"
-              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-            >
+            <button @click="closeDeleteModal"
+              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">
               Hủy
             </button>
-            <button
-              @click="deleteTable"
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-            >
+            <button @click="deleteTable"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
               Xóa bàn
             </button>
           </div>
@@ -553,19 +498,19 @@ watch(() => newTable.value.allowOnlineReservation, (isOnline) => {
 })
 
 // Computed
-const availableCount = computed(() => 
+const availableCount = computed(() =>
   tables.value.filter(t => t.status === 'AVAILABLE').length
 )
 
-const occupiedCount = computed(() => 
+const occupiedCount = computed(() =>
   tables.value.filter(t => t.status === 'OCCUPIED').length
 )
 
-const reservedCount = computed(() => 
+const reservedCount = computed(() =>
   tables.value.filter(t => t.status === 'RESERVED').length
 )
 
-const onlineReservationCount = computed(() => 
+const onlineReservationCount = computed(() =>
   tables.value.filter(t => t.allowOnlineReservation === true || t.status === 'ONLINE').length
 )
 
@@ -591,7 +536,7 @@ const filteredTables = computed(() => {
   // Search by table number
   if (searchTable.value) {
     const search = searchTable.value.toLowerCase()
-    result = result.filter(t => 
+    result = result.filter(t =>
       t.tableNumber?.toLowerCase().includes(search)
     )
   }
@@ -602,18 +547,18 @@ const filteredTables = computed(() => {
 // Group tables by area/prefix (A, B, VIP, etc.)
 const groupedTables = computed(() => {
   const groups = {}
-  
+
   filteredTables.value.forEach(table => {
     // Extract prefix from table number (e.g., "A1" -> "A", "VIP1" -> "VIP", "T01" -> "T")
     const match = table.tableNumber?.match(/^([A-Z]+)/i)
     const prefix = match ? match[1].toUpperCase() : 'OTHER'
-    
+
     if (!groups[prefix]) {
       groups[prefix] = []
     }
     groups[prefix].push(table)
   })
-  
+
   return groups
 })
 
@@ -621,7 +566,7 @@ const groupedTables = computed(() => {
 const loadTables = async () => {
   try {
     const response = await tableService.getAll()
-    
+
     // Handle different response structures
     let tablesData = []
     if (response.success && response.data) {
@@ -631,14 +576,14 @@ const loadTables = async () => {
     } else if (response.data?.data) {
       tablesData = response.data.data
     }
-    
+
     console.log('Loaded tables:', tablesData.length)
-    
+
     // Initialize positions in a grid layout if not set
     tables.value = tablesData.map((table, index) => {
       let positionX = table.positionX
       let positionY = table.positionY
-      
+
       // If position not set (null or undefined), arrange in a grid
       if (positionX === null || positionX === undefined || positionY === null || positionY === undefined) {
         const cols = 5 // 5 columns
@@ -647,23 +592,23 @@ const loadTables = async () => {
         const spacing = 140 // spacing between tables (increased from 120)
         const startX = 60
         const startY = 60
-        
+
         positionX = startX + (col * spacing)
         positionY = startY + (row * spacing)
-        
+
         console.log(`Table ${table.tableNumber}: initialized position (${positionX}, ${positionY})`)
       } else {
         console.log(`Table ${table.tableNumber}: using saved position (${positionX}, ${positionY})`)
       }
-      
+
       return {
-      ...table,
+        ...table,
         positionX,
         positionY,
         allowOnlineReservation: table.allowOnlineReservation ?? false
       }
     })
-    
+
     console.log('Tables after positioning:', tables.value.length)
   } catch (error) {
     console.error('Error loading tables:', error)
@@ -692,27 +637,27 @@ const dragStartPos = ref({ x: 0, y: 0 })
 
 const onMouseDown = (table, event) => {
   if (!editMode.value) return
-  
+
   event.preventDefault()
   event.stopPropagation()
-  
+
   isDragging.value = true
   draggedTable.value = table
-  
+
   // Get the table block element
   const tableElement = event.currentTarget
   const rect = tableElement.getBoundingClientRect()
-  
+
   // Get map container
   const container = mapContainer.value
   const mapRect = container?.getBoundingClientRect() || { left: 0, top: 0 }
-  
+
   // Calculate offset from mouse position to element's top-left corner
   dragOffset.value = {
     x: event.clientX - rect.left,
     y: event.clientY - rect.top
   }
-  
+
   // Store initial mouse position relative to map container
   dragStartPos.value = {
     x: event.clientX - mapRect.left,
@@ -722,14 +667,14 @@ const onMouseDown = (table, event) => {
 
 const onMouseMove = (event) => {
   if (!isDragging.value || !draggedTable.value || !editMode.value) return
-  
+
   event.preventDefault()
-  
+
   const container = mapContainer.value
   if (!container) return
-  
+
   const rect = container.getBoundingClientRect()
-  
+
   // Calculate new position
   let newX = event.clientX - rect.left - dragOffset.value.x
   let newY = event.clientY - rect.top - dragOffset.value.y
@@ -752,11 +697,11 @@ const onMouseMove = (event) => {
 
 const onMouseUp = (event) => {
   if (!isDragging.value || !draggedTable.value) return
-  
+
   // Save position when mouse is released
   const table = draggedTable.value
   saveTablePosition(table)
-  
+
   // Reset dragging state
   isDragging.value = false
   draggedTable.value = null
@@ -769,25 +714,25 @@ const pendingSaves = new Set()
 
 const saveTablePosition = async (table) => {
   if (!table || !table.id) return
-  
+
   // Add to pending saves
   pendingSaves.add(table.id)
-  
+
   // Clear existing timer
   if (saveTimer) {
     clearTimeout(saveTimer)
   }
-  
+
   // Debounce: wait 500ms before saving to avoid too many API calls
   saveTimer = setTimeout(async () => {
     try {
       // Use new position API with query params
       const response = await tableService.updatePosition(
-        table.id, 
-        table.positionX, 
+        table.id,
+        table.positionX,
         table.positionY
       )
-      
+
       if (response.success !== false) {
         // Only show notification if there are multiple pending saves
         if (pendingSaves.size > 1) {
@@ -798,7 +743,7 @@ const saveTablePosition = async (table) => {
       } else {
         notificationStore.error(response.message || 'Không thể lưu vị trí bàn')
       }
-      
+
       pendingSaves.clear()
     } catch (error) {
       console.error('Error saving table position:', error)
@@ -832,18 +777,18 @@ const updateTableStatus = async () => {
 
 const toggleOnlineStatus = async (event) => {
   if (!selectedTable.value) return
-  
+
   const isChecked = event.target.checked
   const newStatus = isChecked ? 'ONLINE' : 'AVAILABLE'
-  
+
   try {
     // Update status using updateStatus API with status in query parameter
     await tableService.updateStatus(selectedTable.value.id, newStatus)
     selectedTable.value.status = newStatus
-    
+
     // Update allowOnlineReservation to match status locally
     selectedTable.value.allowOnlineReservation = isChecked
-    
+
     // Update local state
     const tableIndex = tables.value.findIndex(t => t.id === selectedTable.value.id)
     if (tableIndex !== -1) {
@@ -869,7 +814,7 @@ const createTable = async () => {
         allowOnlineReservation: false,
         status: 'AVAILABLE'
       }
-  loadTables()
+      loadTables()
     } else {
       notificationStore.error(response.message || 'Thêm bàn thất bại')
     }
@@ -893,7 +838,7 @@ function closeDeleteModal() {
 
 async function deleteTable() {
   if (!tableToDelete.value) return
-  
+
   try {
     const response = await tableService.delete(tableToDelete.value.id)
     if (response.success) {
@@ -996,7 +941,7 @@ const getTableBlockClass = (status) => {
     OCCUPIED: 'bg-red-500 border-red-600',
     RESERVED: 'bg-blue-500 border-blue-600',
     MAINTENANCE: 'bg-yellow-500 border-yellow-600',
-    ONLINE: 'bg-gray-500 border-gray-600'
+    ONLINE: 'bg-green-500 border-green-600' // Online tables show as green (available)
   }
   return classes[status] || 'bg-gray-500 border-gray-600'
 }
@@ -1007,7 +952,7 @@ const getTableLabelClass = (status) => {
     OCCUPIED: 'border-red-600 text-red-700',
     RESERVED: 'border-blue-600 text-blue-700',
     MAINTENANCE: 'border-yellow-600 text-yellow-700',
-    ONLINE: 'border-gray-600 text-gray-700'
+    ONLINE: 'border-green-600 text-green-700' // Online tables show as green (available)
   }
   return classes[status] || 'border-gray-600 text-gray-700'
 }
@@ -1059,12 +1004,12 @@ onMounted(() => {
 }
 
 /* Prevent table label from wrapping */
-.table-block > div > div:first-child {
+.table-block>div>div:first-child {
   white-space: nowrap;
   overflow: visible;
 }
 
-.table-block > div > div:first-child > span {
+.table-block>div>div:first-child>span {
   display: inline-block;
   white-space: nowrap;
   max-width: none;
@@ -1079,6 +1024,7 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

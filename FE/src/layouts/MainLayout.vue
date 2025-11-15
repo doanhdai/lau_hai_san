@@ -9,7 +9,7 @@
       <div class="flex items-center justify-center h-16 border-b border-slate-800 flex-shrink-0">
         <h1 class="text-xl font-bold flex items-center gap-2">
           <i class="fas fa-bowl-food text-2xl"></i>
-          <span>HN DHD</span>
+          <span>MNDHD</span>
         </h1>
       </div>
 

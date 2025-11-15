@@ -17,9 +17,10 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
     List<RestaurantTable> findByActiveTrue();
     Boolean existsByTableNumber(String tableNumber);
     
-    // Tìm bàn phù hợp theo số người
+    // Tìm bàn phù hợp theo số người (chỉ lấy bàn chưa bị xóa)
     @Query("SELECT t FROM RestaurantTable t WHERE t.capacity >= :numberOfGuests " +
            "AND t.status = 'AVAILABLE' AND t.active = true " +
+           "AND (t.isDeleted IS NULL OR t.isDeleted = false) " +
            "ORDER BY t.capacity ASC")
     List<RestaurantTable> findSuitableTable(@Param("numberOfGuests") Integer numberOfGuests);
     

@@ -152,6 +152,11 @@ public class ReservationService {
             table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
             
+            // Kiểm tra bàn đã bị xóa mềm chưa
+            if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
+            }
+            
             // Chỉ cho phép đặt bàn online các bàn có trạng thái ONLINE
             if (table.getStatus() != TableStatus.ONLINE) {
                 throw new BadRequestException("Bàn này không thể đặt online. Chỉ các bàn có trạng thái ONLINE mới có thể đặt online. Trạng thái hiện tại: " + table.getStatus());
@@ -258,6 +263,11 @@ public class ReservationService {
             RestaurantTable table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
             
+            // Kiểm tra bàn đã bị xóa mềm chưa
+            if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
+            }
+            
             if (table.getStatus() != TableStatus.AVAILABLE) {
                 throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
             }
@@ -335,6 +345,12 @@ public class ReservationService {
         if (request.getTableId() != null) {
             RestaurantTable table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
+            
+            // Kiểm tra bàn đã bị xóa mềm chưa
+            if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
+            }
+            
             reservation.setTable(table);
         } else {
             reservation.setTable(null);
@@ -423,6 +439,11 @@ public class ReservationService {
         // Tìm bàn mới
         RestaurantTable newTable = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", tableId));
+
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (newTable.getIsDeleted() != null && newTable.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", tableId);
+        }
 
         // Kiểm tra bàn có active không
         if (newTable.getActive() == null || !newTable.getActive()) {
