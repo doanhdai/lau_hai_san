@@ -13,7 +13,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
@@ -28,11 +28,22 @@
       <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-slate-500 text-xs font-medium mb-1">Ngừng hoạt động</p>
-            <p class="text-2xl font-bold text-slate-900">{{ inactiveCount }}</p>
+            <p class="text-slate-500 text-xs font-medium mb-1">Hết hạn</p>
+            <p class="text-2xl font-bold text-slate-900">{{ expiredCount }}</p>
+          </div>
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-clock text-red-600 text-xl"></i>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-500 text-xs font-medium mb-1">Tắt</p>
+            <p class="text-2xl font-bold text-slate-900">{{ disabledCount }}</p>
           </div>
           <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-            <i class="fas fa-times-circle text-gray-600 text-xl"></i>
+            <i class="fas fa-ban text-gray-600 text-xl"></i>
           </div>
         </div>
       </div>
@@ -66,7 +77,8 @@
           <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
             <option value="active">Hoạt động</option>
-            <option value="inactive">Ngừng hoạt động</option>
+            <option value="expired">Hết hạn</option>
+            <option value="disabled">Tắt</option>
           </select>
         </div>
         <div class="flex items-end">
@@ -89,7 +101,7 @@
         v-for="promotion in filteredPromotions" 
         :key="promotion.id"
         class="bg-white border rounded-lg p-5 hover:shadow-lg transition-all duration-200"
-        :class="promotion.active ? 'border-2 border-amber-200' : 'border-gray-200'"
+        :class="getStatusClass(promotion.status)"
       >
         <div class="space-y-4">
           <!-- Header -->
@@ -101,8 +113,8 @@
               </h3>
               <p class="text-sm text-slate-600 mt-1 line-clamp-2">{{ promotion.description || '-' }}</p>
             </div>
-            <span :class="promotion.active ? 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800' : 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'">
-              {{ promotion.active ? 'Hoạt động' : 'Tắt' }}
+            <span :class="getStatusBadgeClass(promotion.status)">
+              {{ getStatusText(promotion.status) }}
             </span>
           </div>
 
@@ -150,10 +162,11 @@
             </button>
             <button 
               @click="toggleStatus(promotion)" 
-              :class="promotion.active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-green-50 text-green-700 hover:bg-green-100'"
+              :class="promotion.status === 1 ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-green-50 text-green-700 hover:bg-green-100'"
               class="flex-1 text-sm py-2 px-3 rounded-lg font-medium transition-colors"
+              :disabled="promotion.status === 0"
             >
-              {{ promotion.active ? 'Tắt' : 'Bật' }}
+              {{ promotion.status === 1 ? 'Tắt' : 'Bật' }}
             </button>
             <button @click="confirmDelete(promotion)" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Xóa">
               <i class="fas fa-trash text-sm"></i>
@@ -196,11 +209,15 @@ const selectedPromotion = ref(null)
 
 // Stats computed from promotions array (client-side)
 const activeCount = computed(() => {
-  return promotions.value.filter(p => p.status === 1 || (p.active === true && !p.status)).length
+  return promotions.value.filter(p => p.status === 1).length
 })
 
-const inactiveCount = computed(() => {
-  return promotions.value.filter(p => p.status === 0 || p.status === 2 || (p.active === false && !p.status)).length
+const expiredCount = computed(() => {
+  return promotions.value.filter(p => p.status === 0).length
+})
+
+const disabledCount = computed(() => {
+  return promotions.value.filter(p => p.status === 2).length
 })
 
 const totalCount = computed(() => promotions.value.length)
@@ -218,11 +235,13 @@ const filteredPromotions = computed(() => {
     )
   }
 
-  // Filter by status (0 = ngừng hoạt động, 1 = hoạt động, 2 = tắt)
+  // Filter by status (0 = hết hạn, 1 = hoạt động, 2 = tắt, 3 = đã xóa - không hiển thị)
   if (filterStatus.value === 'active') {
-    result = result.filter(p => p.status === 1 || (p.active === true && !p.status))
-  } else if (filterStatus.value === 'inactive') {
-    result = result.filter(p => p.status === 0 || p.status === 2 || (p.active === false && !p.status))
+    result = result.filter(p => p.status === 1)
+  } else if (filterStatus.value === 'expired') {
+    result = result.filter(p => p.status === 0)
+  } else if (filterStatus.value === 'disabled') {
+    result = result.filter(p => p.status === 2)
   }
 
   return result
@@ -251,7 +270,13 @@ function editPromotion(promotion) {
 }
 
 async function toggleStatus(promotion) {
-  const action = promotion.active ? 'tắt' : 'bật'
+  // Không cho toggle nếu status = 0 (hết hạn)
+  if (promotion.status === 0) {
+    notification.error('Không thể thay đổi trạng thái khuyến mãi đã hết hạn')
+    return
+  }
+  
+  const action = promotion.status === 1 ? 'tắt' : 'bật'
   const promotionName = promotion.promotionName || promotion.name
   
   if (!confirm(`Bạn có chắc muốn ${action} khuyến mãi "${promotionName}"?`)) {
@@ -259,7 +284,7 @@ async function toggleStatus(promotion) {
   }
   
   try {
-    if (promotion.active) {
+    if (promotion.status === 1) {
       await promotionService.deactivate(promotion.id)
       notification.success('Đã tắt khuyến mãi')
     } else {
@@ -279,8 +304,9 @@ async function confirmDelete(promotion) {
       notification.success('Xóa khuyến mãi thành công')
       loadPromotions()
     } catch (error) {
-      console.log(error);
-      notification.error(error.response.message);
+      console.error('Error deleting promotion:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Không thể xóa khuyến mãi'
+      notification.error(errorMessage)
     }
   }
 }
@@ -340,5 +366,33 @@ function formatDate(date) {
 
 function refreshData() {
   loadPromotions()
+}
+
+// Helper functions for status display
+function getStatusText(status) {
+  if (status === 0) return 'Hết hạn'
+  if (status === 1) return 'Hoạt động'
+  if (status === 2) return 'Tắt'
+  return 'Không xác định'
+}
+
+function getStatusBadgeClass(status) {
+  if (status === 0) {
+    return 'px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800'
+  }
+  if (status === 1) {
+    return 'px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800'
+  }
+  if (status === 2) {
+    return 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
+  }
+  return 'px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800'
+}
+
+function getStatusClass(status) {
+  if (status === 1) {
+    return 'border-2 border-amber-200'
+  }
+  return 'border-gray-200'
 }
 </script>

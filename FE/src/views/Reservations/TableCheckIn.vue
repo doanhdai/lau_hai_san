@@ -105,9 +105,20 @@
       <div class="lg:col-span-1">
         <div class="bg-white border border-gray-200 rounded-lg">
           <div class="p-3 border-b border-gray-200 bg-slate-50">
-            <h3 class="text-base font-bold text-slate-900">
-              Khách chờ check-in
-            </h3>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-base font-bold text-slate-900">
+                Khách chờ check-in
+              </h3>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1.5">Lọc theo ngày đến</label>
+              <input 
+                v-model="filterDate" 
+                type="date" 
+                :min="minDate"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" 
+              />
+            </div>
           </div>
 
           <!-- Loading -->
@@ -120,7 +131,7 @@
             <div
               v-for="reservation in upcomingReservations"
               :key="reservation.id"
-              class="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
+              class="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-all relative group"
             >
               <!-- Customer Name -->
               <div class="flex items-start justify-between mb-1.5">
@@ -136,16 +147,57 @@
                   {{ formatReservationTime(reservation.reservationTime || reservation.reservationDateTime) }} 
                   ({{ reservation.numberOfGuests }} khách)
                 </p>
+                <!-- Chú thích check-in (chỉ hiện cho ngày hiện tại) -->
+                <template v-if="isToday">
+                  <p 
+                    v-if="!hasTable(reservation)"
+                    class="text-xs text-gray-600 mt-1"
+                  >
+                    Chưa chọn bàn
+                  </p>
+                  <p 
+                    v-else-if="isTableCheckedIn(reservation)"
+                    class="text-xs text-green-700 mt-1 font-semibold"
+                  >
+                    Đã checkin
+                  </p>
+                  <p 
+                    v-else-if="getCountdownHours(reservation.reservationTime || reservation.reservationDateTime) > 1"
+                    class="text-xs text-blue-600 mt-1"
+                  >
+                    Có thể checkin trước 1 tiếng
+                  </p>
+                  <p 
+                    v-else
+                    class="text-xs text-green-600 mt-1 font-medium"
+                  >
+                    Đã có thể checkin
+                  </p>
+                </template>
               </div>
 
-              <!-- Countdown Timer -->
-              <div class="flex items-center justify-between">
+              <!-- Countdown Timer (chỉ ẩn nếu đã check-in VÀ là ngày hiện tại) -->
+              <div v-if="!(isToday && isTableCheckedIn(reservation))" class="flex items-center justify-between">
                 <span class="text-xs text-slate-500">Khách hàng sẽ đến sau</span>
                 <div class="bg-orange-100 border border-orange-200 rounded px-2 py-1">
                   <span class="text-base font-bold text-orange-600 font-mono">
                     {{ getCountdown(reservation.reservationTime || reservation.reservationDateTime) }}
                   </span>
                 </div>
+              </div>
+
+              <!-- Check-in Button (chỉ hiện cho ngày hiện tại: hover và countdown <= 1 tiếng và chưa check-in và đã có bàn và là reservation gần nhất của table) -->
+              <div 
+                v-if="isToday && hasTable(reservation) && !isTableCheckedIn(reservation) && getCountdownHours(reservation.reservationTime || reservation.reservationDateTime) <= 1 && isNearestReservationForTable(reservation)"
+                class="absolute inset-0 bg-white/95 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <button
+                  @click="handleCheckIn(reservation)"
+                  class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors"
+                >
+                  <i class="fas fa-check-circle"></i>
+                  <span>Check-in</span>
+                </button>
               </div>
             </div>
 
@@ -362,6 +414,27 @@ const tableStatus = ref('AVAILABLE')
 const updatingStatus = ref(false)
 const mapContainer = ref(null)
 const currentTime = ref(new Date())
+const filterDate = ref('')
+
+// Min date for filter (today)
+const minDate = computed(() => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+})
+
+// Check if filter date is today
+const isToday = computed(() => {
+  if (!filterDate.value) return true // Default is today
+  const today = new Date()
+  const selectedDate = new Date(filterDate.value + 'T00:00:00')
+  
+  return today.getFullYear() === selectedDate.getFullYear() &&
+         today.getMonth() === selectedDate.getMonth() &&
+         today.getDate() === selectedDate.getDate()
+})
 
 // Merge tables with reservations
 const tablesWithReservations = computed(() => {
@@ -424,22 +497,30 @@ const upcomingReservations = computed(() => {
   }
   
   const now = currentTime.value
+  const selectedDate = filterDate.value ? new Date(filterDate.value + 'T00:00:00') : null
+  const selectedDateEnd = filterDate.value ? new Date(filterDate.value + 'T23:59:59') : null
   
   return reservations.value
     .filter(r => {
       if (!r) return false
       
-      // Only show PENDING or CONFIRMED reservations
-      if (r.status !== 'PENDING' && r.status !== 'CONFIRMED') {
+      // Only show CONFIRMED reservations
+      if (r.status !== 'CONFIRMED') {
         return false
       }
       
-      // Only show future reservations
       const reservationTime = r.reservationTime || r.reservationDateTime
       if (!reservationTime) return false
       
       try {
         const reservationDate = new Date(reservationTime)
+        
+        // Filter by selected date if provided
+        if (selectedDate && selectedDateEnd) {
+          return reservationDate >= selectedDate && reservationDate <= selectedDateEnd
+        }
+        
+        // Otherwise, only show future reservations
         return reservationDate >= now
       } catch (error) {
         return false
@@ -453,6 +534,13 @@ const upcomingReservations = computed(() => {
 })
 
 onMounted(() => {
+  // Set default filter date to today
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  filterDate.value = `${year}-${month}-${day}`
+  
   loadData()
   
   // Update current time every second for countdown
@@ -880,6 +968,110 @@ function getCountdown(reservationTime) {
   } catch (error) {
     console.error('Error calculating countdown:', error)
     return '00:00:00'
+  }
+}
+
+function getCountdownHours(reservationTime) {
+  if (!reservationTime) return 0
+  
+  try {
+    const target = new Date(reservationTime)
+    const now = currentTime.value
+    const diff = target - now
+    
+    if (diff <= 0) {
+      return 0
+    }
+    
+    // Trả về số giờ (có thể là số thập phân)
+    return diff / (1000 * 60 * 60)
+  } catch (error) {
+    console.error('Error calculating countdown hours:', error)
+    return 0
+  }
+}
+
+function hasTable(reservation) {
+  if (!reservation) return false
+  
+  // Lấy tableId từ reservation
+  const tableId = reservation.tableId || reservation.table?.id
+  return tableId != null && tableId !== undefined
+}
+
+function isTableCheckedIn(reservation) {
+  if (!reservation) return false
+  
+  // Lấy tableId từ reservation
+  const tableId = reservation.tableId || reservation.table?.id
+  if (!tableId) return false
+  
+  // Tìm table trong danh sách tables
+  const table = tables.value.find(t => t && t.id === tableId)
+  if (!table) return false
+  
+  // Kiểm tra status của table
+  return table.status === 'OCCUPIED'
+}
+
+function isNearestReservationForTable(reservation) {
+  if (!reservation) return false
+  
+  // Lấy tableId từ reservation
+  const tableId = reservation.tableId || reservation.table?.id
+  if (!tableId) return true // Nếu không có tableId, cho phép hiển thị
+  
+  // Tìm tất cả reservations cùng tableId
+  const sameTableReservations = upcomingReservations.value.filter(r => {
+    const rTableId = r.tableId || r.table?.id
+    return rTableId === tableId && r.id !== reservation.id
+  })
+  
+  // Nếu không có reservation nào khác cùng table, cho phép hiển thị
+  if (sameTableReservations.length === 0) return true
+  
+  // Lấy reservationTime của reservation hiện tại
+  const currentReservationTime = new Date(reservation.reservationTime || reservation.reservationDateTime)
+  
+  // Kiểm tra xem có reservation nào có thời gian gần hơn không
+  for (const otherReservation of sameTableReservations) {
+    const otherReservationTime = new Date(otherReservation.reservationTime || otherReservation.reservationDateTime)
+    
+    // Nếu có reservation khác có thời gian gần hơn (nhỏ hơn), thì reservation này không phải là gần nhất
+    if (otherReservationTime < currentReservationTime) {
+      return false
+    }
+  }
+  
+  // Nếu không có reservation nào gần hơn, đây là reservation gần nhất
+  return true
+}
+
+async function handleCheckIn(reservation) {
+  if (!reservation) {
+    notification.error('Không tìm thấy thông tin đặt bàn')
+    return
+  }
+
+  // Lấy tableId từ reservation
+  const tableId = reservation.tableId || reservation.table?.id
+  
+  if (!tableId) {
+    notification.error('Đặt bàn này chưa có bàn được gán')
+    return
+  }
+
+  if (!confirm(`Check-in bàn ${reservation.tableNumber || ''} cho khách "${reservation.customerName}"?`)) {
+    return
+  }
+
+  try {
+    await tableService.updateStatus(tableId, 'OCCUPIED')
+    notification.success('Đã check-in thành công')
+    loadData()
+  } catch (error) {
+    console.error('Check-in error:', error)
+    notification.error('Không thể check-in: ' + (error.response?.data?.message || error.message))
   }
 }
 </script>

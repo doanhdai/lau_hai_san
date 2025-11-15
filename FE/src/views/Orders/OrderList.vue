@@ -14,7 +14,7 @@
 
     <!-- Filters -->
     <div class="bg-white border border-gray-200 rounded-lg p-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="items-center grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
           <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
@@ -34,6 +34,16 @@
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Đến ngày</label>
           <input v-model="toDate" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
+        </div>
+        <div class="flex gap-2 flex-col">
+          <button @click="applyFilter" class="bg-slate-900 hover:bg-slate-800 text-white px-2 py-1 rounded-lg font-medium flex items-center gap-2 transition-colors flex-1">
+            <i class="fas fa-filter"></i>
+            <span>Lọc</span>
+          </button>
+          <button @click="resetFilter" class="bg-gray-100 hover:bg-gray-200 text-slate-700 px-2 py-1 rounded-lg font-medium flex items-center gap-2 transition-colors flex-1">
+            <i class="fas fa-redo"></i>
+            <span>Reset</span>
+          </button>
         </div>
       </div>
     </div>
@@ -140,19 +150,89 @@ const fromDate = ref('')
 const toDate = ref('')
 const selectedOrder = ref(null)
 
+// Active filters (sẽ được áp dụng khi bấm nút Lọc)
+const activeFilterStatus = ref('')
+const activeFromDate = ref('')
+const activeToDate = ref('')
+
 const filteredOrders = computed(() => {
   let result = orders.value
 
-  if (filterStatus.value) {
-    result = result.filter(o => o.status === filterStatus.value)
+  // Filter by status
+  if (activeFilterStatus.value) {
+    result = result.filter(o => o.status === activeFilterStatus.value)
   }
+
+  // Filter by date range
+  if (activeFromDate.value) {
+    const from = new Date(activeFromDate.value + 'T00:00:00')
+    result = result.filter(o => {
+      if (!o.createdAt) return false
+      const orderDate = new Date(o.createdAt)
+      return orderDate >= from
+    })
+  }
+
+  if (activeToDate.value) {
+    const to = new Date(activeToDate.value + 'T23:59:59')
+    result = result.filter(o => {
+      if (!o.createdAt) return false
+      const orderDate = new Date(o.createdAt)
+      return orderDate <= to
+    })
+  }
+
+  // Sort by createdAt descending (newest first)
+  result = result.sort((a, b) => {
+    if (!a.createdAt) return 1
+    if (!b.createdAt) return -1
+    return new Date(b.createdAt) - new Date(a.createdAt)
+  })
 
   return result
 })
 
 onMounted(() => {
   loadOrders()
+  setDefaultDateRange()
 })
+
+function setDefaultDateRange() {
+  const today = new Date()
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  
+  // Format: YYYY-MM-DD
+  fromDate.value = formatDateForInput(firstDayOfMonth)
+  toDate.value = formatDateForInput(today)
+  
+  // Set active filters to default
+  activeFromDate.value = fromDate.value
+  activeToDate.value = toDate.value
+}
+
+function formatDateForInput(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function applyFilter() {
+  // Áp dụng filter từ input vào active filters
+  activeFilterStatus.value = filterStatus.value
+  activeFromDate.value = fromDate.value
+  activeToDate.value = toDate.value
+}
+
+function resetFilter() {
+  // Reset tất cả về mặc định
+  filterStatus.value = ''
+  setDefaultDateRange()
+  // Áp dụng ngay filter mặc định
+  activeFilterStatus.value = ''
+  activeFromDate.value = fromDate.value
+  activeToDate.value = toDate.value
+}
 
 async function loadOrders() {
   loading.value = true
