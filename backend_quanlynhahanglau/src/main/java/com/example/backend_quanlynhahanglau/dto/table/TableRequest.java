@@ -1,6 +1,7 @@
 package com.example.backend_quanlynhahanglau.dto.table;
 
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
+import com.example.backend_quanlynhahanglau.enums.TableType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -20,6 +21,7 @@ public class TableRequest {
     private Integer capacity;
 
     private TableStatus status;
+    private TableType type; // Loại bàn: OFFLINE hoặc ONLINE
     private String location;
     private String notes;
     private Integer positionX; // Vị trí X trên bản đồ (pixels)

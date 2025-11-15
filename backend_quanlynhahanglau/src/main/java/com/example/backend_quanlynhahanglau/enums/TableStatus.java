@@ -4,6 +4,5 @@ public enum TableStatus {
     AVAILABLE,      // Trống
     RESERVED,       // Đã đặt
     OCCUPIED,       // Có khách
-    CLEANING,
-    ONLINE   
+    CLEANING        // Đang dọn
 }

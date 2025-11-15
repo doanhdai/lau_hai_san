@@ -6,6 +6,7 @@ import com.example.backend_quanlynhahanglau.dto.reservation.ReservationResponse;
 import com.example.backend_quanlynhahanglau.entity.*;
 import com.example.backend_quanlynhahanglau.enums.ReservationStatus;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
+import com.example.backend_quanlynhahanglau.enums.TableType;
 import com.example.backend_quanlynhahanglau.exception.BadRequestException;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.repository.*;
@@ -157,9 +158,9 @@ public class ReservationService {
                 throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
             }
             
-            // Chỉ cho phép đặt bàn online các bàn có trạng thái ONLINE
-            if (table.getStatus() != TableStatus.ONLINE) {
-                throw new BadRequestException("Bàn này không thể đặt online. Chỉ các bàn có trạng thái ONLINE mới có thể đặt online. Trạng thái hiện tại: " + table.getStatus());
+            // Chỉ cho phép đặt bàn online các bàn có type ONLINE
+            if (table.getType() != TableType.ONLINE) {
+                throw new BadRequestException("Bàn này không thể đặt online. Chỉ các bàn có loại ONLINE mới có thể đặt online. Loại hiện tại: " + table.getType());
             }
 
             // Kiểm tra conflict với các reservation khác trong khoảng ±3 giờ (chỉ khi có table)
@@ -450,10 +451,10 @@ public class ReservationService {
             throw new BadRequestException("Bàn không khả dụng");
         }
 
-        // Kiểm tra bàn có status phù hợp (admin/manager có thể gán bàn AVAILABLE, RESERVED hoặc ONLINE)
+        // Kiểm tra bàn có status phù hợp (admin/manager có thể gán bàn AVAILABLE hoặc RESERVED)
+        // Lưu ý: type (ONLINE/OFFLINE) không ảnh hưởng đến việc admin/manager gán bàn
         if (newTable.getStatus() != TableStatus.AVAILABLE 
-                && newTable.getStatus() != TableStatus.RESERVED 
-                && newTable.getStatus() != TableStatus.ONLINE) {
+                && newTable.getStatus() != TableStatus.RESERVED) {
             throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + newTable.getStatus());
         }
 
@@ -491,8 +492,8 @@ public class ReservationService {
         // Gán bàn mới
         reservation.setTable(newTable);
         
-        // Cập nhật trạng thái bàn mới thành RESERVED nếu đang là AVAILABLE hoặc ONLINE
-        if (newTable.getStatus() == TableStatus.AVAILABLE || newTable.getStatus() == TableStatus.ONLINE) {
+        // Cập nhật trạng thái bàn mới thành RESERVED nếu đang là AVAILABLE
+        if (newTable.getStatus() == TableStatus.AVAILABLE) {
             newTable.setStatus(TableStatus.RESERVED);
             tableRepository.save(newTable);
         }

@@ -208,7 +208,7 @@
                 </div>
 
                  <!-- Online reservation icon (Top Right) -->
-                 <div v-if="table.status === 'ONLINE'" class="absolute -top-2 -right-2 z-10">
+                 <div v-if="table.type === 'ONLINE'" class="absolute -top-2 -right-2 z-10">
                    <div
                      class="bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white">
                      <i class="fas fa-wifi text-white text-xs"></i>
@@ -274,7 +274,7 @@
                     </span>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap">
-                    <span v-if="table.allowOnlineReservation" class="text-green-600 text-sm">
+                    <span v-if="table.type === 'ONLINE'" class="text-green-600 text-sm">
                       <i class="fas fa-check-circle"></i> Cho phép
                     </span>
                     <span v-else class="text-gray-500 text-sm">
@@ -331,15 +331,15 @@
               </div>
             </div>
 
-            <!-- Online Reservation / Status Toggle -->
+            <!-- Online Reservation / Type Toggle -->
             <div>
               <label class="flex items-center gap-2">
-                <input type="checkbox" :checked="selectedTable.status === 'ONLINE'" @change="toggleOnlineStatus"
+                <input type="checkbox" :checked="selectedTable.type === 'ONLINE'" @change="toggleOnlineType"
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
               <p class="text-xs text-gray-500 mt-1 ml-6">
-                {{ selectedTable.status === 'ONLINE' ? 'Trạng thái: Có thể đặt online' : 'Trạng thái: Trống' }}
+                {{ selectedTable.type === 'ONLINE' ? 'Loại bàn: Có thể đặt online' : 'Loại bàn: Chỉ đặt tại quán' }}
               </p>
             </div>
 
@@ -400,6 +400,9 @@
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
+              <p class="text-xs text-gray-500 mt-1 ml-6">
+                {{ newTable.allowOnlineReservation ? 'Loại bàn: Có thể đặt online' : 'Loại bàn: Chỉ đặt tại quán' }}
+              </p>
             </div>
 
             <div class="flex gap-3 pt-4">
@@ -485,15 +488,16 @@ const newTable = ref({
   tableNumber: '',
   capacity: 4,
   allowOnlineReservation: false,
+  type: 'OFFLINE',
   status: 'AVAILABLE'
 })
 
-// Watch allowOnlineReservation to update status
+// Watch allowOnlineReservation to update type
 watch(() => newTable.value.allowOnlineReservation, (isOnline) => {
   if (isOnline) {
-    newTable.value.status = 'ONLINE'
+    newTable.value.type = 'ONLINE'
   } else {
-    newTable.value.status = 'AVAILABLE'
+    newTable.value.type = 'OFFLINE'
   }
 })
 
@@ -511,7 +515,7 @@ const reservedCount = computed(() =>
 )
 
 const onlineReservationCount = computed(() =>
-  tables.value.filter(t => t.allowOnlineReservation === true || t.status === 'ONLINE').length
+  tables.value.filter(t => t.type === 'ONLINE').length
 )
 
 const filteredTables = computed(() => {
@@ -530,7 +534,7 @@ const filteredTables = computed(() => {
   // Filter by online reservation
   if (filterOnline.value !== '') {
     const allowOnline = filterOnline.value === 'true'
-    result = result.filter(t => t.allowOnlineReservation === allowOnline)
+    result = result.filter(t => (t.type === 'ONLINE') === allowOnline)
   }
 
   // Search by table number
@@ -605,7 +609,7 @@ const loadTables = async () => {
         ...table,
         positionX,
         positionY,
-        allowOnlineReservation: table.allowOnlineReservation ?? false
+        type: table.type || 'OFFLINE'
       }
     })
 
@@ -755,11 +759,17 @@ const saveTablePosition = async (table) => {
 }
 
 const selectTable = (table) => {
-  selectedTable.value = { ...table }
+  selectedTable.value = { 
+    ...table,
+    allowOnlineReservation: table.type === 'ONLINE'
+  }
 }
 
 const editTable = (table) => {
-  selectedTable.value = { ...table }
+  selectedTable.value = { 
+    ...table,
+    allowOnlineReservation: table.type === 'ONLINE'
+  }
 }
 
 const updateTableStatus = async () => {
@@ -775,24 +785,25 @@ const updateTableStatus = async () => {
   }
 }
 
-const toggleOnlineStatus = async (event) => {
+const toggleOnlineType = async (event) => {
   if (!selectedTable.value) return
 
   const isChecked = event.target.checked
-  const newStatus = isChecked ? 'ONLINE' : 'AVAILABLE'
+  const newType = isChecked ? 'ONLINE' : 'OFFLINE'
 
   try {
-    // Update status using updateStatus API with status in query parameter
-    await tableService.updateStatus(selectedTable.value.id, newStatus)
-    selectedTable.value.status = newStatus
-
-    // Update allowOnlineReservation to match status locally
+    // Update type using update API
+    await tableService.update(selectedTable.value.id, {
+      ...selectedTable.value,
+      type: newType
+    })
+    selectedTable.value.type = newType
     selectedTable.value.allowOnlineReservation = isChecked
 
     // Update local state
     const tableIndex = tables.value.findIndex(t => t.id === selectedTable.value.id)
     if (tableIndex !== -1) {
-      tables.value[tableIndex].status = newStatus
+      tables.value[tableIndex].type = newType
       tables.value[tableIndex].allowOnlineReservation = isChecked
     }
     notificationStore.success('Cập nhật thành công')
@@ -804,7 +815,15 @@ const toggleOnlineStatus = async (event) => {
 const createTable = async () => {
   creating.value = true
   try {
-    const response = await tableService.create(newTable.value)
+    // Prepare table data with type field
+    const tableData = {
+      tableNumber: newTable.value.tableNumber,
+      capacity: newTable.value.capacity,
+      type: newTable.value.type,
+      status: newTable.value.status
+    }
+    
+    const response = await tableService.create(tableData)
     if (response.success) {
       notificationStore.success('Thêm bàn thành công')
       showCreateModal.value = false
@@ -812,6 +831,7 @@ const createTable = async () => {
         tableNumber: '',
         capacity: 4,
         allowOnlineReservation: false,
+        type: 'OFFLINE',
         status: 'AVAILABLE'
       }
       loadTables()

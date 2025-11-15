@@ -602,8 +602,8 @@ async function openTableSelectModal(reservation) {
       
       console.log('Filtered tables by capacity:', availableTables.value)
       console.log('Tables breakdown:', {
-        online: availableTables.value.filter(t => t.status === 'ONLINE').length,
-        regular: availableTables.value.filter(t => t.status === 'AVAILABLE').length,
+        online: availableTables.value.filter(t => t.type === 'ONLINE').length,
+        regular: availableTables.value.filter(t => t.type === 'OFFLINE').length,
         total: availableTables.value.length
       })
     } else {
@@ -709,13 +709,13 @@ const filteredTablesByType = computed(() => {
   return availableTables.value.filter(table => {
     if (!table) return false
     
-    // Bàn Online: status === 'ONLINE'
+    // Bàn Online: type === 'ONLINE'
     if (tableTypeFilter.value === 'online') {
-      return table.status === 'ONLINE'
+      return table.type === 'ONLINE'
     } 
-    // Bàn Thường: status === 'AVAILABLE'
+    // Bàn Thường: type === 'OFFLINE'
     else {
-      return table.status === 'AVAILABLE'
+      return table.type === 'OFFLINE'
     }
   })
 })

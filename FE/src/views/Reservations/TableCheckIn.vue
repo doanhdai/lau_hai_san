@@ -517,7 +517,7 @@ async function loadData() {
         ...table,
         positionX,
         positionY,
-        allowOnlineReservation: table.allowOnlineReservation ?? false
+        type: table.type || 'OFFLINE'
       }
     }).filter(Boolean) // Remove any null entries
   } catch (error) {
@@ -716,11 +716,6 @@ function getTableBlockClass(table) {
     return 'bg-gray-600 border-gray-700'
   }
   
-  // ONLINE: Online - Màu xanh dương
-  if (tableStatus === 'ONLINE') {
-    return 'bg-blue-500 border-blue-600'
-  }
-  
   // Nếu bàn có reservation nhưng chưa có status rõ ràng, dựa vào reservation status
   if (table.reservation) {
     const reservationStatus = table.reservation.status
@@ -763,11 +758,6 @@ function getTableLabelClass(table) {
   // CLEANING: Đang dọn - Xám đậm
   if (tableStatus === 'CLEANING') {
     return 'border-gray-700 text-gray-800'
-  }
-  
-  // ONLINE: Online - Xanh dương
-  if (tableStatus === 'ONLINE') {
-    return 'border-blue-600 text-blue-700'
   }
   
   // Nếu bàn có reservation nhưng chưa có status rõ ràng, dựa vào reservation status
