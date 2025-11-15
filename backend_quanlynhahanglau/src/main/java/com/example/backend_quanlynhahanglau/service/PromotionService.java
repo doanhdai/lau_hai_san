@@ -8,6 +8,7 @@ import com.example.backend_quanlynhahanglau.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,14 +24,14 @@ public class PromotionService {
     public List<PromotionResponse> getAllPromotions() {
         List<Promotion> promotions = promotionRepository.findAll();
         LocalDateTime now = LocalDateTime.now();
-        
+
         // Auto-update active status based on date range
         for (Promotion promotion : promotions) {
             Integer currentActive = promotion.getActive();
             if (currentActive == null) {
                 currentActive = 1; // Default to active
             }
-            
+
             // Only auto-update if active is 1 (active) or 0 (expired)
             // Don't auto-update if active is 2 (manually disabled)
             if (currentActive != 2) {
@@ -55,7 +56,7 @@ public class PromotionService {
                 }
             }
         }
-        
+
         return promotions.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -107,14 +108,14 @@ public class PromotionService {
         promotion.setDiscountAmount(request.getDiscountAmount());
         promotion.setMinOrderValue(request.getMinOrderValue());
         promotion.setMaxDiscount(request.getMaxDiscount());
-        
+
         // Update active status based on date range after updating dates
         LocalDateTime now = LocalDateTime.now();
         Integer currentActive = promotion.getActive();
         if (currentActive == null) {
             currentActive = 1;
         }
-        
+
         // Only auto-update if not manually disabled (status != 2)
         if (currentActive != 2) {
             if (now.isAfter(request.getEndDate())) {
@@ -134,7 +135,12 @@ public class PromotionService {
     public void deletePromotion(Long id) {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khuyến mãi", "id", id));
-        promotionRepository.delete(promotion);
+        try {
+            promotionRepository.delete(promotion);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Không thể xóa khuyến mãi do đã được sử dụng ở bảng khác!");
+        }
+
     }
 
     @Transactional
@@ -144,7 +150,7 @@ public class PromotionService {
         LocalDateTime now = LocalDateTime.now();
         // Chỉ set active = 1 nếu đang trong khoảng thời gian
         if ((now.isAfter(promotion.getStartDate()) || now.isEqual(promotion.getStartDate())) &&
-            (now.isBefore(promotion.getEndDate()) || now.isEqual(promotion.getEndDate()))) {
+                (now.isBefore(promotion.getEndDate()) || now.isEqual(promotion.getEndDate()))) {
             promotion.setActive(1);
         } else {
             // Nếu ngoài khoảng thời gian, vẫn set = 1 (sẽ được auto-update sau)
@@ -165,18 +171,19 @@ public class PromotionService {
         // Determine discount type and value
         String discountType = null;
         BigDecimal discountValue = null;
-        
+
         if (promotion.getDiscountPercent() != null && promotion.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0) {
             discountType = "PERCENTAGE";
             discountValue = promotion.getDiscountPercent();
-        } else if (promotion.getDiscountAmount() != null && promotion.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+        } else if (promotion.getDiscountAmount() != null
+                && promotion.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
             discountType = "FIXED";
             discountValue = promotion.getDiscountAmount();
         }
-        
+
         // Convert Integer active to Boolean for backward compatibility
         Boolean activeBoolean = (promotion.getActive() != null && promotion.getActive() == 1);
-        
+
         return PromotionResponse.builder()
                 .id(promotion.getId())
                 .name(promotion.getName())

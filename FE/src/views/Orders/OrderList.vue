@@ -6,10 +6,10 @@
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý Đơn hàng</h1>
         <p class="text-slate-600 mt-1 text-sm">Danh sách và trạng thái đơn hàng</p>
       </div>
-      <router-link to="/admin/orders/create" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+      <!-- <router-link to="/admin/orders/create" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
         <i class="fas fa-plus"></i>
         <span>Tạo đơn hàng mới</span>
-      </router-link>
+      </router-link> -->
     </div>
 
     <!-- Filters -->

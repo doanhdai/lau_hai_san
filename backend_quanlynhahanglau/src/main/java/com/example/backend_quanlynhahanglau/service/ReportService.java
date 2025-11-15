@@ -203,52 +203,60 @@ public class ReportService {
         // Lấy tất cả đơn hàng trong khoảng thời gian (không lọc theo status)
         List<Order> allOrders = orderRepository.findByDate(startDateTime, endDateTime);
         
-        // Lọc đơn COMPLETED để tính doanh thu
-        List<Order> completedOrders = allOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
-                .collect(Collectors.toList());
-        
-        // Tổng doanh thu (từ đơn COMPLETED)
-        BigDecimal totalRevenue = completedOrders.stream()
-                .map(Order::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // Tổng thực nhận (từ payments COMPLETED)
-        BigDecimal totalReceived = paymentRepository.calculateTotalAmountByDateAndStatus(
+        // Tổng doanh thu = SUM(amount) từ payments COMPLETED
+        BigDecimal totalRevenue = paymentRepository.calculateTotalAmountByDateAndStatus(
                 startDateTime, endDateTime, PaymentStatus.COMPLETED);
-        if (totalReceived == null) {
-            totalReceived = BigDecimal.ZERO;
+        if (totalRevenue == null) {
+            totalRevenue = BigDecimal.ZERO;
         }
+        
+        // Tổng đã giảm = SUM(discount) từ orders
+        BigDecimal totalDiscount = allOrders.stream()
+                .map(o -> o.getDiscount() != null ? o.getDiscount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         // Số đơn hàng (tất cả đơn trong khoảng thời gian)
         Long totalOrders = (long) allOrders.size();
         
         // Doanh thu trung bình
-        BigDecimal averageRevenue = totalOrders > 0 && completedOrders.size() > 0
-                ? totalRevenue.divide(BigDecimal.valueOf(completedOrders.size()), 2, RoundingMode.HALF_UP)
+        BigDecimal averageRevenue = totalOrders > 0 && totalRevenue.compareTo(BigDecimal.ZERO) > 0
+                ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         
         // Nhóm theo ngày để tạo dữ liệu cho biểu đồ
         Map<LocalDate, List<Order>> ordersByDate = allOrders.stream()
                 .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
         
-        Map<LocalDate, List<Order>> completedOrdersByDate = completedOrders.stream()
-                .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
+        // Lấy doanh thu từ payments theo ngày
+        List<Object[]> paymentsByDate = paymentRepository.calculateAmountByDateAndStatus(
+                startDateTime, endDateTime, PaymentStatus.COMPLETED);
+        Map<LocalDate, BigDecimal> revenueByDateMap = new HashMap<>();
+        for (Object[] row : paymentsByDate) {
+            LocalDate date;
+            if (row[0] instanceof java.sql.Date) {
+                date = ((java.sql.Date) row[0]).toLocalDate();
+            } else if (row[0] instanceof LocalDate) {
+                date = (LocalDate) row[0];
+            } else {
+                continue;
+            }
+            BigDecimal amount = (BigDecimal) row[1];
+            if (amount != null) {
+                revenueByDateMap.put(date, amount);
+            }
+        }
         
         // Tạo dữ liệu cho biểu đồ
         List<ReportStatsResponse.DailyData> revenueByDay = new ArrayList<>();
         List<ReportStatsResponse.DailyData> ordersByDay = new ArrayList<>();
+        List<ReportStatsResponse.DailyData> discountByDay = new ArrayList<>();
         
         LocalDate currentDate = actualStartDate;
         while (!currentDate.isAfter(actualEndDate)) {
             List<Order> dayOrders = ordersByDate.getOrDefault(currentDate, Collections.emptyList());
-            List<Order> dayCompletedOrders = completedOrdersByDate.getOrDefault(currentDate, Collections.emptyList());
             
-            // Doanh thu theo ngày
-            BigDecimal dayRevenue = dayCompletedOrders.stream()
-                    .map(Order::getTotal)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+            // Doanh thu theo ngày (từ payments)
+            BigDecimal dayRevenue = revenueByDateMap.getOrDefault(currentDate, BigDecimal.ZERO);
             revenueByDay.add(ReportStatsResponse.DailyData.builder()
                     .date(currentDate)
                     .value(dayRevenue)
@@ -260,6 +268,15 @@ public class ReportService {
                     .value(BigDecimal.valueOf(dayOrders.size()))
                     .build());
             
+            // Đã giảm giá theo ngày (từ orders.discount)
+            BigDecimal dayDiscount = dayOrders.stream()
+                    .map(o -> o.getDiscount() != null ? o.getDiscount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            discountByDay.add(ReportStatsResponse.DailyData.builder()
+                    .date(currentDate)
+                    .value(dayDiscount)
+                    .build());
+            
             currentDate = currentDate.plusDays(1);
         }
         
@@ -268,11 +285,12 @@ public class ReportService {
                 .startDate(actualStartDate)
                 .endDate(actualEndDate)
                 .totalRevenue(totalRevenue)
-                .totalReceived(totalReceived)
+                .totalDiscount(totalDiscount)
                 .totalOrders(totalOrders)
                 .averageRevenue(averageRevenue)
                 .revenueByDay(revenueByDay)
                 .ordersByDay(ordersByDay)
+                .discountByDay(discountByDay)
                 .build();
     }
 }

@@ -22,5 +22,16 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("status") PaymentStatus status);
+    
+    // Tính tổng amount từ payments theo order_id và theo ngày
+    @Query("SELECT FUNCTION('DATE', p.createdAt) as date, SUM(p.amount) as total " +
+           "FROM Payment p WHERE " +
+           "p.createdAt >= :startDate AND p.createdAt <= :endDate " +
+           "AND p.paymentStatus = :status " +
+           "GROUP BY FUNCTION('DATE', p.createdAt)")
+    List<Object[]> calculateAmountByDateAndStatus(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") PaymentStatus status);
 }
 
