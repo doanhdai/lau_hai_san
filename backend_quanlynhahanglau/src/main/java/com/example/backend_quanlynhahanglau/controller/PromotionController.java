@@ -21,6 +21,7 @@ public class PromotionController {
     private final PromotionService promotionService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<PromotionResponse>>> getAllPromotions() {
         List<PromotionResponse> promotions = promotionService.getAllPromotions();
         return ResponseEntity.ok(ApiResponse.success(promotions));
@@ -33,6 +34,7 @@ public class PromotionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<PromotionResponse>> getPromotionById(@PathVariable Long id) {
         PromotionResponse promotion = promotionService.getPromotionById(id);
         return ResponseEntity.ok(ApiResponse.success(promotion));
@@ -56,16 +58,25 @@ public class PromotionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deletePromotion(@PathVariable Long id) {
         promotionService.deletePromotion(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa khuyến mãi thành công", null));
     }
 
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<PromotionResponse>> activatePromotion(@PathVariable Long id) {
+        promotionService.activatePromotion(id);
+        PromotionResponse promotion = promotionService.getPromotionById(id);
+        return ResponseEntity.ok(ApiResponse.success("Kích hoạt khuyến mãi thành công", promotion));
+    }
+
     @PutMapping("/{id}/deactivate")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<ApiResponse<Void>> deactivatePromotion(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<PromotionResponse>> deactivatePromotion(@PathVariable Long id) {
         promotionService.deactivatePromotion(id);
-        return ResponseEntity.ok(ApiResponse.success("Vô hiệu hóa khuyến mãi thành công", null));
+        PromotionResponse promotion = promotionService.getPromotionById(id);
+        return ResponseEntity.ok(ApiResponse.success("Vô hiệu hóa khuyến mãi thành công", promotion));
     }
 }

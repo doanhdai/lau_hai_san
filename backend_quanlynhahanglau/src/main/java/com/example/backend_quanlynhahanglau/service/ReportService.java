@@ -1,12 +1,15 @@
 package com.example.backend_quanlynhahanglau.service;
 
 import com.example.backend_quanlynhahanglau.dto.report.RevenueReportResponse;
+import com.example.backend_quanlynhahanglau.dto.report.ReportStatsResponse;
 import com.example.backend_quanlynhahanglau.dto.report.SalesReportResponse;
 import com.example.backend_quanlynhahanglau.entity.Order;
 import com.example.backend_quanlynhahanglau.entity.OrderDetail;
 import com.example.backend_quanlynhahanglau.enums.OrderStatus;
+import com.example.backend_quanlynhahanglau.enums.PaymentStatus;
 import com.example.backend_quanlynhahanglau.repository.OrderDetailRepository;
 import com.example.backend_quanlynhahanglau.repository.OrderRepository;
+import com.example.backend_quanlynhahanglau.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ import java.util.stream.Collectors;
 public class ReportService {
     private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final PaymentRepository paymentRepository;
     
     @Transactional(readOnly = true)
     public RevenueReportResponse getRevenueReport(LocalDate startDate, LocalDate endDate) {
@@ -160,6 +164,115 @@ public class ReportService {
                 .salesByCategory(salesByCategory)
                 .totalRevenue(totalRevenue)
                 .totalItemsSold(totalItemsSold)
+                .build();
+    }
+    
+    @Transactional(readOnly = true)
+    public ReportStatsResponse getReportStats(String filterType, LocalDate startDate, LocalDate endDate) {
+        // Xác định khoảng thời gian dựa trên filterType
+        LocalDate actualStartDate;
+        LocalDate actualEndDate;
+        
+        LocalDate today = LocalDate.now();
+        
+        switch (filterType.toUpperCase()) {
+            case "TODAY":
+                actualStartDate = today;
+                actualEndDate = today;
+                break;
+            case "THIS_MONTH":
+                actualStartDate = today.withDayOfMonth(1);
+                actualEndDate = today;
+                break;
+            case "THIS_YEAR":
+                actualStartDate = today.withDayOfYear(1);
+                actualEndDate = today;
+                break;
+            case "CUSTOM":
+                actualStartDate = startDate != null ? startDate : today;
+                actualEndDate = endDate != null ? endDate : today;
+                break;
+            default:
+                actualStartDate = today;
+                actualEndDate = today;
+        }
+        
+        LocalDateTime startDateTime = actualStartDate.atStartOfDay();
+        LocalDateTime endDateTime = actualEndDate.atTime(LocalTime.MAX);
+        
+        // Lấy tất cả đơn hàng trong khoảng thời gian (không lọc theo status)
+        List<Order> allOrders = orderRepository.findByDate(startDateTime, endDateTime);
+        
+        // Lọc đơn COMPLETED để tính doanh thu
+        List<Order> completedOrders = allOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .collect(Collectors.toList());
+        
+        // Tổng doanh thu (từ đơn COMPLETED)
+        BigDecimal totalRevenue = completedOrders.stream()
+                .map(Order::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Tổng thực nhận (từ payments COMPLETED)
+        BigDecimal totalReceived = paymentRepository.calculateTotalAmountByDateAndStatus(
+                startDateTime, endDateTime, PaymentStatus.COMPLETED);
+        if (totalReceived == null) {
+            totalReceived = BigDecimal.ZERO;
+        }
+        
+        // Số đơn hàng (tất cả đơn trong khoảng thời gian)
+        Long totalOrders = (long) allOrders.size();
+        
+        // Doanh thu trung bình
+        BigDecimal averageRevenue = totalOrders > 0 && completedOrders.size() > 0
+                ? totalRevenue.divide(BigDecimal.valueOf(completedOrders.size()), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        
+        // Nhóm theo ngày để tạo dữ liệu cho biểu đồ
+        Map<LocalDate, List<Order>> ordersByDate = allOrders.stream()
+                .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
+        
+        Map<LocalDate, List<Order>> completedOrdersByDate = completedOrders.stream()
+                .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
+        
+        // Tạo dữ liệu cho biểu đồ
+        List<ReportStatsResponse.DailyData> revenueByDay = new ArrayList<>();
+        List<ReportStatsResponse.DailyData> ordersByDay = new ArrayList<>();
+        
+        LocalDate currentDate = actualStartDate;
+        while (!currentDate.isAfter(actualEndDate)) {
+            List<Order> dayOrders = ordersByDate.getOrDefault(currentDate, Collections.emptyList());
+            List<Order> dayCompletedOrders = completedOrdersByDate.getOrDefault(currentDate, Collections.emptyList());
+            
+            // Doanh thu theo ngày
+            BigDecimal dayRevenue = dayCompletedOrders.stream()
+                    .map(Order::getTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            revenueByDay.add(ReportStatsResponse.DailyData.builder()
+                    .date(currentDate)
+                    .value(dayRevenue)
+                    .build());
+            
+            // Số đơn hàng theo ngày
+            ordersByDay.add(ReportStatsResponse.DailyData.builder()
+                    .date(currentDate)
+                    .value(BigDecimal.valueOf(dayOrders.size()))
+                    .build());
+            
+            currentDate = currentDate.plusDays(1);
+        }
+        
+        return ReportStatsResponse.builder()
+                .filterType(filterType)
+                .startDate(actualStartDate)
+                .endDate(actualEndDate)
+                .totalRevenue(totalRevenue)
+                .totalReceived(totalReceived)
+                .totalOrders(totalOrders)
+                .averageRevenue(averageRevenue)
+                .revenueByDay(revenueByDay)
+                .ordersByDay(ordersByDay)
                 .build();
     }
 }

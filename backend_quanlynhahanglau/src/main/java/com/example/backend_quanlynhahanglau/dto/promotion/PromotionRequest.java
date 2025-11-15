@@ -26,4 +26,6 @@ public class PromotionRequest {
 
     private BigDecimal discountPercent;
     private BigDecimal discountAmount;
+    private BigDecimal minOrderValue;
+    private BigDecimal maxDiscount;
 }

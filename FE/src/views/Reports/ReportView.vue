@@ -3,349 +3,290 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
-        <p class="text-gray-600 mt-1">Báo cáo chi tiết và phân tích dữ liệu</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Báo cáo & Thống kê</h1>
+        <p class="text-slate-600 mt-1 text-sm">Báo cáo doanh thu và đơn hàng</p>
       </div>
     </div>
 
-    <!-- Date Filter -->
-    <div class="card">
+    <!-- Filter Section -->
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Loại lọc</label>
+          <select 
+            v-model="filterType" 
+            @change="handleFilterChange"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+          >
+            <option value="TODAY">Hôm nay</option>
+            <option value="THIS_MONTH">Tháng này</option>
+            <option value="THIS_YEAR">Năm nay</option>
+            <option value="CUSTOM">Lựa chọn khác</option>
+          </select>
+        </div>
+        
+        <div v-if="filterType === 'CUSTOM'">
           <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
-          <input v-model="dateFrom" type="date" class="input-field" />
+          <input
+            v-model="customStartDate"
+            type="date"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+            placeholder="DD/MM/YYYY"
+          />
         </div>
-        <div>
+        
+        <div v-if="filterType === 'CUSTOM'">
           <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
-          <input v-model="dateTo" type="date" class="input-field" />
+          <input
+            v-model="customEndDate"
+            type="date"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+            placeholder="DD/MM/YYYY"
+          />
         </div>
-        <div class="flex items-end">
-          <button @click="loadReports" class="btn-primary w-full flex items-center justify-center gap-2">
-            <span class="text-lg">📊</span>
-            Tạo báo cáo
+        
+        <div v-if="filterType === 'CUSTOM'" class="flex items-end">
+          <button 
+            @click="loadReport" 
+            class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+          >
+            <i class="fas fa-filter"></i>
+            <span>Lọc</span>
           </button>
         </div>
-        <div class="flex items-end">
-          <button @click="exportCSV" class="btn-secondary w-full flex items-center justify-center gap-2">
-            <span class="text-lg">📥</span>
-            Xuất CSV
-          </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- Tổng doanh thu -->
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-500 text-xs font-medium mb-1">Tổng doanh thu</p>
+            <p class="text-2xl font-bold text-slate-900">{{ formatCurrency(stats.totalRevenue) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-search text-blue-600 text-xl"></i>
+          </div>
         </div>
-        <div class="flex items-end">
-          <button @click="exportPDF" class="btn-secondary w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white">
-            <span class="text-lg">📄</span>
-            Xuất PDF
-          </button>
+      </div>
+
+      <!-- Tổng thực nhận -->
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-500 text-xs font-medium mb-1">Tổng thực nhận</p>
+            <p class="text-2xl font-bold text-slate-900">{{ formatCurrency(stats.totalReceived) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-search text-green-600 text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Số đơn hàng -->
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-500 text-xs font-medium mb-1">Số đơn hàng</p>
+            <p class="text-2xl font-bold text-slate-900">{{ stats.totalOrders || 0 }}</p>
+          </div>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-search text-green-600 text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doanh thu trung bình -->
+      <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-500 text-xs font-medium mb-1">Doanh thu trung bình</p>
+            <p class="text-2xl font-bold text-slate-900">{{ formatCurrency(stats.averageRevenue) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-search text-orange-600 text-xl"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="loading-spinner"></div>
+      <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
-    <div v-else class="space-y-6">
-      <!-- Revenue Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-green-100 text-sm">Tổng doanh thu</p>
-              <p class="text-3xl font-bold mt-1">{{ formatCurrency(revenue.total) }}</p>
-            </div>
-            <span class="text-4xl opacity-50">💰</span>
-          </div>
-        </div>
-        <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-blue-100 text-sm">Số đơn hàng</p>
-              <p class="text-3xl font-bold mt-1">{{ revenue.orderCount || 0 }}</p>
-            </div>
-            <span class="text-4xl opacity-50">🛒</span>
-          </div>
-        </div>
-        <div class="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-purple-100 text-sm">Giá trị trung bình</p>
-              <p class="text-3xl font-bold mt-1">{{ formatCurrency(revenue.average) }}</p>
-            </div>
-            <span class="text-4xl opacity-50">📊</span>
-          </div>
-        </div>
+    <!-- Charts -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Doanh thu theo ngày -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Doanh thu theo ngày</h3>
+        <Line :data="revenueChartData" :options="chartOptions" />
       </div>
 
-      <!-- Top Dishes -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-bold text-gray-900">Top 10 món bán chạy</h3>
-          <span class="text-sm text-gray-500">{{ topDishes.length }} món</span>
-        </div>
-        
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hạng</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Món ăn</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số lượng bán</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doanh thu</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">% Tổng DT</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="(dish, index) in topDishes" :key="dish.dishId" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full" :class="getRankClass(index)">
-                    {{ index + 1 }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center text-white">
-                      🍲
-                    </div>
-                    <div>
-                      <p class="text-sm font-medium text-gray-900">{{ dish.dishName }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                  {{ dish.quantitySold }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                  {{ formatCurrency(dish.totalRevenue) }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        class="bg-red-600 h-2 rounded-full"
-                        :style="{ width: getPercentage(dish.totalRevenue) + '%' }"
-                      ></div>
-                    </div>
-                    <span class="text-sm text-gray-600 w-12 text-right">{{ getPercentage(dish.totalRevenue).toFixed(1) }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Empty state -->
-        <div v-if="topDishes.length === 0" class="text-center py-12">
-          <span class="text-8xl text-gray-300 block mb-4">📊</span>
-          <p class="text-gray-500 text-lg">Không có dữ liệu trong khoảng thời gian này</p>
-        </div>
-      </div>
-
-      <!-- Customer Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="card">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Thống kê khách hàng</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span class="text-gray-700">Tổng khách hàng:</span>
-              <span class="text-xl font-bold text-gray-900">{{ customerStats.total || 0 }}</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-              <span class="text-gray-700">Khách VIP:</span>
-              <span class="text-xl font-bold text-yellow-600">{{ customerStats.vip || 0 }}</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-              <span class="text-gray-700">Khách thường:</span>
-              <span class="text-xl font-bold text-green-600">{{ customerStats.regular || 0 }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Sử dụng bàn</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span class="text-gray-700">Tổng số bàn:</span>
-              <span class="text-xl font-bold text-gray-900">{{ tableUsage.total || 0 }}</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-              <span class="text-gray-700">Đang sử dụng:</span>
-              <span class="text-xl font-bold text-red-600">{{ tableUsage.occupied || 0 }}</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-              <span class="text-gray-700">Bàn trống:</span>
-              <span class="text-xl font-bold text-green-600">{{ tableUsage.available || 0 }}</span>
-            </div>
-          </div>
-        </div>
+      <!-- Đơn hàng theo ngày -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Đơn hàng theo ngày</h3>
+        <Bar :data="ordersChartData" :options="chartOptions" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { Line, Bar } from 'vue-chartjs'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { reportService } from '@/services/reportService'
 import { useNotificationStore } from '@/stores/notification'
-// Heroicons replaced with emojis
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+)
 
 const notification = useNotificationStore()
 
 const loading = ref(false)
-const dateFrom = ref('')
-const dateTo = ref('')
-const revenue = ref({ total: 0, average: 0, orderCount: 0 })
-const topDishes = ref([])
-const customerStats = ref({ total: 0, vip: 0, regular: 0 })
-const tableUsage = ref({ total: 0, occupied: 0, available: 0 })
-
-onMounted(() => {
-  // Set default date range (last 30 days)
-  const today = new Date()
-  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-  
-  dateTo.value = today.toISOString().split('T')[0]
-  dateFrom.value = thirtyDaysAgo.toISOString().split('T')[0]
-  
-  loadReports()
+const filterType = ref('TODAY')
+const customStartDate = ref('')
+const customEndDate = ref('')
+const stats = ref({
+  totalRevenue: 0,
+  totalReceived: 0,
+  totalOrders: 0,
+  averageRevenue: 0,
+  revenueByDay: [],
+  ordersByDay: []
 })
 
-async function loadReports() {
+// Chart options
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      mode: 'index',
+      intersect: false
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: function(value) {
+          if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + 'M'
+          } else if (value >= 1000) {
+            return (value / 1000).toFixed(0) + 'K'
+          }
+          return value
+        }
+      }
+    }
+  }
+}
+
+// Revenue chart data
+const revenueChartData = computed(() => {
+  const labels = stats.value.revenueByDay?.map(item => {
+    const date = new Date(item.date)
+    return `${date.getDate()}/${date.getMonth() + 1}`
+  }) || []
+  
+  const data = stats.value.revenueByDay?.map(item => parseFloat(item.value) || 0) || []
+  
+  return {
+    labels,
+    datasets: [{
+      label: 'Doanh thu',
+      data,
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      fill: true,
+      tension: 0.4
+    }]
+  }
+})
+
+// Orders chart data
+const ordersChartData = computed(() => {
+  const labels = stats.value.ordersByDay?.map(item => {
+    const date = new Date(item.date)
+    return `${date.getDate()}/${date.getMonth() + 1}`
+  }) || []
+  
+  const data = stats.value.ordersByDay?.map(item => parseFloat(item.value) || 0) || []
+  
+  return {
+    labels,
+    datasets: [{
+      label: 'Số đơn hàng',
+      data,
+      backgroundColor: 'rgba(34, 197, 94, 0.6)',
+      borderColor: 'rgb(34, 197, 94)',
+      borderWidth: 1
+    }]
+  }
+})
+
+function formatCurrency(value) {
+  if (!value) return '0 ₫'
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
+  }).format(value)
+}
+
+function handleFilterChange() {
+  if (filterType.value !== 'CUSTOM') {
+    loadReport()
+  } else {
+    // Reset custom dates
+    customStartDate.value = ''
+    customEndDate.value = ''
+  }
+}
+
+async function loadReport() {
+  if (filterType.value === 'CUSTOM' && (!customStartDate.value || !customEndDate.value)) {
+    notification.error('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc')
+    return
+  }
+  
   loading.value = true
   try {
-    const [revenueRes, dishesRes, customerRes, tableRes] = await Promise.all([
-      reportService.getRevenueSummary(dateFrom.value, dateTo.value),
-      reportService.getTopDishes(dateFrom.value, dateTo.value, 10),
-      reportService.getCustomerStats(),
-      reportService.getTableUsage()
-    ])
-
-    if (revenueRes.success) revenue.value = revenueRes.data
-    if (dishesRes.success) topDishes.value = dishesRes.data
-    if (customerRes.success) customerStats.value = customerRes.data
-    if (tableRes.success) tableUsage.value = tableRes.data
+    const response = await reportService.getReportStats(
+      filterType.value,
+      customStartDate.value || null,
+      customEndDate.value || null
+    )
+    
+    if (response.success && response.data) {
+      stats.value = response.data
+    } else {
+      notification.error(response.message || 'Không thể tải báo cáo')
+    }
   } catch (error) {
+    console.error('Error loading report:', error)
     notification.error('Không thể tải báo cáo')
   } finally {
     loading.value = false
   }
 }
 
-function exportCSV() {
-  try {
-    // Create CSV content
-    let csv = 'Hạng,Món ăn,Số lượng bán,Doanh thu,% Tổng DT\n'
-    topDishes.value.forEach((dish, index) => {
-      const percentage = getPercentage(dish.totalRevenue).toFixed(1)
-      csv += `${index + 1},"${dish.dishName}",${dish.quantitySold},${dish.totalRevenue},${percentage}%\n`
-    })
-    
-    // Add revenue summary
-    csv += `\n\nTổng doanh thu,${revenue.value.total}\n`
-    csv += `Số đơn hàng,${revenue.value.orderCount}\n`
-    csv += `Giá trị trung bình,${revenue.value.average}\n`
-    
-    // Download file
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `bao-cao-${dateFrom.value}-${dateTo.value}.csv`
-    link.click()
-    
-    notification.success('Đã xuất báo cáo CSV')
-  } catch (error) {
-    notification.error('Không thể xuất CSV')
-  }
-}
-
-function exportPDF() {
-  try {
-    // Create HTML content for PDF
-    let html = `
-      <html>
-      <head>
-        <title>Báo cáo doanh thu</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #333; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #4CAF50; color: white; }
-          .summary { margin-top: 30px; }
-          .summary p { font-size: 16px; margin: 10px 0; }
-        </style>
-      </head>
-      <body>
-        <h1>Báo cáo doanh thu</h1>
-        <p>Từ ngày: ${dateFrom.value} - Đến ngày: ${dateTo.value}</p>
-        
-        <div class="summary">
-          <p><strong>Tổng doanh thu:</strong> ${formatCurrency(revenue.value.total)}</p>
-          <p><strong>Số đơn hàng:</strong> ${revenue.value.orderCount}</p>
-          <p><strong>Giá trị trung bình:</strong> ${formatCurrency(revenue.value.average)}</p>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Hạng</th>
-              <th>Món ăn</th>
-              <th>Số lượng bán</th>
-              <th>Doanh thu</th>
-              <th>% Tổng DT</th>
-            </tr>
-          </thead>
-          <tbody>
-    `
-    
-    topDishes.value.forEach((dish, index) => {
-      const percentage = getPercentage(dish.totalRevenue).toFixed(1)
-      html += `
-        <tr>
-          <td>${index + 1}</td>
-          <td>${dish.dishName}</td>
-          <td>${dish.quantitySold}</td>
-          <td>${formatCurrency(dish.totalRevenue)}</td>
-          <td>${percentage}%</td>
-        </tr>
-      `
-    })
-    
-    html += `
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `
-    
-    // Open print dialog
-    const printWindow = window.open('', '', 'height=600,width=800')
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.print()
-    
-    notification.success('Đã mở cửa sổ in PDF')
-  } catch (error) {
-    notification.error('Không thể xuất PDF')
-  }
-}
-
-function getRankClass(index) {
-  if (index === 0) return 'bg-yellow-500 text-white font-bold'
-  if (index === 1) return 'bg-gray-400 text-white font-bold'
-  if (index === 2) return 'bg-orange-600 text-white font-bold'
-  return 'bg-gray-200 text-gray-700'
-}
-
-function getPercentage(value) {
-  if (revenue.value.total === 0) return 0
-  return (value / revenue.value.total) * 100
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(value || 0)
-}
+onMounted(() => {
+  loadReport()
+})
 </script>

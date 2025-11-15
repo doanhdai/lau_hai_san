@@ -38,5 +38,13 @@ export const reportService = {
       params: { startDate, endDate }
     })
     return response.data
+  },
+
+  async getReportStats(filterType, startDate = null, endDate = null) {
+    const params = { filterType }
+    if (startDate) params.startDate = startDate
+    if (endDate) params.endDate = endDate
+    const response = await api.get('/reports/stats', { params })
+    return response.data
   }
 }

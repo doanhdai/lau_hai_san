@@ -111,6 +111,8 @@ CREATE TABLE `promotions`(
 	`end_date` DATETIME(6) NOT NULL,
 	`name` VARCHAR(200) NOT NULL,
 	`start_date` DATETIME(6) NOT NULL,
+	`min_order_value` DECIMAL(10, 2) NULL DEFAULT NULL,
+	`max_discount` DECIMAL(10, 2) NULL DEFAULT NULL,
 	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -142,7 +144,7 @@ CREATE TABLE `restaurant_tables`(
 	`location` VARCHAR(100) NULL,
 	`notes` VARCHAR(500) NULL,
 	`status` VARCHAR(255) NOT NULL,
-	`type` VARCHAR(255) NOT NULL DEFAULT 'OFFLINE',
+	`type` VARCHAR(255) NOT NULL DEFAULT 'OFFLINE' COMMENT 'Loại bàn: OFFLINE (chỉ đặt tại quầy) hoặc ONLINE (có thể đặt online)',
 	`table_number` VARCHAR(50) NOT NULL,
 	`room_id` BIGINT NULL,
 	PRIMARY KEY (`id`),
@@ -214,6 +216,23 @@ CREATE TABLE `users`(
 	UNIQUE KEY `UK6dotkott2kjsp8vw4d0m25fb7` (`email`),
 	UNIQUE KEY `UKr43af9ap4edm43mmtq01oddj6` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: payments
+CREATE TABLE `payments`(
+	`id` BIGINT AUTO_INCREMENT NOT NULL,
+	`amount` DECIMAL(10, 2) NOT NULL,
+	`payment_method` VARCHAR(50) NOT NULL,
+	`payment_status` VARCHAR(50) NOT NULL,
+	`transaction_id` VARCHAR(100) NULL,
+	`notes` VARCHAR(500) NULL,
+	`created_at` DATETIME(6) NOT NULL,
+	`updated_at` DATETIME(6) NULL,
+	`order_id` BIGINT NOT NULL,
+	PRIMARY KEY (`id`),
+	CONSTRAINT `CHK_payments_payment_method` CHECK (`payment_method`='CASH' OR `payment_method`='CARD' OR `payment_method`='BANK_TRANSFER' OR `payment_method`='E_WALLET'),
+	CONSTRAINT `CHK_payments_payment_status` CHECK (`payment_status`='PENDING' OR `payment_status`='COMPLETED' OR `payment_status`='FAILED' OR `payment_status`='REFUNDED')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- Insert data: customers
 INSERT INTO `customers` (`id`, `active`, `address`, `blocked`, `created_at`, `customer_code`, `email`, `full_name`, `is_vip`, `notes`, `phone`, `updated_at`) VALUES 
@@ -364,6 +383,8 @@ ALTER TABLE `orders` ADD CONSTRAINT `FKmvji5dgxi79luuluamunmw73h` FOREIGN KEY(`r
 ALTER TABLE `orders` ADD CONSTRAINT `FKpxtb8awmi0dk6smoh2vp1litg` FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`);
 ALTER TABLE `orders` ADD CONSTRAINT `FKtjwuphstqm46uffgc7l1r27a9` FOREIGN KEY(`created_by`) REFERENCES `users`(`id`);
 
+ALTER TABLE `payments` ADD CONSTRAINT `FK_payments_order` FOREIGN KEY(`order_id`) REFERENCES `orders`(`id`);
+
 ALTER TABLE `reservations` ADD CONSTRAINT `FK7m03pg0gvesrflloshk7h40d2` FOREIGN KEY(`confirmed_by`) REFERENCES `users`(`id`);
 ALTER TABLE `reservations` ADD CONSTRAINT `FK8eccffekcj27jkdiyw2e9r8ks` FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`);
 ALTER TABLE `reservations` ADD CONSTRAINT `FKljt6q1tp205b0h26eiegc5mx6` FOREIGN KEY(`room_id`) REFERENCES `rooms`(`id`);
@@ -410,7 +431,7 @@ ALTER TABLE restaurant_tables
 MODIFY COLUMN position_y INTEGER DEFAULT NULL 
 COMMENT 'Vị trí Y trên bản đồ (pixels)';
 
--- Comment cho cột type (cột đã được tạo trong CREATE TABLE)
+-- Comment cho cột type
 ALTER TABLE restaurant_tables 
 MODIFY COLUMN type VARCHAR(255) NOT NULL DEFAULT 'OFFLINE' 
 COMMENT 'Loại bàn: OFFLINE (chỉ đặt tại quầy) hoặc ONLINE (có thể đặt online)';
@@ -428,3 +449,15 @@ WHERE is_deleted IS NULL;
 ALTER TABLE restaurant_tables 
 MODIFY COLUMN is_deleted BIT DEFAULT 0 
 COMMENT 'Xóa mềm: 0 = chưa xóa, 1 = đã xóa';
+
+-- Cập nhật các bàn có status = 'ONLINE' (cũ) thành 'AVAILABLE'
+-- Vì ONLINE giờ là type, không phải status nữa
+UPDATE restaurant_tables 
+SET status = 'AVAILABLE' 
+WHERE status = 'ONLINE';
+
+-- Cập nhật các bàn có status = 'MAINTENANCE' (nếu có) thành 'AVAILABLE'
+-- Vì MAINTENANCE đã bị loại bỏ khỏi enum
+UPDATE restaurant_tables 
+SET status = 'AVAILABLE' 
+WHERE status = 'MAINTENANCE';
