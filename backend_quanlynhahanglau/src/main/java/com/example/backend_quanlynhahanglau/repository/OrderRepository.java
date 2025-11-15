@@ -2,6 +2,7 @@ package com.example.backend_quanlynhahanglau.repository;
 
 import com.example.backend_quanlynhahanglau.entity.Customer;
 import com.example.backend_quanlynhahanglau.entity.Order;
+import com.example.backend_quanlynhahanglau.entity.RestaurantTable;
 import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByOrderNumber(String orderNumber);
     List<Order> findByCustomer(Customer customer);
     List<Order> findByStatus(OrderStatus status);
+    List<Order> findByTable(RestaurantTable table);
     
     // Tìm đơn hàng theo ngày
     @Query("SELECT o FROM Order o WHERE " +

@@ -212,7 +212,7 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
         @click.self="closeTableModal"
       >
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-auto" @click.stop>
           <!-- Modal Header -->
           <div class="bg-slate-900 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
             <h3 class="text-lg font-bold">Quản lý bàn {{ tableModalTable.tableNumber }}</h3>
@@ -251,13 +251,15 @@
             <div v-if="tableModalTable.status === 'OCCUPIED'" class="border-t border-gray-200 pt-6 space-y-3">
               <button
                 @click="goToOrderPage"
-                class="w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                type="button"
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                style="position: relative; z-index: 10;"
               >
                 <i class="fas fa-plus"></i>
                 <span>Thêm món</span>
               </button>
               <button
-                @click="viewOrderList"
+                @click.stop="viewOrderList"
                 class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <i class="fas fa-utensils"></i>
@@ -390,6 +392,213 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Order Detail Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showOrderModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+        @click.self="closeOrderModal"
+      >
+        <div 
+          class="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+          @click="showServedDropdown = false"
+        >
+          <!-- Modal Header -->
+          <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold">Chi tiết đơn hàng</h3>
+              <p v-if="selectedOrder" class="text-sm text-slate-300 mt-1">
+                {{ selectedOrder.orderNumber }}
+              </p>
+            </div>
+            <button @click="closeOrderModal" class="text-white/80 hover:text-white transition-colors">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="flex-1 overflow-y-auto p-6">
+            <!-- Loading State -->
+            <div v-if="loadingOrder" class="flex items-center justify-center py-12">
+              <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+
+            <!-- No Order State -->
+            <div v-else-if="!selectedOrder" class="text-center py-12">
+              <i class="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
+              <p class="text-lg font-medium text-gray-600">Chưa có đơn hàng</p>
+              <p class="text-sm text-gray-500 mt-2">Bàn này chưa có đơn hàng nào</p>
+            </div>
+
+            <!-- Order Details -->
+            <div v-else class="space-y-6">
+              <!-- Order Info -->
+              <div class="bg-slate-50 rounded-lg p-4 space-y-3">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p class="text-xs text-slate-500 mb-1">Khách hàng</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ selectedOrder.customerName || 'Khách vãng lai' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-slate-500 mb-1">Bàn</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ selectedOrder.tableNumber || 'Chưa có' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-slate-500 mb-1">Trạng thái</p>
+                    <span :class="['px-3 py-1 rounded-full text-xs font-semibold', getOrderStatusClass(selectedOrder.status)]">
+                      {{ getOrderStatusLabel(selectedOrder.status) }}
+                    </span>
+                  </div>
+                  <div>
+                    <p class="text-xs text-slate-500 mb-1">Ngày tạo</p>
+                    <p class="text-sm text-slate-700">{{ formatDateTime(selectedOrder.createdAt) }}</p>
+                  </div>
+                </div>
+                <div v-if="selectedOrder.notes">
+                  <p class="text-xs text-slate-500 mb-1">Ghi chú đơn hàng</p>
+                  <p class="text-sm text-slate-700 bg-white p-2 rounded border border-slate-200">{{ selectedOrder.notes }}</p>
+                </div>
+              </div>
+
+              <!-- Order Items -->
+              <div>
+                <h4 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <i class="fas fa-utensils"></i>
+                  <span>Danh sách món</span>
+                </h4>
+                <div class="space-y-2">
+                  <div
+                    v-for="(item, index) in selectedOrder.items"
+                    :key="item.id || index"
+                    class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    :class="servedItems.has(item.id) ? 'border-green-300 bg-green-50' : 'border-slate-200'"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-start gap-3 flex-1">
+                        <div class="flex items-center gap-2 pt-1">
+                          <input
+                            type="checkbox"
+                            :checked="servedItems.has(item.id)"
+                            @change="toggleItemServed(item.id, $event.target.checked)"
+                            class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                            :disabled="selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'CANCELLED'"
+                          />
+                        </div>
+                        <div class="flex-1">
+                          <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                                 :class="servedItems.has(item.id) ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600'">
+                              {{ index + 1 }}
+                            </div>
+                            <div class="flex-1">
+                              <div class="flex items-center gap-2">
+                                <p class="text-sm font-semibold text-slate-900">{{ item.dishName }}</p>
+                                <span v-if="servedItems.has(item.id)" class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
+                                  <i class="fas fa-check mr-1"></i>Đã lên
+                                </span>
+                              </div>
+                              <div class="flex items-center gap-4 mt-1">
+                                <span class="text-xs text-slate-500">SL: {{ item.quantity }}</span>
+                                <span class="text-xs text-slate-500">Giá: {{ formatCurrency(item.price) }}</span>
+                              </div>
+                              <p v-if="item.notes" class="text-xs text-slate-600 mt-2 italic bg-slate-50 p-2 rounded">
+                                <i class="fas fa-sticky-note mr-1"></i>{{ item.notes }}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-sm font-bold text-slate-900">{{ formatCurrency(item.subtotal) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order Summary -->
+              <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
+                <h4 class="text-sm font-semibold text-slate-900 mb-3">Tổng kết</h4>
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-600">Tạm tính:</span>
+                    <span class="font-medium text-slate-900">{{ formatCurrency(selectedOrder.subtotal) }}</span>
+                  </div>
+                  <div v-if="selectedOrder.discount && selectedOrder.discount > 0" class="flex justify-between text-sm">
+                    <span class="text-slate-600">Giảm giá:</span>
+                    <span class="font-medium text-red-600">-{{ formatCurrency(selectedOrder.discount) }}</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-600">Thuế (10%):</span>
+                    <span class="font-medium text-slate-900">{{ formatCurrency(selectedOrder.tax) }}</span>
+                  </div>
+                  <div class="border-t border-slate-300 pt-2 mt-2">
+                    <div class="flex justify-between">
+                      <span class="text-base font-bold text-slate-900">Tổng cộng:</span>
+                      <span class="text-lg font-bold text-red-600">{{ formatCurrency(selectedOrder.total) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div v-if="selectedOrder && !loadingOrder" class="border-t border-slate-200 bg-slate-50 px-6 py-4 flex items-center justify-between gap-3">
+            <button
+              @click="closeOrderModal"
+              class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Đóng
+            </button>
+            <div class="flex gap-3">
+              <!-- Đã lên món dropdown -->
+              <div v-if="selectedOrder.status !== 'SERVED' && selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED'" class="relative" @click.stop>
+                <button
+                  @click.stop="showServedDropdown = !showServedDropdown"
+                  class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <i class="fas fa-check-circle"></i>
+                  <span>Đã lên món</span>
+                  <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                  v-if="showServedDropdown"
+                  @click.stop
+                  class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden z-10"
+                >
+                  <button
+                    @click="markAllAsServed"
+                    class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                  >
+                    <i class="fas fa-check-double"></i>
+                    <span>Tất cả</span>
+                  </button>
+                  <button
+                    @click="markSelectedAsServed"
+                    :disabled="servedItems.size === 0"
+                    class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <i class="fas fa-check"></i>
+                    <span>Đã chọn ({{ servedItems.size }})</span>
+                  </button>
+                </div>
+              </div>
+              <button
+                v-if="selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED'"
+                @click="proceedToPayment"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <i class="fas fa-credit-card"></i>
+                <span>Tiến hành thanh toán</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -398,6 +607,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
+import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
@@ -410,12 +620,18 @@ const selectedTable = ref(null)
 const selectedReservation = ref(null)
 const showDetailModal = ref(false)
 const showTableModal = ref(false)
+const showOrderModal = ref(false)
 const tableModalTable = ref(null)
 const tableStatus = ref('AVAILABLE')
 const updatingStatus = ref(false)
 const mapContainer = ref(null)
 const currentTime = ref(new Date())
 const filterDate = ref('')
+const selectedOrder = ref(null)
+const loadingOrder = ref(false)
+const orders = ref([])
+const servedItems = ref(new Set()) // Track các order_detail đã lên món
+const showServedDropdown = ref(false)
 
 // Min date for filter (today)
 const minDate = computed(() => {
@@ -671,35 +887,211 @@ function createOrder(reservation) {
 }
 
 function goToOrderPage() {
+  console.log('goToOrderPage called', tableModalTable.value)
+  alert('goToOrderPage called!') // Test để xem hàm có được gọi không
+  
   if (!tableModalTable.value) {
     notification.error('Không tìm thấy thông tin bàn')
     return
   }
   
-  // Navigate to create order page with tableId
-  router.push({
-    path: '/admin/orders/create',
-    query: { tableId: tableModalTable.value.id }
-  })
+  // Navigate to create order page with reservationId
+  const query = {}
+  if (tableModalTable.value.reservation && tableModalTable.value.reservation.id) {
+    query.reservationId = tableModalTable.value.reservation.id
+    console.log('Reservation ID:', query.reservationId)
+  } else {
+    console.log('No reservation found in tableModalTable')
+    console.log('tableModalTable.value:', tableModalTable.value)
+  }
   
-  // Close modal after navigation
-  closeTableModal()
+  console.log('Navigating to:', '/admin/orders/create', 'with query:', query)
+  
+  try {
+    router.push({
+      path: '/admin/orders/create',
+      query: query
+    })
+    
+    // Close modal after navigation
+    closeTableModal()
+  } catch (error) {
+    console.error('Error navigating:', error)
+    notification.error('Không thể điều hướng: ' + error.message)
+  }
 }
 
-function viewOrderList() {
+async function viewOrderList() {
   if (!tableModalTable.value) {
     notification.error('Không tìm thấy thông tin bàn')
     return
   }
   
-  // Navigate to order list page, filter by tableId if needed
-  router.push({
-    path: '/admin/orders',
-    query: { tableId: tableModalTable.value.id }
-  })
+  // Load order theo tableId hoặc reservationId
+  await loadOrderForTable()
   
-  // Close modal after navigation
+  // Close table modal and open order modal
   closeTableModal()
+  showOrderModal.value = true
+}
+
+async function loadOrderForTable() {
+  if (!tableModalTable.value) return
+  
+  loadingOrder.value = true
+  try {
+    // Lấy reservation_id từ reservation của bàn
+    const reservationId = tableModalTable.value.reservation?.id
+    
+    if (!reservationId) {
+      selectedOrder.value = null
+      notification.info('Bàn này chưa có đặt bàn')
+      return
+    }
+    
+    // Load all orders
+    const ordersRes = await orderService.getAll()
+    const allOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
+    
+    // Tìm order theo reservationId
+    const foundOrder = allOrders.find(order => {
+      return order.reservationId === reservationId
+    })
+    
+    if (foundOrder) {
+      // Load full order details
+      const orderRes = await orderService.getById(foundOrder.id)
+      selectedOrder.value = orderRes.success ? orderRes.data : orderRes.data
+      // Reset served items khi load order mới
+      servedItems.value.clear()
+    } else {
+      selectedOrder.value = null
+      servedItems.value.clear()
+      notification.info('Chưa có đơn hàng cho đặt bàn này')
+    }
+  } catch (error) {
+    console.error('Error loading order:', error)
+    notification.error('Không thể tải thông tin đơn hàng')
+    selectedOrder.value = null
+  } finally {
+    loadingOrder.value = false
+  }
+}
+
+function closeOrderModal() {
+  showOrderModal.value = false
+  selectedOrder.value = null
+  servedItems.value.clear()
+  showServedDropdown.value = false
+}
+
+function toggleItemServed(itemId, checked) {
+  if (checked) {
+    servedItems.value.add(itemId)
+  } else {
+    servedItems.value.delete(itemId)
+  }
+}
+
+async function markAllAsServed() {
+  if (!selectedOrder.value) return
+  
+  showServedDropdown.value = false
+  
+  if (!confirm('Xác nhận đã lên món tất cả cho đơn hàng này?')) return
+  
+  try {
+    await orderService.updateStatus(selectedOrder.value.id, 'SERVED')
+    // Đánh dấu tất cả items đã lên món
+    if (selectedOrder.value.items) {
+      selectedOrder.value.items.forEach(item => {
+        if (item.id) {
+          servedItems.value.add(item.id)
+        }
+      })
+    }
+    notification.success('Đã cập nhật trạng thái: Đã lên món tất cả')
+    await loadOrderForTable()
+  } catch (error) {
+    console.error('Error updating order status:', error)
+    notification.error('Không thể cập nhật trạng thái: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+async function markSelectedAsServed() {
+  if (!selectedOrder.value || servedItems.value.size === 0) return
+  
+  showServedDropdown.value = false
+  
+  if (!confirm(`Xác nhận đã lên món cho ${servedItems.value.size} món đã chọn?`)) return
+  
+  try {
+    // Hiển thị thông báo thành công
+    notification.success(`Đã đánh dấu ${servedItems.value.size} món đã lên món`)
+    
+    // Nếu tất cả items đã được đánh dấu, có thể tự động update order status
+    if (selectedOrder.value.items && servedItems.value.size === selectedOrder.value.items.length) {
+      await orderService.updateStatus(selectedOrder.value.id, 'SERVED')
+      notification.success('Tất cả món đã lên, đã cập nhật trạng thái đơn hàng')
+      await loadOrderForTable()
+    }
+  } catch (error) {
+    console.error('Error marking items as served:', error)
+    notification.error('Không thể đánh dấu món: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+async function proceedToPayment() {
+  if (!selectedOrder.value) return
+  
+  if (!confirm('Xác nhận tiến hành thanh toán cho đơn hàng này?')) return
+  
+  try {
+    await orderService.updateStatus(selectedOrder.value.id, 'COMPLETED')
+    notification.success('Đã hoàn thành đơn hàng')
+    await loadOrderForTable()
+    // Có thể đóng modal sau khi thanh toán
+    setTimeout(() => {
+      closeOrderModal()
+    }, 1500)
+  } catch (error) {
+    console.error('Error completing order:', error)
+    notification.error('Không thể hoàn thành đơn hàng: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+function formatCurrency(value) {
+  if (!value) return '0 ₫'
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
+  }).format(value)
+}
+
+function getOrderStatusLabel(status) {
+  const labels = {
+    'PENDING': 'Chờ xử lý',
+    'CONFIRMED': 'Đã xác nhận',
+    'PREPARING': 'Đang chuẩn bị',
+    'READY': 'Sẵn sàng',
+    'SERVED': 'Đã lên món',
+    'COMPLETED': 'Hoàn thành',
+    'CANCELLED': 'Đã hủy'
+  }
+  return labels[status] || status
+}
+
+function getOrderStatusClass(status) {
+  const classes = {
+    'PENDING': 'bg-yellow-100 text-yellow-800',
+    'CONFIRMED': 'bg-blue-100 text-blue-800',
+    'PREPARING': 'bg-orange-100 text-orange-800',
+    'READY': 'bg-purple-100 text-purple-800',
+    'SERVED': 'bg-green-100 text-green-800',
+    'COMPLETED': 'bg-gray-100 text-gray-800',
+    'CANCELLED': 'bg-red-100 text-red-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
 function openTableModal(table) {
@@ -1019,16 +1411,8 @@ function hasTable(reservation) {
 function isTableCheckedIn(reservation) {
   if (!reservation) return false
   
-  // Lấy tableId từ reservation
-  const tableId = reservation.tableId || reservation.table?.id
-  if (!tableId) return false
-  
-  // Tìm table trong danh sách tables
-  const table = tables.value.find(t => t && t.id === tableId)
-  if (!table) return false
-  
-  // Kiểm tra status của table
-  return table.status === 'OCCUPIED'
+  // Kiểm tra status của reservation
+  return reservation.status === 'CHECKED_IN'
 }
 
 function isNearestReservationForTable(reservation) {
@@ -1083,7 +1467,12 @@ async function handleCheckIn(reservation) {
   }
 
   try {
+    // 1. Update reservation status thành CHECKED_IN và confirmed_by
+    await reservationService.checkin(reservation.id)
+    
+    // 2. Update table status thành OCCUPIED
     await tableService.updateStatus(tableId, 'OCCUPIED')
+    
     notification.success('Đã check-in thành công')
     loadData()
   } catch (error) {

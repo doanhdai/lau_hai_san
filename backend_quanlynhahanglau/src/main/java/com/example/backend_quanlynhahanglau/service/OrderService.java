@@ -110,8 +110,21 @@ public class OrderService {
                     tableRepository.save(table);
                     order.setTable(table);
                 } else if (table.getStatus() == TableStatus.OCCUPIED) {
-                    // Kiểm tra xem bàn này có đang được sử dụng bởi reservation khác không
-                    throw new BadRequestException("Bàn đang được sử dụng");
+                    // Nếu bàn đã OCCUPIED, kiểm tra xem có đang được sử dụng bởi reservation khác không
+                    // Nếu reservation này là reservation của table này (đã check-in), thì cho phép tạo order
+                    // Kiểm tra xem có order nào khác đang sử dụng table này với reservation khác không
+                    final Long currentReservationId = reservation.getId();
+                    List<Order> existingOrders = orderRepository.findByTable(table);
+                    boolean isTableUsedByOtherReservation = existingOrders.stream()
+                            .anyMatch(o -> o.getReservation() != null && 
+                                          !o.getReservation().getId().equals(currentReservationId) &&
+                                          o.getStatus() != OrderStatus.COMPLETED);
+                    
+                    if (isTableUsedByOtherReservation) {
+                        throw new BadRequestException("Bàn đang được sử dụng bởi đặt bàn khác");
+                    }
+                    // Nếu không có order nào khác hoặc order khác cùng reservation, cho phép
+                    order.setTable(table);
                 }
             } else {
                 throw new BadRequestException("Đặt bàn này chưa có bàn được gán");
@@ -262,6 +275,85 @@ public class OrderService {
         // Recalculate totals
         recalculateOrderTotals(order);
         
+        order = orderRepository.save(order);
+        return mapToResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse updateOrder(Long id, OrderRequest request) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", id));
+
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Không thể cập nhật đơn hàng đã hoàn thành hoặc đã hủy");
+        }
+
+        // Update notes
+        if (request.getNotes() != null) {
+            order.setNotes(request.getNotes());
+        }
+
+        // Thêm items mới vào order hiện có (không xóa items cũ)
+        for (OrderItemRequest itemRequest : request.getItems()) {
+            Dish dish = dishRepository.findById(itemRequest.getDishId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
+            
+            if (!dish.getActive()) {
+                throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
+            }
+
+            // Chuẩn hóa notes để so sánh (null hoặc empty string đều coi như giống nhau)
+            String requestNotes = (itemRequest.getNotes() == null || itemRequest.getNotes().trim().isEmpty()) 
+                    ? null : itemRequest.getNotes().trim();
+            
+            // Kiểm tra xem món này đã có trong order chưa (cùng dishId VÀ cùng notes)
+            OrderDetail existingDetail = order.getOrderDetails().stream()
+                    .filter(d -> {
+                        if (!d.getDish().getId().equals(dish.getId())) {
+                            return false;
+                        }
+                        // So sánh notes
+                        String detailNotes = (d.getNotes() == null || d.getNotes().trim().isEmpty()) 
+                                ? null : d.getNotes().trim();
+                        // Nếu cả hai đều null hoặc cả hai đều có giá trị và giống nhau
+                        if (requestNotes == null && detailNotes == null) {
+                            return true;
+                        }
+                        if (requestNotes != null && detailNotes != null) {
+                            return requestNotes.equals(detailNotes);
+                        }
+                        return false;
+                    })
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingDetail != null) {
+                // Nếu món đã có và notes giống => tăng quantity
+                existingDetail.setQuantity(existingDetail.getQuantity() + itemRequest.getQuantity());
+                BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(existingDetail.getQuantity()));
+                existingDetail.setSubtotal(itemSubtotal);
+                orderDetailRepository.save(existingDetail);
+            } else {
+                // Nếu món chưa có hoặc notes khác => tạo order_detail mới
+                BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+                
+                OrderDetail detail = OrderDetail.builder()
+                        .order(order)
+                        .dish(dish)
+                        .quantity(itemRequest.getQuantity())
+                        .price(dish.getPrice())
+                        .subtotal(itemSubtotal)
+                        .notes(itemRequest.getNotes())
+                        .build();
+
+                order.getOrderDetails().add(detail);
+                orderDetailRepository.save(detail);
+            }
+        }
+
+        // Tính lại subtotal, tax, total từ order_details (để đảm bảo chính xác)
+        recalculateOrderTotals(order);
+
         order = orderRepository.save(order);
         return mapToResponse(order);
     }
