@@ -104,28 +104,8 @@ public class OrderService {
                 if (table.getActive() == null || !table.getActive()) {
                     throw new BadRequestException("Bàn không khả dụng");
                 }
-                // Nếu bàn đang RESERVED hoặc AVAILABLE, có thể sử dụng cho reservation này
-                if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
-                    table.setStatus(TableStatus.OCCUPIED);
-                    tableRepository.save(table);
-                    order.setTable(table);
-                } else if (table.getStatus() == TableStatus.OCCUPIED) {
-                    // Nếu bàn đã OCCUPIED, kiểm tra xem có đang được sử dụng bởi reservation khác không
-                    // Nếu reservation này là reservation của table này (đã check-in), thì cho phép tạo order
-                    // Kiểm tra xem có order nào khác đang sử dụng table này với reservation khác không
-                    final Long currentReservationId = reservation.getId();
-                    List<Order> existingOrders = orderRepository.findByTable(table);
-                    boolean isTableUsedByOtherReservation = existingOrders.stream()
-                            .anyMatch(o -> o.getReservation() != null && 
-                                          !o.getReservation().getId().equals(currentReservationId) &&
-                                          o.getStatus() != OrderStatus.COMPLETED);
-                    
-                    if (isTableUsedByOtherReservation) {
-                        throw new BadRequestException("Bàn đang được sử dụng bởi đặt bàn khác");
-                    }
-                    // Nếu không có order nào khác hoặc order khác cùng reservation, cho phép
-                    order.setTable(table);
-                }
+                // Set table cho order (không cần kiểm tra gì cả)
+                order.setTable(table);
             } else {
                 throw new BadRequestException("Đặt bàn này chưa có bàn được gán");
             }
