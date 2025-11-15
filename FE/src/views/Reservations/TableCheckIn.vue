@@ -162,16 +162,10 @@
                     Đã checkin
                   </p>
                   <p 
-                    v-else-if="getCountdownHours(reservation.reservationTime || reservation.reservationDateTime) > 1"
-                    class="text-xs text-blue-600 mt-1"
-                  >
-                    Có thể checkin trước 1 tiếng
-                  </p>
-                  <p 
                     v-else
                     class="text-xs text-green-600 mt-1 font-medium"
                   >
-                    Đã có thể checkin
+                    Có thể checkin
                   </p>
                 </template>
               </div>
@@ -186,9 +180,9 @@
                 </div>
               </div>
 
-              <!-- Check-in Button (chỉ hiện cho ngày hiện tại: hover và countdown <= 1 tiếng và chưa check-in và đã có bàn và là reservation gần nhất của table) -->
+              <!-- Check-in Button (chỉ hiện cho ngày hiện tại: hover và chưa check-in và đã có bàn và là reservation gần nhất của table) -->
               <div 
-                v-if="isToday && hasTable(reservation) && !isTableCheckedIn(reservation) && getCountdownHours(reservation.reservationTime || reservation.reservationDateTime) <= 1 && isNearestReservationForTable(reservation)"
+                v-if="isToday && hasTable(reservation) && !isTableCheckedIn(reservation) && isNearestReservationForTable(reservation)"
                 class="absolute inset-0 bg-white/95 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <button
@@ -254,10 +248,17 @@
             </div>
 
             <!-- Nút điều hướng đến Order (nếu bàn đã check-in) -->
-            <div v-if="tableModalTable.status === 'OCCUPIED'" class="border-t border-gray-200 pt-6">
+            <div v-if="tableModalTable.status === 'OCCUPIED'" class="border-t border-gray-200 pt-6 space-y-3">
               <button
                 @click="goToOrderPage"
                 class="w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-plus"></i>
+                <span>Thêm món</span>
+              </button>
+              <button
+                @click="viewOrderList"
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <i class="fas fa-utensils"></i>
                 <span>Xem đơn hàng</span>
@@ -675,9 +676,25 @@ function goToOrderPage() {
     return
   }
   
-  // Navigate to orders page, optionally filter by tableId if needed
+  // Navigate to create order page with tableId
   router.push({
     path: '/admin/orders/create',
+    query: { tableId: tableModalTable.value.id }
+  })
+  
+  // Close modal after navigation
+  closeTableModal()
+}
+
+function viewOrderList() {
+  if (!tableModalTable.value) {
+    notification.error('Không tìm thấy thông tin bàn')
+    return
+  }
+  
+  // Navigate to order list page, filter by tableId if needed
+  router.push({
+    path: '/admin/orders',
     query: { tableId: tableModalTable.value.id }
   })
   
