@@ -2,6 +2,7 @@ package com.example.backend_quanlynhahanglau.repository;
 
 import com.example.backend_quanlynhahanglau.entity.Dish;
 import com.example.backend_quanlynhahanglau.entity.DishCategory;
+import com.example.backend_quanlynhahanglau.entity.Promotion;
 import com.example.backend_quanlynhahanglau.enums.DishStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,6 +18,10 @@ public interface DishRepository extends JpaRepository<Dish, Long> {
     List<Dish> findByStatus(DishStatus status);
     List<Dish> findByActiveTrue();
     List<Dish> findByIsPromotionTrue();
+    boolean existsByPromotion(Promotion promotion);
+    
+    @Query("SELECT COUNT(d) > 0 FROM Dish d WHERE d.promotion = :promotion")
+    boolean existsByPromotionId(@Param("promotion") Promotion promotion);
     
     // Soft delete: set active = false (chắc chắn chỉ chạy UPDATE, không DELETE)
     @Modifying(clearAutomatically = true, flushAutomatically = true)

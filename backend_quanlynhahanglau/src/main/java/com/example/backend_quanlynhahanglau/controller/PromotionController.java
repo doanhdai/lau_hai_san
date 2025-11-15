@@ -4,7 +4,6 @@ import com.example.backend_quanlynhahanglau.dto.ApiResponse;
 import com.example.backend_quanlynhahanglau.dto.promotion.PromotionRequest;
 import com.example.backend_quanlynhahanglau.dto.promotion.PromotionResponse;
 import com.example.backend_quanlynhahanglau.service.PromotionService;
-import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -62,18 +61,8 @@ public class PromotionController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deletePromotion(@PathVariable Long id) {
-        try {
-            promotionService.deletePromotion(id);
-            return ResponseEntity.ok(ApiResponse.success("Xóa khuyến mãi thành công", null));
-
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Không tìm thấy khuyến mãi để xóa"));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Không thể xóa khuyến mãi vì đang được sử dụng"));
-        }
+        promotionService.deletePromotion(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa khuyến mãi thành công", null));
     }
 
     @PutMapping("/{id}/activate")
