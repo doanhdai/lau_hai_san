@@ -145,7 +145,12 @@
             <button 
               @click="createOrder" 
               :disabled="!canCreateOrder"
-              class="btn-primary w-full cursor-pointer"
+              :class="[
+                'w-full font-medium py-2.5 px-4 rounded-lg transition-colors',
+                canCreateOrder 
+                  ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ]"
             >
               Thêm món
             </button>
@@ -352,8 +357,10 @@ function clearOrder() {
 }
 
 async function createOrder() {
-  alert("hehehe");
-  if (!canCreateOrder.value) return
+  if (!canCreateOrder.value) {
+    notification.error('Vui lòng chọn đặt bàn và thêm ít nhất một món')
+    return
+  }
 
   try {
     // Chuẩn bị items data cho order_details (chỉ gửi dishId, quantity, notes)
