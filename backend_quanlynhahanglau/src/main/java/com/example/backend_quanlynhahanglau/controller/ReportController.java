@@ -2,6 +2,7 @@ package com.example.backend_quanlynhahanglau.controller;
 
 import com.example.backend_quanlynhahanglau.dto.ApiResponse;
 import com.example.backend_quanlynhahanglau.dto.report.RevenueReportResponse;
+import com.example.backend_quanlynhahanglau.dto.report.ReportStatsResponse;
 import com.example.backend_quanlynhahanglau.dto.report.SalesReportResponse;
 import com.example.backend_quanlynhahanglau.service.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -37,5 +38,16 @@ public class ReportController {
         
         SalesReportResponse report = reportService.getSalesReport(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(report));
+    }
+    
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<ReportStatsResponse>> getReportStats(
+            @RequestParam String filterType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        
+        ReportStatsResponse stats = reportService.getReportStats(filterType, startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }
