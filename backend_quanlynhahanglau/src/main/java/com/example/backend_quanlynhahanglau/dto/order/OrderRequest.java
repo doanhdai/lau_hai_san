@@ -1,6 +1,5 @@
 package com.example.backend_quanlynhahanglau.dto.order;
 
-import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -16,13 +15,13 @@ public class OrderRequest {
     private Long tableId;
     private Long reservationId;
 
-    @NotEmpty(message = "Đơn hàng phải có ít nhất một món")
-    private List<OrderItemRequest> items;
+    private List<OrderItemRequest> items; // Có thể null khi chỉ cập nhật discount/total
 
     private String notes;
     
     // Các field này dùng cho update order
     private BigDecimal subtotal;
     private BigDecimal tax;
+    private BigDecimal discount;
     private BigDecimal total;
 }
