@@ -36,6 +36,16 @@ export const orderService = {
     return response.data
   },
 
+  async updateOrderDetail(orderId, itemId, item) {
+    const response = await api.put(`/orders/${orderId}/items/${itemId}`, item)
+    return response.data
+  },
+
+  async deleteOrderDetail(orderId, itemId) {
+    const response = await api.delete(`/orders/${orderId}/items/${itemId}`)
+    return response.data
+  },
+
   async delete(id) {
     const response = await api.delete(`/orders/${id}`)
     return response.data

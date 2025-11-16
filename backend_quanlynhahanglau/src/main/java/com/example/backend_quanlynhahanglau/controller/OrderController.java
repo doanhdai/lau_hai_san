@@ -104,4 +104,23 @@ public class OrderController {
         List<OrderResponse> orders = orderService.getPendingOrders();
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
+
+    @PutMapping("/{orderId}/items/{itemId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderDetail(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId,
+            @RequestBody OrderItemRequest itemRequest) {
+        OrderResponse order = orderService.updateOrderDetail(orderId, itemId, itemRequest);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật món thành công", order));
+    }
+
+    @DeleteMapping("/{orderId}/items/{itemId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<OrderResponse>> deleteOrderDetail(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId) {
+        OrderResponse order = orderService.deleteOrderDetail(orderId, itemId);
+        return ResponseEntity.ok(ApiResponse.success("Xóa món thành công", order));
+    }
 }

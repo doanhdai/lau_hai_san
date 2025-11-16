@@ -228,7 +228,17 @@ async function handleQueryParams() {
     
     // Load orders để tìm order theo reservationId
     await loadData()
-    const existingOrder = orders.value.find(o => o.reservationId === reservationIdNum)
+    
+    // Tìm tất cả orders có cùng reservationId, loại bỏ CANCELLED, sắp xếp theo createdAt mới nhất
+    const matchingOrders = orders.value
+      .filter(o => o.reservationId === reservationIdNum && o.status !== 'CANCELLED')
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
+      })
+    
+    const existingOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
     
     if (existingOrder) {
       // Nếu có order, set orderId (để biết là update)

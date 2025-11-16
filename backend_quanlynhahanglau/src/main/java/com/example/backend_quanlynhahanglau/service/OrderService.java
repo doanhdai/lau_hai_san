@@ -255,6 +255,9 @@ public class OrderService {
         // Recalculate totals
         recalculateOrderTotals(order);
         
+        // Cập nhật status order thành PENDING khi thêm món (trừ COMPLETED và CANCELLED đã bị block ở trên)
+        order.setStatus(OrderStatus.PENDING);
+        
         order = orderRepository.save(order);
         return mapToResponse(order);
     }
@@ -273,8 +276,23 @@ public class OrderService {
             order.setNotes(request.getNotes());
         }
 
-        // Thêm items mới vào order hiện có (không xóa items cũ)
-        for (OrderItemRequest itemRequest : request.getItems()) {
+        // Update discount và total nếu có
+        if (request.getDiscount() != null) {
+            order.setDiscount(request.getDiscount());
+        }
+        if (request.getTotal() != null) {
+            order.setTotal(request.getTotal());
+        }
+        if (request.getSubtotal() != null) {
+            order.setSubtotal(request.getSubtotal());
+        }
+        if (request.getTax() != null) {
+            order.setTax(request.getTax());
+        }
+
+        // Thêm items mới vào order hiện có (không xóa items cũ) - chỉ khi có items
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (OrderItemRequest itemRequest : request.getItems()) {
             Dish dish = dishRepository.findById(itemRequest.getDishId())
                     .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
             
@@ -330,9 +348,23 @@ public class OrderService {
                 orderDetailRepository.save(detail);
             }
         }
+        } else {
+            // Nếu không có items, chỉ tính lại totals nếu có thay đổi discount/total
+            if (request.getDiscount() != null || request.getTotal() != null) {
+                // Không tính lại, giữ nguyên giá trị đã set ở trên
+            } else {
+                // Tính lại subtotal, tax, total từ order_details (để đảm bảo chính xác)
+                recalculateOrderTotals(order);
+            }
+        }
 
-        // Tính lại subtotal, tax, total từ order_details (để đảm bảo chính xác)
-        recalculateOrderTotals(order);
+        // Tính lại subtotal, tax, total từ order_details nếu có items mới
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            recalculateOrderTotals(order);
+            // Cập nhật status order thành PENDING khi thêm món (trừ COMPLETED và CANCELLED đã bị block ở trên)
+            order.setStatus(OrderStatus.PENDING);
+        }
+        // Nếu chỉ cập nhật discount/total mà không có items, giữ nguyên status
 
         order = orderRepository.save(order);
         return mapToResponse(order);
@@ -350,6 +382,74 @@ public class OrderService {
         }
         
         orderRepository.delete(order);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderDetail(Long orderId, Long itemId, OrderItemRequest itemRequest) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", orderId));
+
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Không thể cập nhật đơn hàng đã hoàn thành hoặc đã hủy");
+        }
+
+        // Tìm order_detail theo id
+        OrderDetail orderDetail = orderDetailRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chi tiết đơn hàng", "id", itemId));
+
+        // Kiểm tra order_detail thuộc về order này
+        if (!orderDetail.getOrder().getId().equals(orderId)) {
+            throw new BadRequestException("Chi tiết đơn hàng không thuộc về đơn hàng này");
+        }
+
+        // Cập nhật notes
+        if (itemRequest.getNotes() != null) {
+            orderDetail.setNotes(itemRequest.getNotes());
+        }
+
+        // Cập nhật quantity nếu có
+        if (itemRequest.getQuantity() != null && itemRequest.getQuantity() > 0) {
+            orderDetail.setQuantity(itemRequest.getQuantity());
+            BigDecimal itemSubtotal = orderDetail.getPrice().multiply(BigDecimal.valueOf(orderDetail.getQuantity()));
+            orderDetail.setSubtotal(itemSubtotal);
+        }
+
+        orderDetailRepository.save(orderDetail);
+
+        // Tính lại subtotal, tax, total từ order_details
+        recalculateOrderTotals(order);
+        order = orderRepository.save(order);
+
+        return mapToResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse deleteOrderDetail(Long orderId, Long itemId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", orderId));
+
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Không thể xóa món trong đơn hàng đã hoàn thành hoặc đã hủy");
+        }
+
+        // Tìm order_detail theo id
+        OrderDetail orderDetail = orderDetailRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chi tiết đơn hàng", "id", itemId));
+
+        // Kiểm tra order_detail thuộc về order này
+        if (!orderDetail.getOrder().getId().equals(orderId)) {
+            throw new BadRequestException("Chi tiết đơn hàng không thuộc về đơn hàng này");
+        }
+
+        // Xóa order_detail
+        order.getOrderDetails().remove(orderDetail);
+        orderDetailRepository.delete(orderDetail);
+
+        // Tính lại subtotal, tax, total từ order_details
+        recalculateOrderTotals(order);
+        
+        order = orderRepository.save(order);
+        return mapToResponse(order);
     }
 
     @Transactional
