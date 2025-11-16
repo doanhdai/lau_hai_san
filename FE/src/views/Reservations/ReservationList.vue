@@ -273,7 +273,7 @@
                 />
                 <span>Bàn Online</span>
               </label>
-              <label
+              <!-- <label
                 :class="[
                   'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2',
                   tableTypeFilter === 'regular'
@@ -288,7 +288,7 @@
                   class="w-3 h-3 text-slate-900 focus:ring-1 focus:ring-slate-500"
                 />
                 <span>Bàn Thường</span>
-              </label>
+              </label> -->
             </div>
 
             <!-- Loading State -->
