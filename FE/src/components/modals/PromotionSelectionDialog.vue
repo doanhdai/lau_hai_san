@@ -20,7 +20,7 @@
               <input
                 type="radio"
                 :value="null"
-                :checked="modelValue === null"
+                :checked="tempSelectedPromotion === null"
                 @change="handleSelect(null)"
                 class="mt-1 w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
               />
@@ -41,7 +41,7 @@
               <input
                 type="radio"
                 :value="promotion.id"
-                :checked="modelValue?.id === promotion.id"
+                :checked="tempSelectedPromotion?.id === promotion.id"
                 @change="handleSelect(promotion)"
                 :disabled="!isPromotionEligible(promotion)"
                 class="mt-1 w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -78,6 +78,12 @@
             @click="handleClose"
             class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
           >
+            Hủy
+          </button>
+          <button
+            @click="handleConfirm"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Xác nhận
           </button>
         </div>
@@ -87,7 +93,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   show: {
@@ -110,6 +116,16 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'close'])
 
+// Lưu promotion được chọn tạm thời (chưa xác nhận)
+const tempSelectedPromotion = ref(null)
+
+// Khi dialog mở, khởi tạo tempSelectedPromotion từ modelValue
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    tempSelectedPromotion.value = props.modelValue
+  }
+})
+
 // Kiểm tra promotion có đủ điều kiện không
 function isPromotionEligible(promotion) {
   if (!promotion || !props.orderSubtotal) return false
@@ -122,13 +138,21 @@ function isPromotionEligible(promotion) {
   return true
 }
 
-// Xử lý chọn promotion
+// Xử lý chọn promotion (chỉ lưu tạm, chưa cập nhật)
 function handleSelect(promotion) {
-  emit('update:modelValue', promotion)
+  tempSelectedPromotion.value = promotion
 }
 
-// Xử lý đóng dialog
+// Xử lý xác nhận - mới thực sự cập nhật
+function handleConfirm() {
+  emit('update:modelValue', tempSelectedPromotion.value)
+  emit('close')
+}
+
+// Xử lý đóng dialog (không xác nhận) - không cập nhật
 function handleClose() {
+  // Reset về giá trị ban đầu
+  tempSelectedPromotion.value = props.modelValue
   emit('close')
 }
 
