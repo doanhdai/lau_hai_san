@@ -16,7 +16,13 @@
           <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 md:p-10">
             <div class="text-center mb-8">
               <h2 class="text-2xl font-bold text-slate-900 mb-2">Thông Tin Đặt Bàn</h2>
-              <p class="text-slate-600 text-sm">Vui lòng điền đầy đủ thông tin</p>
+              <p class="text-slate-600 text-sm mb-3">Vui lòng điền đầy đủ thông tin</p>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 inline-block">
+                <p class="text-xs text-green-800">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  <strong>Không cần đăng nhập</strong> - Bạn có thể đặt bàn ngay mà không cần tài khoản
+                </p>
+              </div>
             </div>
 
             <!-- Step 1: Check Availability -->
@@ -306,10 +312,12 @@ import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 import { validateEmail, validatePhone } from '@/utils/validation'
 
 const router = useRouter()
 const notification = useNotificationStore()
+const authStore = useAuthStore()
 
 const form = ref({
   name: '',
@@ -619,9 +627,15 @@ async function submitReservation(e) {
       }
       showSuccess.value = false
       
-      // Navigate to home after a short delay
+      // Navigate based on authentication status
       setTimeout(() => {
-        router.push('/home')
+        if (authStore.isAuthenticated) {
+          // Nếu đã login, chuyển về trang lịch sử đặt bàn
+          router.push('/my-reservations')
+        } else {
+          // Nếu chưa login, chuyển về trang home
+          router.push('/home')
+        }
       }, 1000)
     } else {
       notification.error(response.message || 'Có lỗi xảy ra, vui lòng thử lại!')

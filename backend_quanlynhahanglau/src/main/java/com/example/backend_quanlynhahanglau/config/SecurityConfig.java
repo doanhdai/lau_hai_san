@@ -61,7 +61,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/reservations/public").permitAll()
+                        // Cho phép kiểm tra và đặt bàn không cần đăng nhập
+                        .requestMatchers(HttpMethod.GET, "/api/tables/filter").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/tables/check-availability").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reservations/public").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/reservations/public/**/cancel").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
                         .anyRequest().authenticated()
                 );

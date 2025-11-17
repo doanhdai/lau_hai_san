@@ -54,6 +54,7 @@ public class DashboardService {
     private final DishRepository dishRepository;
     private final OrderRepository orderRepository;
     private final CustomerFeedbackRepository feedbackRepository;
+    private final PaymentRepository paymentRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
@@ -78,20 +79,20 @@ public class DashboardService {
         Long pendingOrders = (long) orderRepository.findByStatus(OrderStatus.PENDING).size();
         Long completedOrders = (long) orderRepository.findByStatus(OrderStatus.COMPLETED).size();
 
-        // Revenue stats
+        // Revenue stats - Lấy từ bảng payments (chỉ tính payments có status COMPLETED)
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
-        BigDecimal todayRevenue = orderRepository.calculateRevenueByDate(todayStart, todayEnd);
+        BigDecimal todayRevenue = paymentRepository.calculateRevenueByDate(todayStart, todayEnd);
         if (todayRevenue == null) todayRevenue = BigDecimal.ZERO;
 
         LocalDateTime monthStart = YearMonth.now().atDay(1).atStartOfDay();
         LocalDateTime monthEnd = YearMonth.now().atEndOfMonth().atTime(LocalTime.MAX);
-        BigDecimal monthRevenue = orderRepository.calculateRevenueByDate(monthStart, monthEnd);
+        BigDecimal monthRevenue = paymentRepository.calculateRevenueByDate(monthStart, monthEnd);
         if (monthRevenue == null) monthRevenue = BigDecimal.ZERO;
 
         LocalDateTime yearStart = LocalDate.now().withDayOfYear(1).atStartOfDay();
         LocalDateTime yearEnd = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear()).atTime(LocalTime.MAX);
-        BigDecimal yearRevenue = orderRepository.calculateRevenueByDate(yearStart, yearEnd);
+        BigDecimal yearRevenue = paymentRepository.calculateRevenueByDate(yearStart, yearEnd);
         if (yearRevenue == null) yearRevenue = BigDecimal.ZERO;
 
         // Table status count
@@ -134,17 +135,17 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public RevenueReport getRevenueReport(LocalDateTime startDate, LocalDateTime endDate) {
-        // Tính doanh thu cho các đơn đã xác nhận trở đi (CONFIRMED, PREPARING, SERVED, COMPLETED)
+        // Tính doanh thu từ bảng payments (chỉ tính payments có status COMPLETED)
+        BigDecimal totalRevenue = paymentRepository.calculateRevenueByDate(startDate, endDate);
+        if (totalRevenue == null) totalRevenue = BigDecimal.ZERO;
+
+        // Lấy danh sách orders trong khoảng thời gian để tính các thống kê khác
         List<Order> orders = orderRepository.findByDate(startDate, endDate).stream()
                 .filter(o -> o.getStatus() == OrderStatus.CONFIRMED || 
                            o.getStatus() == OrderStatus.PREPARING ||
                            o.getStatus() == OrderStatus.SERVED ||
                            o.getStatus() == OrderStatus.COMPLETED)
                 .collect(Collectors.toList());
-
-        BigDecimal totalRevenue = orders.stream()
-                .map(Order::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Long totalOrders = (long) orders.size();
 
@@ -221,7 +222,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public Map<Integer, BigDecimal> getMonthlyRevenue(Integer year) {
-        List<Object[]> monthlyData = orderRepository.calculateMonthlyRevenue(year);
+        List<Object[]> monthlyData = paymentRepository.calculateMonthlyRevenue(year);
         Map<Integer, BigDecimal> result = new HashMap<>();
         
         // Initialize all months with 0

@@ -579,8 +579,42 @@ const upcomingReservations = computed(() => {
       }
     })
     .sort((a, b) => {
+      const now = currentTime.value
       const timeA = new Date(a.reservationTime || a.reservationDateTime)
       const timeB = new Date(b.reservationTime || b.reservationDateTime)
+      
+      // Kiểm tra xem reservation có thể check-in ngay không
+      const canCheckInA = (() => {
+        if (!a) return false
+        const tableIdA = a.tableId || a.table?.id
+        const hasTableA = tableIdA != null && tableIdA !== undefined
+        const isCheckedInA = a.status === 'CHECKED_IN'
+        const isTimeReachedA = now >= timeA
+        const isOverdueA = (() => {
+          const overdueTime = new Date(timeA.getTime() + 30 * 60 * 1000) // +30 phút
+          return now > overdueTime
+        })()
+        return hasTableA && !isCheckedInA && isTimeReachedA && !isOverdueA
+      })()
+      
+      const canCheckInB = (() => {
+        if (!b) return false
+        const tableIdB = b.tableId || b.table?.id
+        const hasTableB = tableIdB != null && tableIdB !== undefined
+        const isCheckedInB = b.status === 'CHECKED_IN'
+        const isTimeReachedB = now >= timeB
+        const isOverdueB = (() => {
+          const overdueTime = new Date(timeB.getTime() + 30 * 60 * 1000) // +30 phút
+          return now > overdueTime
+        })()
+        return hasTableB && !isCheckedInB && isTimeReachedB && !isOverdueB
+      })()
+      
+      // Ưu tiên các reservation có thể check-in ngay lên đầu
+      if (canCheckInA && !canCheckInB) return -1
+      if (!canCheckInA && canCheckInB) return 1
+      
+      // Nếu cả hai đều có thể check-in hoặc không thể check-in, sắp xếp theo thời gian gần nhất
       return timeA - timeB
     })
 })

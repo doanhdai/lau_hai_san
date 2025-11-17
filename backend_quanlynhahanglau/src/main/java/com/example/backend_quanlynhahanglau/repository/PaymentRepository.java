@@ -33,5 +33,19 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("status") PaymentStatus status);
+    
+    // Tính doanh thu theo ngày (chỉ lấy payments đã thanh toán thành công)
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE " +
+           "p.createdAt >= :startDate AND p.createdAt <= :endDate " +
+           "AND p.paymentStatus = 'COMPLETED'")
+    BigDecimal calculateRevenueByDate(@Param("startDate") LocalDateTime startDate, 
+                                      @Param("endDate") LocalDateTime endDate);
+    
+    // Tính doanh thu theo tháng (chỉ lấy payments đã thanh toán thành công)
+    @Query("SELECT FUNCTION('MONTH', p.createdAt), SUM(p.amount) FROM Payment p WHERE " +
+           "FUNCTION('YEAR', p.createdAt) = :year " +
+           "AND p.paymentStatus = 'COMPLETED' " +
+           "GROUP BY FUNCTION('MONTH', p.createdAt)")
+    List<Object[]> calculateMonthlyRevenue(@Param("year") int year);
 }
 

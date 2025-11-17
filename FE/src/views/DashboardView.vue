@@ -173,7 +173,7 @@
       </div>
 
       <!-- Rating -->
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-5">
+      <!-- <div class="bg-amber-50 border border-amber-200 rounded-lg p-5">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-base font-semibold text-slate-900 mb-2">Đánh giá trung bình</h3>
@@ -188,7 +188,7 @@
             <i class="fas fa-comments text-amber-600 text-2xl"></i>
           </div>
         </div>
-      </div>
+      </div> -->
     </template>
   </div>
 </template>
