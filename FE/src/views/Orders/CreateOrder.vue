@@ -12,9 +12,9 @@
       </router-link>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
       <!-- Left Column: Order Form -->
-      <div class="lg:col-span-2 space-y-6">
+      <div class="lg:col-span-2 flex flex-col">
         <!-- Reservation Selection -->
         <!-- <div class="card bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200">
           <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -34,43 +34,121 @@
           </div>
         </div> -->
 
-        <!-- Dish Selection -->
-        <div class="card">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Chọn món ăn</h3>
-          
-          <!-- Search -->
-          <div class="mb-4">
-            <input
-              v-model="dishSearchQuery"
-              type="text"
-              placeholder="Tìm kiếm món ăn..."
-              class="input-field"
-            />
+        <!-- Tabs Navigation -->
+        <div class="card p-0 overflow-hidden flex-1 flex flex-col">
+          <div class="border-b border-gray-200">
+            <nav class="flex -mb-px">
+              <button
+                @click="activeTab = 'dishes'"
+                :class="[
+                  'flex-1 px-4 py-3 text-sm font-medium text-center transition-colors border-b-2 rounded-tl-xl',
+                  activeTab === 'dishes'
+                    ? 'border-red-500 text-red-600 bg-red-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ]"
+              >
+                <i class="fas fa-utensils mr-2"></i>
+                Chọn món ăn
+              </button>
+              <button
+                v-if="existingOrderDetails.length > 0"
+                @click="activeTab = 'current-order'"
+                :class="[
+                  'flex-1 px-4 py-3 text-sm font-medium text-center transition-colors border-b-2 relative rounded-tr-xl',
+                  activeTab === 'current-order'
+                    ? 'border-blue-500 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ]"
+              >
+                <i class="fas fa-list-check mr-2"></i>
+                Đơn hàng hiện tại
+                <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white">
+                  {{ existingOrderDetails.length }}
+                </span>
+              </button>
+            </nav>
           </div>
 
-          <!-- Dish Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-            <div 
-              v-for="dish in filteredDishes" 
-              :key="dish.id"
-              @click="addDishToOrder(dish)"
-              class="border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition"
-            >
-              <div class="flex items-center gap-2">
-                <img :src="dish.imageUrl" :alt="dish.name" class="w-10 h-10 object-cover rounded-lg">
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate">{{ dish.name }}</p>
-                  <p class="text-xs text-red-600 font-bold">{{ formatCurrency(dish.price) }}</p>
+          <!-- Tab Content: Dish Selection -->
+          <div v-if="activeTab === 'dishes'" class="p-6 flex-1 flex flex-col min-h-0 max-h-[100vh]">
+            <!-- Search -->
+            <div class="mb-4 flex-shrink-0">
+              <input
+                v-model="dishSearchQuery"
+                type="text"
+                placeholder="Tìm kiếm món ăn..."
+                class="input-field"
+              />
+            </div>
+
+            <!-- Dish Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto h-full" style="min-height: 450px; ">
+              <div 
+                v-for="dish in filteredDishes" 
+                :key="dish.id"
+                @click="addDishToOrder(dish)"
+                class="border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition"
+              >
+                <div class="flex items-center gap-2">
+                  <img :src="dish.imageUrl" :alt="dish.name" class="w-10 h-10 object-cover rounded-lg">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ dish.name }}</p>
+                    <p class="text-xs text-red-600 font-bold">{{ formatCurrency(dish.price) }}</p>
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Tab Content: Existing Order Items -->
+          <div v-if="activeTab === 'current-order' && existingOrderDetails.length > 0" class="p-6 bg-white flex-1 flex flex-col min-h-0">
+            <div class="space-y-3 flex-1 min-h-0 overflow-y-auto">
+              <div
+                v-for="item in existingOrderDetails"
+                :key="item.id"
+                class="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-gray-900 mb-2">{{ item.dishName || item.dish?.name || 'Món không xác định' }} ( x{{ item.quantity }} )</p>
+                    <div class="space-y-1 text-xs text-gray-600">
+                      <div>Giá: <span class="font-semibold text-red-600">{{ formatCurrency(item.price) }}</span></div>
+                    </div>
+                    <div v-if="getCleanedNotes(item.notes)" class="mt-3">
+                      <div class="flex items-start gap-2">
+                        <i class="fas fa-sticky-note text-yellow-500 text-xs mt-0.5"></i>
+                        <p class="text-xs text-gray-600 italic bg-yellow-50 px-2 py-1 rounded border border-yellow-200 flex-1">
+                          {{ getCleanedNotes(item.notes) }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex-shrink-0 text-right">
+                    <p class="text-sm font-bold text-gray-900">{{ formatCurrency(item.subtotal || (item.price * item.quantity)) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="existingOrderTotal > 0" class="mt-4 pt-4 border-t border-gray-300 flex-shrink-0">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-medium text-gray-700">Tổng đơn hàng hiện tại:</span>
+                <span class="text-lg font-bold text-blue-600">{{ formatCurrency(existingOrderTotal) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty state cho tab đơn hàng hiện tại -->
+          <div v-if="activeTab === 'current-order' && existingOrderDetails.length === 0" class="p-6 text-center py-12">
+            <i class="fas fa-shopping-cart text-gray-300 text-4xl mb-3"></i>
+            <p class="text-gray-500">Chưa có món nào trong đơn hàng</p>
           </div>
         </div>
       </div>
 
       <!-- Right Column: Order Summary -->
-      <div class="lg:col-span-1">
-        <div class="card sticky top-6">
+      <div class="lg:col-span-1 flex flex-col">
+        <div class="card w-full h-full flex flex-col">
           <h3 class="text-lg font-bold text-gray-900 mb-4">Tóm tắt</h3>
           
           <!-- Order Items -->
@@ -182,6 +260,9 @@ const confirmedReservations = ref([])
 const orders = ref([])
 const selectedReservationId = ref('')
 const dishSearchQuery = ref('')
+const existingOrderDetails = ref([])
+const existingOrder = ref(null)
+const activeTab = ref('dishes') // 'dishes' hoặc 'current-order'
 
 const orderForm = ref({
   orderId: null, // ID của order (null nếu tạo mới, có giá trị nếu update)
@@ -214,6 +295,11 @@ const canCreateOrder = computed(() => {
          orderForm.value.items.length > 0
 })
 
+const existingOrderTotal = computed(() => {
+  if (!existingOrder.value) return 0
+  return existingOrder.value.total || existingOrder.value.subtotal || 0
+})
+
 onMounted(() => {
   loadData()
   handleQueryParams()
@@ -238,35 +324,59 @@ async function handleQueryParams() {
         return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
       })
     
-    const existingOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
+    const foundOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
     
-    if (existingOrder) {
+    if (foundOrder) {
       // Nếu có order, set orderId (để biết là update)
-      orderForm.value.orderId = existingOrder.id
+      orderForm.value.orderId = foundOrder.id
+      await loadExistingOrderDetails(foundOrder.id)
     } else {
       // Nếu không có order, orderId = null (tạo mới)
       orderForm.value.orderId = null
+      existingOrder.value = null
+      existingOrderDetails.value = []
     }
   }
 
   // Xử lý orderId từ query params (nếu có)
   const orderId = route.query.orderId || route.query.order_id
   if (orderId) {
-    orderForm.value.orderId = parseInt(orderId)
-    // Load order để lấy reservationId
+    const orderIdNum = parseInt(orderId)
+    orderForm.value.orderId = orderIdNum
+    // Load order để lấy reservationId và order details
     try {
-      const orderRes = await orderService.getById(parseInt(orderId))
+      const orderRes = await orderService.getById(orderIdNum)
       if (orderRes.success && orderRes.data) {
         const order = orderRes.data
         // Set reservationId từ order
         if (order.reservationId) {
           orderForm.value.reservationId = order.reservationId
         }
+        await loadExistingOrderDetails(orderIdNum)
       }
     } catch (error) {
       console.error('Error loading order:', error)
       notification.error('Không thể tải thông tin đơn hàng')
     }
+  }
+}
+
+async function loadExistingOrderDetails(orderId) {
+  try {
+    const orderRes = await orderService.getById(orderId)
+    if (orderRes.success && orderRes.data) {
+      existingOrder.value = orderRes.data
+      // Lấy order details từ order.items hoặc order.orderDetails
+      existingOrderDetails.value = orderRes.data.items || orderRes.data.orderDetails || []
+      // Nếu có order details, tự động chuyển sang tab đơn hàng hiện tại
+      if (existingOrderDetails.value.length > 0) {
+        activeTab.value = 'current-order'
+      }
+    }
+  } catch (error) {
+    console.error('Error loading existing order details:', error)
+    existingOrder.value = null
+    existingOrderDetails.value = []
   }
 }
 
@@ -389,9 +499,12 @@ async function createOrder() {
         tax: tax.value,
         total: total.value,
         reservationId: orderForm.value.reservationId,
-        items: itemsData
+        items: itemsData,
+        status: 'CONFIRMED'
       }
       await orderService.update(orderForm.value.orderId, updateData)
+      // Đảm bảo status được set là CONFIRMED
+      await orderService.updateStatus(orderForm.value.orderId, 'CONFIRMED')
       notification.success('Đã cập nhật đơn hàng')
     } else {
       // Tạo order mới với notes, subtotal, tax, total, reservation_id
@@ -401,10 +514,15 @@ async function createOrder() {
         tax: tax.value,
         total: total.value,
         reservationId: orderForm.value.reservationId,
-        items: itemsData
+        items: itemsData,
+        status: 'CONFIRMED'
       }
 
-      await orderService.create(orderData)
+      const result = await orderService.create(orderData)
+      // Đảm bảo status được set là CONFIRMED sau khi tạo
+      if (result.success && result.data?.id) {
+        await orderService.updateStatus(result.data.id, 'CONFIRMED')
+      }
       notification.success('Tạo đơn hàng thành công')
     }
     
@@ -419,5 +537,17 @@ function formatCurrency(value) {
     style: 'currency',
     currency: 'VND'
   }).format(value)
+}
+
+// Làm sạch notes - loại bỏ "served" và "Chưa lên"
+function getCleanedNotes(notes) {
+  if (!notes) return null
+  
+  let cleaned = notes
+  // Loại bỏ "served" (không phân biệt hoa thường)
+  const servedRegex = /\bserved\b/gi
+  cleaned = cleaned.replace(servedRegex, '').trim()
+  
+  return cleaned || null
 }
 </script>
