@@ -62,13 +62,6 @@ const router = createRouter({
       component: () => import('@/views/Auth/RegisterView.vue'),
       meta: { requiresAuth: false }
     },
-    // Payment Page - không có sidebar
-    {
-      path: '/payment/:orderId',
-      name: 'Payment',
-      component: () => import('@/views/Orders/PaymentPage.vue'),
-      meta: { requiresAuth: true, roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
-    },
     // Admin Routes
     {
       path: '/admin',
@@ -137,6 +130,12 @@ const router = createRouter({
           path: 'reservations/checkin',
           name: 'TableCheckIn',
           component: () => import('@/views/Reservations/TableCheckIn.vue'),
+          meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
+        },
+        {
+          path: 'payment/:orderId',
+          name: 'Payment',
+          component: () => import('@/views/Orders/PaymentPage.vue'),
           meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
         },
         {

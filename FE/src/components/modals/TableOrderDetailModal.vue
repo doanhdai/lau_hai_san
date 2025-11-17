@@ -87,53 +87,51 @@
                 <div
                   v-for="(item, index) in selectedOrder.items"
                   :key="item.id || index"
-                  class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow relative"
                   :class="isItemServed(item) ? 'border-green-300 bg-green-50' : 'border-slate-200'"
                 >
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-start gap-3 flex-1">
-                      <div class="flex items-center gap-2 pt-1">
-                        <input
-                          type="checkbox"
-                          :checked="isItemServed(item)"
-                          @click="handleItemServedClick(item.id, $event)"
-                          class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                          :disabled="isItemServed(item) || selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'CANCELLED'"
-                        />
-                      </div>
-                      <div class="flex-1">
-                        <div class="flex items-center gap-3">
-                          <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                              <p class="text-sm font-semibold text-slate-900">{{ item.dishName }}</p>
-                              <span v-if="isItemServed(item)" class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
-                                <i class="fas fa-check mr-1"></i>Đã lên đủ
-                              </span>
-                              <span v-else class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-medium">
-                                Chưa lên
-                              </span>
-                            </div>
-                            <div class="flex items-center gap-4 mt-1">
-                              <span class="text-xs text-slate-500">SL: {{ item.quantity }}</span>
-                              <span class="text-xs text-slate-500">Giá: {{ formatCurrency(item.price) }}</span>
-                            </div>
-                            <p v-if="getDisplayNotes(item)" class="text-xs text-slate-600 mt-2 italic bg-slate-50 p-2 rounded">
-                              <i class="fas fa-sticky-note mr-1"></i>{{ getDisplayNotes(item) }}
-                            </p>
+                  <button
+                    v-if="selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED'"
+                    @click="removeOrderItem(item.id)"
+                    class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                    title="Hủy món"
+                  >
+                    <i class="fas fa-times text-sm"></i>
+                  </button>
+                  <div class="flex items-start gap-3">
+                    <div class="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        :checked="isItemServed(item)"
+                        @click="handleItemServedClick(item.id, $event)"
+                        class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        :disabled="isItemServed(item) || selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'CANCELLED'"
+                      />
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2">
+                            <p class="text-sm font-semibold text-slate-900">{{ item.dishName }}</p>
+                            <span v-if="isItemServed(item)" class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
+                              <i class="fas fa-check mr-1"></i>Đã lên đủ
+                            </span>
+                            <span v-else class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-medium">
+                              Chưa lên
+                            </span>
                           </div>
+                          <div class="flex items-center justify-between gap-4 mt-1">
+                            <div class="flex items-center gap-4">
+                              <span class="text-xs text-slate-900 font-bold">SL: {{ item.quantity }}</span>
+                              <span class="text-xs text-slate-500 font-bold">Giá: {{ formatCurrency(item.price) }}</span>
+                            </div>
+                            <span class="text-sm font-bold text-slate-900">Tổng: {{ formatCurrency(item.subtotal) }}</span>
+                          </div>
+                          <p v-if="getDisplayNotes(item)" class="text-xs text-slate-600 mt-2 italic bg-slate-50 p-2 rounded">
+                            <i class="fas fa-sticky-note mr-1"></i>{{ getDisplayNotes(item) }}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                    <div class="text-right flex items-center gap-3">
-                      <p class="text-sm font-bold text-slate-900">{{ formatCurrency(item.subtotal) }}</p>
-                      <button
-                        v-if="selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED'"
-                        @click="removeOrderItem(item.id)"
-                        class="text-red-600 hover:text-red-800 transition-colors p-1"
-                        title="Hủy món"
-                      >
-                        <i class="fas fa-times text-sm"></i>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -440,9 +438,6 @@ async function updateItemServedStatus(itemId, served) {
     // Reload order để lấy dữ liệu mới nhất
     await loadOrder()
     
-    // Tự động kiểm tra và cập nhật status order
-    await checkAndUpdateOrderStatus()
-    
     emit('order-updated')
   } catch (error) {
     console.error('Error updating item served status:', error)
@@ -450,34 +445,8 @@ async function updateItemServedStatus(itemId, served) {
   }
 }
 
-// Kiểm tra và cập nhật status order
-async function checkAndUpdateOrderStatus() {
-  if (!selectedOrder.value || !selectedOrder.value.items || selectedOrder.value.items.length === 0) return
-  
-  // Kiểm tra tất cả món đã served chưa
-  const allServed = selectedOrder.value.items.every(item => isItemServed(item))
-  
-  // Nếu tất cả đã served và status chưa phải SERVED, cập nhật
-  if (allServed && selectedOrder.value.status !== 'SERVED') {
-    try {
-      await orderService.updateStatus(selectedOrder.value.id, 'SERVED')
-      await loadOrder()
-      emit('order-updated')
-    } catch (error) {
-      console.error('Error updating order status:', error)
-    }
-  }
-  // Nếu còn món chưa served và status là SERVED, chuyển về PENDING
-  else if (!allServed && selectedOrder.value.status === 'SERVED') {
-    try {
-      await orderService.updateStatus(selectedOrder.value.id, 'PENDING')
-      await loadOrder()
-      emit('order-updated')
-    } catch (error) {
-      console.error('Error updating order status:', error)
-    }
-  }
-}
+// Hàm checkAndUpdateOrderStatus đã được loại bỏ - không cần cập nhật status order nữa
+// Chỉ cần update từ khóa SERVED_KEYWORD trong notes của order_detail
 
 async function markAllAsServed() {
   if (!selectedOrder.value) return
@@ -506,7 +475,6 @@ async function markAllAsServed() {
     await Promise.all(updatePromises)
     notification.success('Đã cập nhật: Đã lên món tất cả')
     await loadOrder()
-    await checkAndUpdateOrderStatus()
     emit('order-updated')
   } catch (error) {
     console.error('Error updating items:', error)
@@ -549,7 +517,6 @@ async function markSelectedAsServed() {
     await Promise.all(updatePromises)
     notification.success(`Đã đánh dấu ${unservedItems.length} món đã lên món`)
     await loadOrder()
-    await checkAndUpdateOrderStatus()
     emit('order-updated')
   } catch (error) {
     console.error('Error marking items as served:', error)
@@ -561,7 +528,7 @@ async function proceedToPayment() {
   if (!selectedOrder.value) return
   
   // Redirect sang trang thanh toán
-  router.push(`/payment/${selectedOrder.value.id}`)
+  router.push(`/admin/payment/${selectedOrder.value.id}`)
 }
 
 async function loadPromotions() {
@@ -660,7 +627,6 @@ async function removeOrderItem(itemId) {
     await orderService.deleteOrderDetail(selectedOrder.value.id, itemId)
     notification.success('Đã hủy món')
     await loadOrder()
-    await checkAndUpdateOrderStatus()
     emit('order-updated')
   } catch (error) {
     console.error('Error removing order item:', error)
