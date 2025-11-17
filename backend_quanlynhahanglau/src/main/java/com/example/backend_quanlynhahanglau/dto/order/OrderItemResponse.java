@@ -3,6 +3,7 @@ package com.example.backend_quanlynhahanglau.dto.order;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -17,4 +18,5 @@ public class OrderItemResponse {
     private BigDecimal price;
     private BigDecimal subtotal;
     private String notes;
+    private LocalDateTime createdAt;
 }

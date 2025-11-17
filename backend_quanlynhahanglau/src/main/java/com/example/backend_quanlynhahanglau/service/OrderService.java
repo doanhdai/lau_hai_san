@@ -155,7 +155,7 @@ public class OrderService {
         // Save order first to get ID
         order = orderRepository.save(order);
 
-        // Add order details
+        // Add order details - Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
         BigDecimal subtotal = BigDecimal.ZERO;
         for (OrderItemRequest itemRequest : request.getItems()) {
             Dish dish = dishRepository.findById(itemRequest.getDishId())
@@ -165,19 +165,22 @@ public class OrderService {
                 throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
             }
 
-            BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-            
-            OrderDetail detail = OrderDetail.builder()
-                    .order(order)
-                    .dish(dish)
-                    .quantity(itemRequest.getQuantity())
-                    .price(dish.getPrice())
-                    .subtotal(itemSubtotal)
-                    .notes(itemRequest.getNotes())
-                    .build();
+            // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
+            for (int i = 0; i < itemRequest.getQuantity(); i++) {
+                BigDecimal itemSubtotal = dish.getPrice(); // Mỗi record = 1 món
+                
+                OrderDetail detail = OrderDetail.builder()
+                        .order(order)
+                        .dish(dish)
+                        .quantity(1) // Luôn là 1 cho mỗi record
+                        .price(dish.getPrice())
+                        .subtotal(itemSubtotal)
+                        .notes(itemRequest.getNotes())
+                        .build();
 
-            order.getOrderDetails().add(detail);
-            subtotal = subtotal.add(itemSubtotal);
+                order.getOrderDetails().add(detail);
+                subtotal = subtotal.add(itemSubtotal);
+            }
         }
 
         // Calculate totals
@@ -206,8 +209,16 @@ public class OrderService {
             order.setCompletedAt(LocalDateTime.now());
             
             // Cập nhật lại trạng thái bàn
+            // Nếu bàn đang OCCUPIED (có khách), chuyển sang CLEANING sau thanh toán
+            // Ngược lại chuyển sang AVAILABLE
             if (order.getTable() != null) {
-                order.getTable().setStatus(TableStatus.AVAILABLE);
+                if (order.getTable().getStatus() == TableStatus.OCCUPIED) {
+                    // Từ OCCUPIED (bàn đang có khách) chuyển sang CLEANING sau thanh toán
+                    order.getTable().setStatus(TableStatus.CLEANING);
+                } else {
+                    // Trường hợp khác chuyển sang AVAILABLE
+                    order.getTable().setStatus(TableStatus.AVAILABLE);
+                }
                 tableRepository.save(order.getTable());
             }
             
@@ -238,19 +249,23 @@ public class OrderService {
             throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
         }
 
-        BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-        
-        OrderDetail detail = OrderDetail.builder()
-                .order(order)
-                .dish(dish)
-                .quantity(itemRequest.getQuantity())
-                .price(dish.getPrice())
-                .subtotal(itemSubtotal)
-                .notes(itemRequest.getNotes())
-                .build();
+        // Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
+        // Mỗi record = 1 món (quantity = 1)
+        for (int i = 0; i < itemRequest.getQuantity(); i++) {
+            BigDecimal itemSubtotal = dish.getPrice(); // Mỗi record = 1 món
+            
+            OrderDetail detail = OrderDetail.builder()
+                    .order(order)
+                    .dish(dish)
+                    .quantity(1) // Luôn là 1 cho mỗi record
+                    .price(dish.getPrice())
+                    .subtotal(itemSubtotal)
+                    .notes(itemRequest.getNotes())
+                    .build();
 
-        order.getOrderDetails().add(detail);
-        orderDetailRepository.save(detail);
+            order.getOrderDetails().add(detail);
+            orderDetailRepository.save(detail);
+        }
 
         // Recalculate totals
         recalculateOrderTotals(order);
@@ -291,63 +306,33 @@ public class OrderService {
         }
 
         // Thêm items mới vào order hiện có (không xóa items cũ) - chỉ khi có items
+        // Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (OrderItemRequest itemRequest : request.getItems()) {
-            Dish dish = dishRepository.findById(itemRequest.getDishId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
-            
-            if (!dish.getActive()) {
-                throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
-            }
-
-            // Chuẩn hóa notes để so sánh (null hoặc empty string đều coi như giống nhau)
-            String requestNotes = (itemRequest.getNotes() == null || itemRequest.getNotes().trim().isEmpty()) 
-                    ? null : itemRequest.getNotes().trim();
-            
-            // Kiểm tra xem món này đã có trong order chưa (cùng dishId VÀ cùng notes)
-            OrderDetail existingDetail = order.getOrderDetails().stream()
-                    .filter(d -> {
-                        if (!d.getDish().getId().equals(dish.getId())) {
-                            return false;
-                        }
-                        // So sánh notes
-                        String detailNotes = (d.getNotes() == null || d.getNotes().trim().isEmpty()) 
-                                ? null : d.getNotes().trim();
-                        // Nếu cả hai đều null hoặc cả hai đều có giá trị và giống nhau
-                        if (requestNotes == null && detailNotes == null) {
-                            return true;
-                        }
-                        if (requestNotes != null && detailNotes != null) {
-                            return requestNotes.equals(detailNotes);
-                        }
-                        return false;
-                    })
-                    .findFirst()
-                    .orElse(null);
-
-            if (existingDetail != null) {
-                // Nếu món đã có và notes giống => tăng quantity
-                existingDetail.setQuantity(existingDetail.getQuantity() + itemRequest.getQuantity());
-                BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(existingDetail.getQuantity()));
-                existingDetail.setSubtotal(itemSubtotal);
-                orderDetailRepository.save(existingDetail);
-            } else {
-                // Nếu món chưa có hoặc notes khác => tạo order_detail mới
-                BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+                Dish dish = dishRepository.findById(itemRequest.getDishId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
                 
-                OrderDetail detail = OrderDetail.builder()
-                        .order(order)
-                        .dish(dish)
-                        .quantity(itemRequest.getQuantity())
-                        .price(dish.getPrice())
-                        .subtotal(itemSubtotal)
-                        .notes(itemRequest.getNotes())
-                        .build();
+                if (!dish.getActive()) {
+                    throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
+                }
 
-                order.getOrderDetails().add(detail);
-                orderDetailRepository.save(detail);
+                // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
+                for (int i = 0; i < itemRequest.getQuantity(); i++) {
+                    BigDecimal itemSubtotal = dish.getPrice(); // Mỗi record = 1 món
+                    
+                    OrderDetail detail = OrderDetail.builder()
+                            .order(order)
+                            .dish(dish)
+                            .quantity(1) // Luôn là 1 cho mỗi record
+                            .price(dish.getPrice())
+                            .subtotal(itemSubtotal)
+                            .notes(itemRequest.getNotes())
+                            .build();
+
+                    order.getOrderDetails().add(detail);
+                    orderDetailRepository.save(detail);
+                }
             }
-        }
         } else {
             // Nếu không có items, chỉ tính lại totals nếu có thay đổi discount/total
             if (request.getDiscount() != null || request.getTotal() != null) {
@@ -517,7 +502,7 @@ public class OrderService {
         // Save order first to get ID
         order = orderRepository.save(order);
 
-        // Add order details
+        // Add order details - Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
         BigDecimal subtotal = BigDecimal.ZERO;
         for (OrderItemRequest itemRequest : request.getItems()) {
             Dish dish = dishRepository.findById(itemRequest.getDishId())
@@ -527,19 +512,22 @@ public class OrderService {
                 throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
             }
 
-            BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-            
-            OrderDetail detail = OrderDetail.builder()
-                    .order(order)
-                    .dish(dish)
-                    .quantity(itemRequest.getQuantity())
-                    .price(dish.getPrice())
-                    .subtotal(itemSubtotal)
-                    .notes(itemRequest.getNotes())
-                    .build();
+            // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
+            for (int i = 0; i < itemRequest.getQuantity(); i++) {
+                BigDecimal itemSubtotal = dish.getPrice(); // Mỗi record = 1 món
+                
+                OrderDetail detail = OrderDetail.builder()
+                        .order(order)
+                        .dish(dish)
+                        .quantity(1) // Luôn là 1 cho mỗi record
+                        .price(dish.getPrice())
+                        .subtotal(itemSubtotal)
+                        .notes(itemRequest.getNotes())
+                        .build();
 
-            order.getOrderDetails().add(detail);
-            subtotal = subtotal.add(itemSubtotal);
+                order.getOrderDetails().add(detail);
+                subtotal = subtotal.add(itemSubtotal);
+            }
         }
 
         // Calculate totals
@@ -585,15 +573,25 @@ public class OrderService {
 
     private OrderResponse mapToResponse(Order order) {
         List<OrderItemResponse> items = order.getOrderDetails().stream()
-                .map(detail -> OrderItemResponse.builder()
-                        .id(detail.getId())
-                        .dishName(detail.getDish().getName())
-                        .dishId(detail.getDish().getId())
-                        .quantity(detail.getQuantity())
-                        .price(detail.getPrice())
-                        .subtotal(detail.getSubtotal())
-                        .notes(detail.getNotes())
-                        .build())
+                .map(detail -> {
+                    // Nếu createdAt là null (trường hợp OrderDetail mới tạo chưa được save), 
+                    // sử dụng thời gian hiện tại hoặc thời gian tạo order
+                    LocalDateTime createdAt = detail.getCreatedAt();
+                    if (createdAt == null) {
+                        createdAt = order.getCreatedAt(); // Fallback về thời gian tạo order
+                    }
+                    
+                    return OrderItemResponse.builder()
+                            .id(detail.getId())
+                            .dishName(detail.getDish().getName())
+                            .dishId(detail.getDish().getId())
+                            .quantity(detail.getQuantity())
+                            .price(detail.getPrice())
+                            .subtotal(detail.getSubtotal())
+                            .notes(detail.getNotes())
+                            .createdAt(createdAt)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return OrderResponse.builder()

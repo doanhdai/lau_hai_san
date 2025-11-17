@@ -72,6 +72,7 @@ CREATE TABLE `order_details`(
 	`price` DECIMAL(10, 2) NOT NULL,
 	`quantity` INT NOT NULL,
 	`subtotal` DECIMAL(10, 2) NOT NULL,
+	`created_at` DATETIME(6) NOT NULL,
 	`dish_id` BIGINT NOT NULL,
 	`order_id` BIGINT NOT NULL,
 	PRIMARY KEY (`id`)
@@ -297,13 +298,13 @@ INSERT INTO `dishes` (`id`, `active`, `created_at`, `description`, `image_url`, 
 (50, 1, CAST('2025-11-04 11:11:43.206667' AS DATETIME), 'Sinh tố bơ sữa', 'https://via.placeholder.com/400x400?text=Sinh+To', 0, 'Sinh Tố Bơ', CAST(45000.00 AS DECIMAL(10, 2)), 'AVAILABLE', CAST('2025-11-04 11:11:43.206667' AS DATETIME), 6, NULL);
 
 -- Insert data: order_details
-INSERT INTO `order_details` (`id`, `notes`, `price`, `quantity`, `subtotal`, `dish_id`, `order_id`) VALUES 
-(1, '', CAST(350000.00 AS DECIMAL(10, 2)), 1, CAST(350000.00 AS DECIMAL(10, 2)), 13, 1),
-(2, '', CAST(280000.00 AS DECIMAL(10, 2)), 1, CAST(280000.00 AS DECIMAL(10, 2)), 14, 1),
-(3, '', CAST(320000.00 AS DECIMAL(10, 2)), 1, CAST(320000.00 AS DECIMAL(10, 2)), 16, 1),
-(4, '', CAST(350000.00 AS DECIMAL(10, 2)), 1, CAST(350000.00 AS DECIMAL(10, 2)), 20, 2),
-(5, '', CAST(45000.00 AS DECIMAL(10, 2)), 1, CAST(45000.00 AS DECIMAL(10, 2)), 21, 2),
-(6, '', CAST(55000.00 AS DECIMAL(10, 2)), 1, CAST(55000.00 AS DECIMAL(10, 2)), 26, 2);
+INSERT INTO `order_details` (`id`, `notes`, `price`, `quantity`, `subtotal`, `created_at`, `dish_id`, `order_id`) VALUES 
+(1, '', CAST(350000.00 AS DECIMAL(10, 2)), 1, CAST(350000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:39:13.454270' AS DATETIME), 13, 1),
+(2, '', CAST(280000.00 AS DECIMAL(10, 2)), 1, CAST(280000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:39:13.454270' AS DATETIME), 14, 1),
+(3, '', CAST(320000.00 AS DECIMAL(10, 2)), 1, CAST(320000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:39:13.454270' AS DATETIME), 16, 1),
+(4, '', CAST(350000.00 AS DECIMAL(10, 2)), 1, CAST(350000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:48.151710' AS DATETIME), 20, 2),
+(5, '', CAST(45000.00 AS DECIMAL(10, 2)), 1, CAST(45000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:48.151710' AS DATETIME), 21, 2),
+(6, '', CAST(55000.00 AS DECIMAL(10, 2)), 1, CAST(55000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:48.151710' AS DATETIME), 26, 2);
 
 -- Insert data: orders
 INSERT INTO `orders` (`id`, `completed_at`, `created_at`, `discount`, `notes`, `order_number`, `status`, `subtotal`, `tax`, `total`, `updated_at`, `created_by`, `customer_id`, `reservation_id`, `room_id`, `table_id`) VALUES 
@@ -460,3 +461,17 @@ WHERE status = 'ONLINE';
 UPDATE restaurant_tables 
 SET status = 'AVAILABLE' 
 WHERE status = 'MAINTENANCE';
+
+-- Thêm cột created_at vào bảng order_details (cho database đã tồn tại)
+ALTER TABLE order_details 
+ADD COLUMN created_at DATETIME(6) NULL;
+
+-- Cập nhật các bản ghi cũ với giá trị mặc định (lấy từ order.created_at)
+UPDATE order_details od
+INNER JOIN orders o ON od.order_id = o.id
+SET od.created_at = o.created_at
+WHERE od.created_at IS NULL;
+
+-- Đặt NOT NULL sau khi đã cập nhật dữ liệu
+ALTER TABLE order_details 
+MODIFY COLUMN created_at DATETIME(6) NOT NULL;

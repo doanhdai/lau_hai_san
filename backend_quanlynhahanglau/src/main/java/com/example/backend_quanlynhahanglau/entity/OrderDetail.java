@@ -2,8 +2,10 @@ package com.example.backend_quanlynhahanglau.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "order_details")
@@ -36,4 +38,8 @@ public class OrderDetail {
 
     @Column(length = 500)
     private String notes;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }
