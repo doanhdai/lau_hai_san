@@ -110,14 +110,28 @@
                 Khách chờ check-in
               </h3>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1.5">Lọc theo ngày đến</label>
-              <input 
-                v-model="filterDate" 
-                type="date" 
-                :min="minDate"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" 
-              />
+            <div class="space-y-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1.5">Lọc theo ngày đến</label>
+                <input 
+                  v-model="filterDate" 
+                  type="date" 
+                  :min="minDate"
+                  class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" 
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1.5">Tìm kiếm theo tên</label>
+                <div class="relative">
+                  <input 
+                    v-model="searchQuery" 
+                    type="text" 
+                    placeholder="Nhập tên khách hàng..."
+                    class="w-full px-3 py-1.5 pl-9 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" 
+                  />
+                  <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -162,6 +176,12 @@
                     Đã checkin
                   </p>
                   <p 
+                    v-else-if="isReservationOverdue(reservation)"
+                    class="text-xs text-red-600 mt-1 font-medium"
+                  >
+                    Khách không tới
+                  </p>
+                  <p 
                     v-else
                     class="text-xs text-green-600 mt-1 font-medium"
                   >
@@ -170,8 +190,8 @@
                 </template>
               </div>
 
-              <!-- Countdown Timer (chỉ ẩn nếu đã check-in VÀ là ngày hiện tại) -->
-              <div v-if="!(isToday && isTableCheckedIn(reservation))" class="flex items-center justify-between">
+              <!-- Countdown Timer (chỉ hiện nếu chưa check-in, chưa đến thời gian VÀ là ngày hiện tại) -->
+              <div v-if="isToday && !isTableCheckedIn(reservation) && !isReservationTimeReached(reservation)" class="flex items-center justify-between">
                 <span class="text-xs text-slate-500">Khách hàng sẽ đến sau</span>
                 <div class="bg-orange-100 border border-orange-200 rounded px-2 py-1">
                   <span class="text-base font-bold text-orange-600 font-mono">
@@ -180,9 +200,9 @@
                 </div>
               </div>
 
-              <!-- Check-in Button (chỉ hiện cho ngày hiện tại: hover và chưa check-in và đã có bàn và là reservation gần nhất của table) -->
+              <!-- Check-in Button (chỉ hiện cho ngày hiện tại: hover và chưa check-in và đã có bàn và là reservation gần nhất của table và chưa quá 30 phút) -->
               <div 
-                v-if="isToday && hasTable(reservation) && !isTableCheckedIn(reservation) && isNearestReservationForTable(reservation)"
+                v-if="isToday && hasTable(reservation) && !isTableCheckedIn(reservation) && !isReservationOverdue(reservation) && isNearestReservationForTable(reservation)"
                 class="absolute inset-0 bg-white/95 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <button
@@ -434,6 +454,7 @@ const filterDate = ref('')
 const orderModalReservationId = ref(null)
 const orderModalTableId = ref(null)
 const tableModalReservationId = ref(null) // Lưu reservationId khi mở modal bàn
+const searchQuery = ref('') // Search query for customer name
 
 // Min date for filter (today)
 const minDate = computed(() => {
@@ -518,6 +539,7 @@ const upcomingReservations = computed(() => {
   const now = currentTime.value
   const selectedDate = filterDate.value ? new Date(filterDate.value + 'T00:00:00') : null
   const selectedDateEnd = filterDate.value ? new Date(filterDate.value + 'T23:59:59') : null
+  const query = (searchQuery.value || '').trim().toLowerCase()
   
   return reservations.value
     .filter(r => {
@@ -536,11 +558,22 @@ const upcomingReservations = computed(() => {
         
         // Filter by selected date if provided
         if (selectedDate && selectedDateEnd) {
-          return reservationDate >= selectedDate && reservationDate <= selectedDateEnd
+          const isInSelectedDate = reservationDate >= selectedDate && reservationDate <= selectedDateEnd
+          if (!isInSelectedDate) return false
+        } else {
+          // Otherwise, only show future reservations
+          if (reservationDate < now) return false
         }
         
-        // Otherwise, only show future reservations
-        return reservationDate >= now
+        // Filter by search query (customer name)
+        if (query) {
+          const customerName = (r.customerName || '').toLowerCase()
+          if (!customerName.includes(query)) {
+            return false
+          }
+        }
+        
+        return true
       } catch (error) {
         return false
       }
@@ -1097,6 +1130,51 @@ function isTableCheckedIn(reservation) {
   
   // Kiểm tra status của reservation
   return reservation.status === 'CHECKED_IN'
+}
+
+/**
+ * Kiểm tra xem thời gian reservation đã đến chưa
+ * @param {Object} reservation - Reservation object
+ * @returns {boolean} - true nếu thời gian reservation đã đến hoặc đã qua
+ */
+function isReservationTimeReached(reservation) {
+  if (!reservation) return false
+  
+  const reservationTime = reservation.reservationTime || reservation.reservationDateTime
+  if (!reservationTime) return false
+  
+  try {
+    const targetTime = new Date(reservationTime)
+    const now = currentTime.value
+    return now >= targetTime
+  } catch (error) {
+    console.error('Error checking reservation time:', error)
+    return false
+  }
+}
+
+/**
+ * Kiểm tra xem reservation đã quá 30 phút so với thời gian hẹn chưa
+ * @param {Object} reservation - Reservation object
+ * @returns {boolean} - true nếu đã quá 30 phút
+ */
+function isReservationOverdue(reservation) {
+  if (!reservation) return false
+  
+  const reservationTime = reservation.reservationTime || reservation.reservationDateTime
+  if (!reservationTime) return false
+  
+  try {
+    const targetTime = new Date(reservationTime)
+    const now = currentTime.value
+    const diffMinutes = (now - targetTime) / (1000 * 60) // Chênh lệch tính bằng phút
+    
+    // Quá 30 phút
+    return diffMinutes > 30
+  } catch (error) {
+    console.error('Error checking reservation overdue:', error)
+    return false
+  }
 }
 
 function isNearestReservationForTable(reservation) {
