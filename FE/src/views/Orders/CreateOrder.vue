@@ -82,7 +82,7 @@
             </div>
 
             <!-- Dish Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto h-full" style="min-height: 450px; ">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto h-full items-start" style="min-height: 450px; ">
               <div 
                 v-for="dish in filteredDishes" 
                 :key="dish.id"
@@ -90,7 +90,7 @@
                 class="border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition"
               >
                 <div class="flex items-center gap-2">
-                  <img :src="dish.imageUrl" :alt="dish.name" class="w-10 h-10 object-cover rounded-lg">
+                  <img :src="dish.imageUrl" :alt="dish.name" class="w-10 h-10 object-cover rounded-lg flex-shrink-0">
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">{{ dish.name }}</p>
                     <p class="text-xs text-red-600 font-bold">{{ formatCurrency(dish.price) }}</p>
@@ -368,10 +368,7 @@ async function loadExistingOrderDetails(orderId) {
       existingOrder.value = orderRes.data
       // Lấy order details từ order.items hoặc order.orderDetails
       existingOrderDetails.value = orderRes.data.items || orderRes.data.orderDetails || []
-      // Nếu có order details, tự động chuyển sang tab đơn hàng hiện tại
-      if (existingOrderDetails.value.length > 0) {
-        activeTab.value = 'current-order'
-      }
+      // Không tự động chuyển tab - giữ nguyên tab hiện tại
     }
   } catch (error) {
     console.error('Error loading existing order details:', error)

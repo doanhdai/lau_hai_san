@@ -455,6 +455,7 @@ const orderModalReservationId = ref(null)
 const orderModalTableId = ref(null)
 const tableModalReservationId = ref(null) // Lưu reservationId khi mở modal bàn
 const searchQuery = ref('') // Search query for customer name
+const maxTableReservationTime = ref(45)
 
 // Min date for filter (today)
 const minDate = computed(() => {
@@ -1154,9 +1155,9 @@ function isReservationTimeReached(reservation) {
 }
 
 /**
- * Kiểm tra xem reservation đã quá 30 phút so với thời gian hẹn chưa
+ * Kiểm tra xem reservation đã quá maxTableReservationTime phút so với thời gian hẹn chưa
  * @param {Object} reservation - Reservation object
- * @returns {boolean} - true nếu đã quá 30 phút
+ * @returns {boolean} - true nếu đã quá maxTableReservationTime phút
  */
 function isReservationOverdue(reservation) {
   if (!reservation) return false
@@ -1169,8 +1170,8 @@ function isReservationOverdue(reservation) {
     const now = currentTime.value
     const diffMinutes = (now - targetTime) / (1000 * 60) // Chênh lệch tính bằng phút
     
-    // Quá 30 phút
-    return diffMinutes > 30
+    // Quá maxTableReservationTime phút
+    return diffMinutes > maxTableReservationTime.value
   } catch (error) {
     console.error('Error checking reservation overdue:', error)
     return false
