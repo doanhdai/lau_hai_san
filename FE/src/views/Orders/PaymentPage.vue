@@ -537,10 +537,10 @@ async function handlePayment() {
     
     notification.success('Thanh toán thành công')
     
-    // Redirect về trang check-in sau 1.5 giây
+    // Redirect về trang orders sau 0.5 giây
     setTimeout(() => {
-      router.push('/admin/reservations/checkin')
-    }, 1500)
+      router.push('/admin/orders')
+    }, 500);
   } catch (error) {
     console.error('Error processing payment:', error)
     notification.error('Không thể xử lý thanh toán: ' + (error.response?.data?.message || error.message))

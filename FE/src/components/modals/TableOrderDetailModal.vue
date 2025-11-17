@@ -111,13 +111,20 @@
                     <div class="flex-1">
                       <div class="flex items-start justify-between gap-3">
                         <div class="flex-1">
-                          <div class="flex items-center gap-2">
+                          <div class="flex items-center gap-2 flex-wrap">
                             <p class="text-sm font-semibold text-slate-900">{{ item.dishName }}</p>
                             <span v-if="isItemServed(item)" class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
                               <i class="fas fa-check mr-1"></i>Đã lên đủ
                             </span>
                             <span v-else class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-medium">
                               Chưa lên
+                            </span>
+                            <!-- Cảnh báo quá 30 phút -->
+                            <span 
+                              v-if="!isItemServed(item) && isItemOver30Minutes(item)" 
+                              class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium animate-pulse"
+                            >
+                              <i class="fas fa-exclamation-triangle mr-1"></i>Bạn chưa lên món này! Đã quá {{ WARNING_TIME_MINUTES }}p
                             </span>
                           </div>
                           <div class="flex items-center justify-between gap-4 mt-1">
@@ -220,6 +227,9 @@ const router = useRouter()
 
 // Từ khóa đánh dấu món đã lên (có thể thay đổi dễ dàng)
 const SERVED_KEYWORD = 'served'
+
+// Thời gian cảnh báo (phút) - món quá thời gian này chưa được đánh dấu đã lên sẽ hiển thị cảnh báo
+const WARNING_TIME_MINUTES = 2
 
 const props = defineProps({
   show: {
@@ -357,6 +367,28 @@ function isItemServed(item) {
   return item.notes.includes(SERVED_KEYWORD)
 }
 
+// Kiểm tra món đã quá thời gian cảnh báo chưa được đánh dấu đã lên
+function isItemOver30Minutes(item) {
+  if (!item) return false
+  
+  // Hỗ trợ cả createdAt (camelCase) và created_at (snake_case)
+  const createdAtValue = item.createdAt || item.created_at
+  if (!createdAtValue) return false
+  
+  try {
+    const createdAt = new Date(createdAtValue)
+    if (isNaN(createdAt.getTime())) return false // Invalid date
+    
+    const now = new Date()
+    const diffInMinutes = (now - createdAt) / (1000 * 60) // Chuyển đổi từ milliseconds sang minutes
+    
+    return diffInMinutes > WARNING_TIME_MINUTES
+  } catch (error) {
+    console.error('Error calculating time difference:', error)
+    return false
+  }
+}
+
 // Lấy notes hiển thị (loại bỏ SERVED_KEYWORD)
 function getDisplayNotes(item) {
   if (!item || !item.notes) return null
@@ -408,6 +440,7 @@ async function handleItemServedClick(itemId, event) {
 }
 
 // Cập nhật notes của order_detail để đánh dấu served
+// Nếu có order_detail khác cùng dishId và notes đã served, tăng quantity và xóa order_detail hiện tại
 async function updateItemServedStatus(itemId, served) {
   if (!selectedOrder.value || !selectedOrder.value.items) return
   
@@ -415,25 +448,66 @@ async function updateItemServedStatus(itemId, served) {
     const item = selectedOrder.value.items.find(i => i.id === itemId)
     if (!item) return
     
-    // Lấy notes hiện tại (loại bỏ SERVED_KEYWORD nếu có)
-    let currentNotes = item.notes || ''
+    const dishId = item.dishId || item.dish?.id
+    if (!dishId) return
+    
+    // Lấy notes để so sánh (loại bỏ SERVED_KEYWORD)
+    const itemNotes = item.notes || ''
     const regex = new RegExp(SERVED_KEYWORD, 'gi')
-    currentNotes = currentNotes.replace(regex, '').trim()
+    const cleanNotes = itemNotes.replace(regex, '').trim() || null
     
-    // Thêm SERVED_KEYWORD vào notes
-    let newNotes = currentNotes
-    if (served) {
-      newNotes = currentNotes ? `${currentNotes} ${SERVED_KEYWORD}` : SERVED_KEYWORD
+    // Tìm order_detail khác cùng dishId và notes đã được served
+    const existingServedItem = selectedOrder.value.items.find(otherItem => {
+      if (otherItem.id === itemId) return false // Bỏ qua chính nó
+      
+      const otherDishId = otherItem.dishId || otherItem.dish?.id
+      if (otherDishId !== dishId) return false
+      
+      // Kiểm tra đã served chưa
+      if (!isItemServed(otherItem)) return false
+      
+      // So sánh notes (loại bỏ SERVED_KEYWORD)
+      const otherNotes = otherItem.notes || ''
+      const cleanOtherNotes = otherNotes.replace(regex, '').trim() || null
+      
+      return cleanOtherNotes === cleanNotes
+    })
+    
+    if (existingServedItem) {
+      // Nếu có order_detail khác cùng dishId và notes đã served:
+      // 1. Tăng quantity của order_detail đó
+      // 2. Xóa order_detail hiện tại
+      const newQuantity = (existingServedItem.quantity || 1) + (item.quantity || 1)
+      const newSubtotal = existingServedItem.price * newQuantity
+      
+      // Update quantity của order_detail đã có
+      const updateItemData = {
+        dishId: existingServedItem.dishId || existingServedItem.dish?.id,
+        quantity: newQuantity,
+        notes: existingServedItem.notes // Giữ nguyên notes (đã có SERVED_KEYWORD)
+      }
+      
+      await orderService.updateOrderDetail(selectedOrder.value.id, existingServedItem.id, updateItemData)
+      
+      // Xóa order_detail hiện tại
+      await orderService.deleteOrderDetail(selectedOrder.value.id, itemId)
+      
+      notification.success('Đã cập nhật số lượng món đã lên')
+    } else {
+      // Nếu không có, chỉ đánh dấu served như bình thường
+      let currentNotes = item.notes || ''
+      currentNotes = currentNotes.replace(regex, '').trim()
+      
+      const newNotes = currentNotes ? `${currentNotes} ${SERVED_KEYWORD}` : SERVED_KEYWORD
+      
+      const updateItemData = {
+        dishId: item.dishId || item.dish?.id,
+        quantity: item.quantity,
+        notes: newNotes
+      }
+      
+      await orderService.updateOrderDetail(selectedOrder.value.id, itemId, updateItemData)
     }
-    
-    // Cập nhật order_detail trực tiếp theo id
-    const updateItemData = {
-      dishId: item.dishId || item.dish?.id,
-      quantity: item.quantity,
-      notes: newNotes
-    }
-    
-    await orderService.updateOrderDetail(selectedOrder.value.id, itemId, updateItemData)
     
     // Reload order để lấy dữ liệu mới nhất
     await loadOrder()
@@ -449,30 +523,18 @@ async function updateItemServedStatus(itemId, served) {
 // Chỉ cần update từ khóa SERVED_KEYWORD trong notes của order_detail
 
 async function markAllAsServed() {
-  if (!selectedOrder.value) return
+  if (!selectedOrder.value || !selectedOrder.value.items) return
 
   if (!confirm('Xác nhận đã lên đủ số lượng món cho đơn hàng này?')) return
 
   try {
-    // Đánh dấu tất cả items là served - cập nhật từng item theo id
-    const updatePromises = selectedOrder.value.items.map(async (item) => {
-      if (isItemServed(item)) return // Đã served rồi thì bỏ qua
-      
-      let currentNotes = item.notes || ''
-      const regex = new RegExp(SERVED_KEYWORD, 'gi')
-      currentNotes = currentNotes.replace(regex, '').trim()
-      const newNotes = currentNotes ? `${currentNotes} ${SERVED_KEYWORD}` : SERVED_KEYWORD
-      
-      const updateItemData = {
-        dishId: item.dishId || item.dish?.id,
-        quantity: item.quantity,
-        notes: newNotes
-      }
-      
-      return orderService.updateOrderDetail(selectedOrder.value.id, item.id, updateItemData)
-    })
+    // Đánh dấu tất cả items chưa served là served
+    const unservedItems = selectedOrder.value.items.filter(item => !isItemServed(item))
     
-    await Promise.all(updatePromises)
+    for (const item of unservedItems) {
+      await updateItemServedStatus(item.id, true)
+    }
+    
     notification.success('Đã cập nhật: Đã lên món tất cả')
     await loadOrder()
     emit('order-updated')
