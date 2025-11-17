@@ -65,7 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/tables/filter").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tables/check-availability").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reservations/public").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/reservations/public/**/cancel").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/reservations/public/*/cancel").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
                         .anyRequest().authenticated()
                 );

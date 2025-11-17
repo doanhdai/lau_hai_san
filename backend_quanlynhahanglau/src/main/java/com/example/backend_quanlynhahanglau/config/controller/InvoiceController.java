@@ -1,4 +1,4 @@
-package com.example.backend_quanlynhahanglau.controller;
+package com.example.backend_quanlynhahanglau.config.controller;
 
 import com.example.backend_quanlynhahanglau.service.InvoiceService;
 import lombok.RequiredArgsConstructor;

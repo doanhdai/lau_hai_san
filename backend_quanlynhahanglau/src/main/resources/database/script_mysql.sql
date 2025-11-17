@@ -462,10 +462,6 @@ UPDATE restaurant_tables
 SET status = 'AVAILABLE' 
 WHERE status = 'MAINTENANCE';
 
--- Thêm cột created_at vào bảng order_details (cho database đã tồn tại)
-ALTER TABLE order_details 
-ADD COLUMN created_at DATETIME(6) NULL;
-
 -- Cập nhật các bản ghi cũ với giá trị mặc định (lấy từ order.created_at)
 UPDATE order_details od
 INNER JOIN orders o ON od.order_id = o.id
