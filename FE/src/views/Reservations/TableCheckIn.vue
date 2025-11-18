@@ -23,10 +23,6 @@
             <div class="w-4 h-4 rounded border-2 bg-amber-500 border-amber-600"></div>
             <span class="text-xs text-slate-600">Đã đặt</span>
           </div> -->
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
-            <span class="text-xs text-slate-600">Đang dọn</span>
-          </div>
         </div>
       </div>
     </div>
@@ -323,22 +319,6 @@
                       class="w-3 h-3 text-red-600 focus:ring-1 focus:ring-red-500"
                     />
                     <span>Check-in</span>
-                  </label>
-                  <label
-                    :class="[
-                      'flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all flex items-center justify-center gap-2',
-                      tableStatus === 'CLEANING'
-                        ? 'bg-gray-500 text-white'
-                        : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                    ]"
-                  >
-                    <input
-                      type="radio"
-                      value="CLEANING"
-                      v-model="tableStatus"
-                      class="w-3 h-3 text-gray-600 focus:ring-1 focus:ring-gray-500"
-                    />
-                    <span>Đang dọn</span>
                   </label>
                 </div>
                 <button
@@ -846,7 +826,8 @@ function handleOrderUpdated() {
 
 function openTableModal(table) {
   tableModalTable.value = { ...table }
-  tableStatus.value = table.status || 'AVAILABLE'
+  // Nếu bàn đang ở trạng thái CLEANING, tự động chuyển về AVAILABLE vì không còn option CLEANING
+  tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
   
   // Lưu reservationId: ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
   let reservationId = table.reservation?.id || null
