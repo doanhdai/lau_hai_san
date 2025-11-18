@@ -19,10 +19,10 @@
             <div class="w-4 h-4 rounded border-2 bg-red-400 border-red-400"></div>
             <span class="text-xs text-slate-600">Có khách</span>
           </div>
-          <div class="flex items-center gap-2">
+          <!-- <div class="flex items-center gap-2">
             <div class="w-4 h-4 rounded border-2 bg-amber-500 border-amber-600"></div>
             <span class="text-xs text-slate-600">Đã đặt</span>
-          </div>
+          </div> -->
           <div class="flex items-center gap-2">
             <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
             <span class="text-xs text-slate-600">Đang dọn</span>
@@ -784,15 +784,26 @@ function goToOrderPage() {
   // Tìm reservation_id theo table_id và status = CHECKED_IN
   const reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
   
-  if (!reservationId) {
-    notification.error('Bàn chưa có đặt bàn đã check-in')
-    return
+  // if (!reservationId) {
+  //   notification.error('Bàn chưa có đặt bàn đã check-in')
+  //   return
+  // }
+  
+  // Navigate to create order page
+  // Nếu có reservationId thì chỉ truyền reservationId (bàn sẽ được lấy tự động từ đặt bàn)
+  // Nếu không có reservationId thì truyền tableId (cho walk-in customers)
+  const queryParams = {}
+  if (reservationId) {
+    queryParams.reservationId = reservationId
+    // Không truyền tableId khi có reservationId
+  } else if (tableModalTable.value.id) {
+    // Chỉ truyền tableId khi không có reservationId
+    queryParams.tableId = tableModalTable.value.id
   }
   
-  // Navigate to create order page with reservationId
   router.push({
     path: '/admin/orders/create',
-    query: { reservationId: reservationId }
+    query: queryParams
   })
   
   // Close modal after navigation
@@ -808,10 +819,10 @@ async function viewOrderList() {
   // Tìm reservation_id theo table_id và status = CHECKED_IN
   const reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
   
-  if (!reservationId) {
-    notification.error('Bàn chưa có đặt bàn đã check-in')
-    return
-  }
+  // if (!reservationId) {
+  //   notification.error('Bàn chưa có đặt bàn đã check-in')
+  //   return
+  // }
   
   // Set props for modal
   orderModalReservationId.value = reservationId

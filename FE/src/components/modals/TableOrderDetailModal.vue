@@ -229,7 +229,7 @@ const router = useRouter()
 const SERVED_KEYWORD = 'served'
 
 // Thời gian cảnh báo (phút) - món quá thời gian này chưa được đánh dấu đã lên sẽ hiển thị cảnh báo
-const WARNING_TIME_MINUTES = 2
+const WARNING_TIME_MINUTES = 30
 
 const props = defineProps({
   show: {
@@ -303,24 +303,32 @@ async function loadOrder() {
       }
     }
 
-    if (!reservationId) {
-      selectedOrder.value = null
-      notification.info('Bàn này chưa có đặt bàn')
-      return
-    }
-
-    // Load all orders to find order by reservationId
+    // Load all orders to find order by reservationId or tableId
     const ordersRes = await orderService.getAll()
     const allOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
 
-    // Tìm tất cả orders có cùng reservationId
-    const matchingOrders = allOrders.filter(order => {
-      const orderReservationId = order.reservationId
-      return orderReservationId === reservationId || 
-             orderReservationId === Number(reservationId) || 
-             Number(orderReservationId) === reservationId ||
-             String(orderReservationId) === String(reservationId)
-    })
+    let matchingOrders = []
+
+    // Nếu có reservationId, tìm order theo reservationId
+    if (reservationId) {
+      matchingOrders = allOrders.filter(order => {
+        const orderReservationId = order.reservationId
+        return orderReservationId === reservationId || 
+               orderReservationId === Number(reservationId) || 
+               Number(orderReservationId) === reservationId ||
+               String(orderReservationId) === String(reservationId)
+      })
+    } 
+    // Nếu không có reservationId nhưng có tableId, tìm order theo tableId (cho walk-in customers)
+    else if (props.tableId) {
+      matchingOrders = allOrders.filter(order => {
+        const orderTableId = order.tableId
+        return orderTableId === props.tableId || 
+               orderTableId === Number(props.tableId) || 
+               Number(orderTableId) === props.tableId ||
+               String(orderTableId) === String(props.tableId)
+      })
+    }
 
     // Loại bỏ orders có status CANCELLED và sắp xếp theo createdAt mới nhất
     const validOrders = matchingOrders
@@ -336,7 +344,7 @@ async function loadOrder() {
 
     if (!foundOrder || !foundOrder.id) {
       selectedOrder.value = null
-      notification.info('Chưa có đơn hàng cho đặt bàn này')
+      // Không hiển thị notification nếu không tìm thấy order (có thể là bàn mới chưa có order)
       return
     }
 
@@ -369,10 +377,16 @@ function isItemServed(item) {
 
 // Kiểm tra món đã quá thời gian cảnh báo chưa được đánh dấu đã lên
 function isItemOver30Minutes(item) {
-  if (!item) return false
+  if (!item || !selectedOrder.value) return false
   
-  // Hỗ trợ cả createdAt (camelCase) và created_at (snake_case)
-  const createdAtValue = item.createdAt || item.created_at
+  // Ưu tiên lấy thời gian từ item.createdAt (nếu item được thêm sau khi order đã tạo)
+  // Nếu không có, lấy từ selectedOrder.createdAt (thời gian order được tạo)
+  let createdAtValue = item.createdAt || item.created_at
+  if (!createdAtValue) {
+    // Nếu item không có createdAt, dùng thời gian order được tạo
+    createdAtValue = selectedOrder.value.createdAt || selectedOrder.value.created_at
+  }
+  
   if (!createdAtValue) return false
   
   try {

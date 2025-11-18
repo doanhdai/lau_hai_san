@@ -100,11 +100,29 @@ public class OrderService {
             // Tự động lấy table từ reservation (bắt buộc phải có)
             if (reservation.getTable() != null) {
                 RestaurantTable table = reservation.getTable();
+                
+                // Kiểm tra bàn có bị xóa mềm không
+                if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                    throw new ResourceNotFoundException("Bàn", "id", table.getId());
+                }
+                
                 // Kiểm tra bàn có khả dụng không
                 if (table.getActive() == null || !table.getActive()) {
                     throw new BadRequestException("Bàn không khả dụng");
                 }
-                // Set table cho order (không cần kiểm tra gì cả)
+                
+                // Không cho phép tạo order cho bàn đang CLEANING
+                if (table.getStatus() == TableStatus.CLEANING) {
+                    throw new BadRequestException("Bàn đang được dọn dẹp. Không thể tạo đơn hàng");
+                }
+                
+                // Nếu bàn đang AVAILABLE hoặc RESERVED, đổi thành OCCUPIED
+                // Nếu bàn đang OCCUPIED, giữ nguyên (có thể là order thứ 2, 3...)
+                if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
+                    table.setStatus(TableStatus.OCCUPIED);
+                    tableRepository.save(table);
+                }
+                
                 order.setTable(table);
             } else {
                 throw new BadRequestException("Đặt bàn này chưa có bàn được gán");
@@ -137,12 +155,28 @@ public class OrderService {
                 RestaurantTable table = tableRepository.findById(request.getTableId())
                         .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
                 
-                if (table.getStatus() != TableStatus.AVAILABLE && table.getStatus() != TableStatus.RESERVED) {
-                    throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
+                // Kiểm tra bàn có bị xóa mềm không
+                if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                    throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
                 }
                 
-                table.setStatus(TableStatus.OCCUPIED);
-                tableRepository.save(table);
+                if (table.getActive() == null || !table.getActive()) {
+                    throw new BadRequestException("Bàn không khả dụng");
+                }
+                
+                // Cho phép tạo order cho bàn AVAILABLE, RESERVED, hoặc OCCUPIED
+                // Không cho phép tạo order cho bàn đang CLEANING
+                if (table.getStatus() == TableStatus.CLEANING) {
+                    throw new BadRequestException("Bàn đang được dọn dẹp. Không thể tạo đơn hàng");
+                }
+                
+                // Nếu bàn đang AVAILABLE hoặc RESERVED, đổi thành OCCUPIED
+                // Nếu bàn đang OCCUPIED, giữ nguyên (có thể là order thứ 2, 3...)
+                if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
+                    table.setStatus(TableStatus.OCCUPIED);
+                    tableRepository.save(table);
+                }
+                
                 order.setTable(table);
             }
         }
@@ -457,47 +491,30 @@ public class OrderService {
                 .orderDetails(new ArrayList<>())
                 .build();
 
-        // Create or find customer if provided
-        if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
-            // Try to find existing customer by phone
-            Customer customer = null;
-            if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
-                customer = customerRepository.findByPhone(request.getCustomerPhone()).orElse(null);
-            }
-            
-            // If not found, create a walk-in customer entry
-            if (customer == null) {
-                customer = Customer.builder()
-                        .fullName(request.getCustomerName())
-                        .phone(request.getCustomerPhone())
-                        .isVip(false)
-                        .blocked(false)
-                        .active(true)
-                        .build();
-                customer = customerRepository.save(customer);
-            } else {
-                // Kiểm tra customer có bị chặn không
-                if (customer.getBlocked()) {
-                    throw new BadRequestException("Khách hàng này đã bị chặn");
-                }
-            }
-            
-            order.setCustomer(customer);
+        // Bàn là bắt buộc cho order tại quầy
+        if (request.getTableId() == null) {
+            throw new BadRequestException("Vui lòng chọn bàn");
         }
 
-        // Hỗ trợ gán bàn cho khách đặt trực tiếp tại nhà hàng (nếu có)
-        if (request.getTableId() != null) {
-            RestaurantTable table = tableRepository.findById(request.getTableId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
-            
-            if (table.getStatus() != TableStatus.AVAILABLE && table.getStatus() != TableStatus.RESERVED) {
-                throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
-            }
-            
-            table.setStatus(TableStatus.OCCUPIED);
-            tableRepository.save(table);
-            order.setTable(table);
+        RestaurantTable table = tableRepository.findById(request.getTableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
+        
+        // Kiểm tra bàn có bị xóa mềm không
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
         }
+        
+        if (table.getActive() == null || !table.getActive()) {
+            throw new BadRequestException("Bàn không khả dụng");
+        }
+        
+        if (table.getStatus() != TableStatus.AVAILABLE && table.getStatus() != TableStatus.RESERVED) {
+            throw new BadRequestException("Bàn không khả dụng. Trạng thái hiện tại: " + table.getStatus());
+        }
+        
+        table.setStatus(TableStatus.OCCUPIED);
+        tableRepository.save(table);
+        order.setTable(table);
 
         // Save order first to get ID
         order = orderRepository.save(order);

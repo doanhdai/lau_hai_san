@@ -12,10 +12,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class CounterOrderRequest {
-    private String customerName;
-    private String customerPhone;
-    
-    private Long tableId; // Bàn cho khách đặt trực tiếp tại nhà hàng (tùy chọn)
+    @NotNull(message = "Vui lòng chọn bàn")
+    private Long tableId; // Bàn cho khách đặt trực tiếp tại nhà hàng (bắt buộc)
     
     @NotEmpty(message = "Đơn hàng phải có ít nhất một món")
     private List<OrderItemRequest> items;

@@ -267,6 +267,7 @@ const activeTab = ref('dishes') // 'dishes' hoặc 'current-order'
 const orderForm = ref({
   orderId: null, // ID của order (null nếu tạo mới, có giá trị nếu update)
   reservationId: null,
+  tableId: null, // ID của bàn (cho walk-in customers)
   items: [],
   notes: ''
 })
@@ -291,8 +292,8 @@ const total = computed(() => {
 })
 
 const canCreateOrder = computed(() => {
-  return orderForm.value.reservationId && 
-         orderForm.value.items.length > 0
+  // Cho phép tạo order nếu có ít nhất một món (không bắt buộc reservationId cho walk-in customers)
+  return orderForm.value.items.length > 0
 })
 
 const existingOrderTotal = computed(() => {
@@ -308,33 +309,61 @@ onMounted(() => {
 async function handleQueryParams() {
   // Xử lý reservationId từ query params
   const reservationId = route.query.reservationId || route.query.reservation_id
-  if (reservationId) {
+  const tableId = route.query.tableId || route.query.table_id
+  
+  // Kiểm tra nếu có cả reservationId và tableId thì báo lỗi
+  if (reservationId && reservationId !== 'null' && reservationId !== 'undefined' &&
+      tableId && tableId !== 'null' && tableId !== 'undefined') {
+    notification.error('Khi tạo đơn từ đặt bàn, không được chọn bàn lại. Bàn sẽ được lấy tự động từ đặt bàn.')
+    // Không set tableId khi có reservationId
     const reservationIdNum = parseInt(reservationId)
-    orderForm.value.reservationId = reservationIdNum
-    
-    // Load orders để tìm order theo reservationId
-    await loadData()
-    
-    // Tìm tất cả orders có cùng reservationId, loại bỏ CANCELLED, sắp xếp theo createdAt mới nhất
-    const matchingOrders = orders.value
-      .filter(o => o.reservationId === reservationIdNum && o.status !== 'CANCELLED')
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0)
-        const dateB = new Date(b.createdAt || 0)
-        return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
-      })
-    
-    const foundOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
-    
-    if (foundOrder) {
-      // Nếu có order, set orderId (để biết là update)
-      orderForm.value.orderId = foundOrder.id
-      await loadExistingOrderDetails(foundOrder.id)
-    } else {
-      // Nếu không có order, orderId = null (tạo mới)
-      orderForm.value.orderId = null
-      existingOrder.value = null
-      existingOrderDetails.value = []
+    if (!isNaN(reservationIdNum)) {
+      orderForm.value.reservationId = reservationIdNum
+      orderForm.value.tableId = null // Đảm bảo tableId là null
+    }
+    return
+  }
+  
+  if (reservationId && reservationId !== 'null' && reservationId !== 'undefined') {
+    const reservationIdNum = parseInt(reservationId)
+    // Chỉ set nếu parse thành công (không phải NaN)
+    if (!isNaN(reservationIdNum)) {
+      orderForm.value.reservationId = reservationIdNum
+      orderForm.value.tableId = null // Không set tableId khi có reservationId
+      
+      // Load orders để tìm order theo reservationId
+      await loadData()
+      
+      // Tìm tất cả orders có cùng reservationId, loại bỏ CANCELLED, sắp xếp theo createdAt mới nhất
+      const matchingOrders = orders.value
+        .filter(o => o.reservationId === reservationIdNum && o.status !== 'CANCELLED')
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0)
+          const dateB = new Date(b.createdAt || 0)
+          return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
+        })
+      
+      const foundOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
+      
+      if (foundOrder) {
+        // Nếu có order, set orderId (để biết là update)
+        orderForm.value.orderId = foundOrder.id
+        await loadExistingOrderDetails(foundOrder.id)
+      } else {
+        // Nếu không có order, orderId = null (tạo mới)
+        orderForm.value.orderId = null
+        existingOrder.value = null
+        existingOrderDetails.value = []
+      }
+    }
+  } else {
+    // Chỉ xử lý tableId khi không có reservationId
+    if (tableId && tableId !== 'null' && tableId !== 'undefined') {
+      const tableIdNum = parseInt(tableId)
+      // Chỉ set nếu parse thành công (không phải NaN)
+      if (!isNaN(tableIdNum)) {
+        orderForm.value.tableId = tableIdNum
+      }
     }
   }
 
@@ -343,7 +372,7 @@ async function handleQueryParams() {
   if (orderId) {
     const orderIdNum = parseInt(orderId)
     orderForm.value.orderId = orderIdNum
-    // Load order để lấy reservationId và order details
+    // Load order để lấy reservationId, tableId và order details
     try {
       const orderRes = await orderService.getById(orderIdNum)
       if (orderRes.success && orderRes.data) {
@@ -351,6 +380,10 @@ async function handleQueryParams() {
         // Set reservationId từ order
         if (order.reservationId) {
           orderForm.value.reservationId = order.reservationId
+        }
+        // Set tableId từ order nếu có
+        if (order.tableId) {
+          orderForm.value.tableId = order.tableId
         }
         await loadExistingOrderDetails(orderIdNum)
       }
@@ -468,6 +501,7 @@ function clearOrder() {
   if (confirm('Bạn có chắc muốn xóa tất cả?')) {
     selectedReservationId.value = ''
     orderForm.value.reservationId = null
+    orderForm.value.tableId = null
     orderForm.value.items = []
     orderForm.value.notes = ''
   }
@@ -475,7 +509,7 @@ function clearOrder() {
 
 async function createOrder() {
   if (!canCreateOrder.value) {
-    notification.error('Vui lòng chọn đặt bàn và thêm ít nhất một món')
+    notification.error('Vui lòng thêm ít nhất một món')
     return
   }
 
@@ -489,13 +523,16 @@ async function createOrder() {
 
     // Nếu có orderId, update order và order_details
     if (orderForm.value.orderId) {
-      // Update order với notes, subtotal, tax, total, reservation_id
+      // Update order với notes, subtotal, tax, total, reservation_id, table_id
+      // Nếu có reservationId thì không truyền tableId (bàn sẽ được lấy tự động từ đặt bàn)
       const updateData = {
         notes: orderForm.value.notes || '',
         subtotal: subtotal.value,
         tax: tax.value,
         total: total.value,
-        reservationId: orderForm.value.reservationId,
+        reservationId: orderForm.value.reservationId || null,
+        // Chỉ truyền tableId khi không có reservationId (cho walk-in customers)
+        tableId: orderForm.value.reservationId ? null : (orderForm.value.tableId || null),
         items: itemsData,
         status: 'CONFIRMED'
       }
@@ -504,13 +541,16 @@ async function createOrder() {
       await orderService.updateStatus(orderForm.value.orderId, 'CONFIRMED')
       notification.success('Đã cập nhật đơn hàng')
     } else {
-      // Tạo order mới với notes, subtotal, tax, total, reservation_id
+      // Tạo order mới với notes, subtotal, tax, total, reservation_id, table_id
+      // Nếu có reservationId thì không truyền tableId (bàn sẽ được lấy tự động từ đặt bàn)
       const orderData = {
         notes: orderForm.value.notes || '',
         subtotal: subtotal.value,
         tax: tax.value,
         total: total.value,
-        reservationId: orderForm.value.reservationId,
+        reservationId: orderForm.value.reservationId || null,
+        // Chỉ truyền tableId khi không có reservationId (cho walk-in customers)
+        tableId: orderForm.value.reservationId ? null : (orderForm.value.tableId || null),
         items: itemsData,
         status: 'CONFIRMED'
       }
