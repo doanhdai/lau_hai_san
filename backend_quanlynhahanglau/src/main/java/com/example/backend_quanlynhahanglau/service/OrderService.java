@@ -243,16 +243,9 @@ public class OrderService {
             order.setCompletedAt(LocalDateTime.now());
             
             // Cập nhật lại trạng thái bàn
-            // Nếu bàn đang OCCUPIED (có khách), chuyển sang CLEANING sau thanh toán
-            // Ngược lại chuyển sang AVAILABLE
+            // Sau khi thanh toán, chuyển bàn sang AVAILABLE ngay (bao gồm cả CLEANING và OCCUPIED)
             if (order.getTable() != null) {
-                if (order.getTable().getStatus() == TableStatus.OCCUPIED) {
-                    // Từ OCCUPIED (bàn đang có khách) chuyển sang CLEANING sau thanh toán
-                    order.getTable().setStatus(TableStatus.CLEANING);
-                } else {
-                    // Trường hợp khác chuyển sang AVAILABLE
-                    order.getTable().setStatus(TableStatus.AVAILABLE);
-                }
+                order.getTable().setStatus(TableStatus.AVAILABLE);
                 tableRepository.save(order.getTable());
             }
             
