@@ -59,9 +59,10 @@ public class DishService {
 
     @Transactional(readOnly = true)
     public List<DishResponse> searchDishes(String keyword) {
-        // Filter thủ công để chỉ lấy món active
+        // Filter thủ công để chỉ lấy món active và không phải DISCONTINUED
+        // (Dùng cho menu công khai nên không hiển thị món đã dừng kinh doanh)
         return dishRepository.searchByNameOrCategory(keyword).stream()
-                .filter(dish -> dish.getActive())
+                .filter(dish -> dish.getActive() && dish.getStatus() != DishStatus.DISCONTINUED)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -72,9 +73,10 @@ public class DishService {
         DishCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", categoryId));
         
-        // Lấy tất cả món của category và filter chỉ lấy món active
+        // Lấy tất cả món của category và filter chỉ lấy món active và không phải DISCONTINUED
+        // (Dùng cho menu công khai nên không hiển thị món đã dừng kinh doanh)
         return dishRepository.findByCategory(category).stream()
-                .filter(dish -> dish.getActive())
+                .filter(dish -> dish.getActive() && dish.getStatus() != DishStatus.DISCONTINUED)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -156,9 +158,12 @@ public class DishService {
         dish.setDescription(request.getDescription());
         dish.setPrice(request.getPrice());
         dish.setCategory(category);
-        dish.setStatus(request.getStatus());
-        dish.setImageUrl(request.getImageUrl());
-        dish.setIsPromotion(request.getIsPromotion());
+        dish.setStatus(request.getStatus() != null ? request.getStatus() : dish.getStatus());
+        // Chỉ cập nhật imageUrl nếu có giá trị, nếu không thì giữ nguyên
+        if (request.getImageUrl() != null) {
+            dish.setImageUrl(request.getImageUrl().isEmpty() ? null : request.getImageUrl());
+        }
+        dish.setIsPromotion(request.getIsPromotion() != null ? request.getIsPromotion() : dish.getIsPromotion());
 
         if (request.getPromotionId() != null) {
             Promotion promotion = promotionRepository.findById(request.getPromotionId())

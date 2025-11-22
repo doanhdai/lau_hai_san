@@ -3,6 +3,7 @@ package com.example.backend_quanlynhahanglau.config.controller;
 import com.example.backend_quanlynhahanglau.dto.ApiResponse;
 import com.example.backend_quanlynhahanglau.dto.feedback.FeedbackRequest;
 import com.example.backend_quanlynhahanglau.dto.feedback.FeedbackResponse;
+import com.example.backend_quanlynhahanglau.dto.feedback.PublicFeedbackRequest;
 import com.example.backend_quanlynhahanglau.service.CustomerFeedbackService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,12 +48,36 @@ public class CustomerFeedbackController {
         return ResponseEntity.ok(ApiResponse.success(rating));
     }
 
+    @GetMapping("/public")
+    public ResponseEntity<ApiResponse<List<FeedbackResponse>>> getPublicFeedbacks(
+            @RequestParam(defaultValue = "6") int limit) {
+        List<FeedbackResponse> feedbacks = feedbackService.getPublicFeedbacks(limit);
+        return ResponseEntity.ok(ApiResponse.success(feedbacks));
+    }
+
+    @GetMapping("/reservation/{reservationId}")
+    public ResponseEntity<ApiResponse<FeedbackResponse>> getFeedbackByReservationId(
+            @PathVariable Long reservationId) {
+        FeedbackResponse feedback = feedbackService.getFeedbackByReservationId(reservationId);
+        if (feedback == null) {
+            return ResponseEntity.ok(ApiResponse.success(null));
+        }
+        return ResponseEntity.ok(ApiResponse.success(feedback));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<FeedbackResponse>> createFeedback(@Valid @RequestBody FeedbackRequest request) {
         FeedbackResponse feedback = feedbackService.createFeedback(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tạo phản hồi thành công", feedback));
+    }
+
+    @PostMapping("/public")
+    public ResponseEntity<ApiResponse<FeedbackResponse>> createPublicFeedback(@Valid @RequestBody PublicFeedbackRequest request) {
+        FeedbackResponse feedback = feedbackService.createFeedbackFromReservation(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Cảm ơn bạn đã đánh giá!", feedback));
     }
 
     @PutMapping("/{id}/respond")
@@ -65,7 +90,7 @@ public class CustomerFeedbackController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteFeedback(@PathVariable Long id) {
         feedbackService.deleteFeedback(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa phản hồi thành công", null));

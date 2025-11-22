@@ -1,32 +1,55 @@
 <template>
   <div class="space-y-3 animate-fade-in">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
-      <div>
-        <h1 class="text-xl font-bold text-slate-900">Sơ đồ bàn - Check-in</h1>
-        <p class="text-slate-600 mt-1 text-xs">Quản lý và check-in bàn</p>
+    <div class="space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Sơ đồ bàn - Check-in</h1>
+          <p class="text-slate-600 mt-1 text-xs">Quản lý và check-in bàn theo từng khu vực</p>
+        </div>
+        
+        <!-- Legend - Chú thích màu sắc -->
+        <div class="bg-white border border-gray-200 rounded-lg p-3">
+          <p class="text-xs font-semibold text-slate-700 mb-2">Chú thích:</p>
+          <div class="flex flex-wrap gap-3">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded border-2 bg-green-500 border-green-300"></div>
+              <span class="text-xs text-slate-600">Trống</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded border-2 bg-red-400 border-red-400"></div>
+              <span class="text-xs text-slate-600">Có khách</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
+              <span class="text-xs text-slate-600">Đang dọn</span>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <!-- Legend - Chú thích màu sắc -->
+
+      <!-- Floor selector -->
       <div class="bg-white border border-gray-200 rounded-lg p-3">
-        <p class="text-xs font-semibold text-slate-700 mb-2">Chú thích:</p>
-        <div class="flex flex-wrap gap-3">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded border-2 bg-green-500 border-green-300"></div>
-            <span class="text-xs text-slate-600">Trống</span>
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p class="text-sm font-semibold text-slate-800">Khu vực (Tầng)</p>
+            <p class="text-xs text-slate-500">
+              Đang xem {{ selectedFloorLabel }} – Có {{ totalTablesInSelectedFloor }} bàn, {{ availableCount }} trống / {{ occupiedCount }} có khách.
+            </p>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded border-2 bg-red-400 border-red-400"></div>
-            <span class="text-xs text-slate-600">Có khách</span>
-          </div>
-          <!-- <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded border-2 bg-amber-500 border-amber-600"></div>
-            <span class="text-xs text-slate-600">Đã đặt</span>
-          </div> -->
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
-            <span class="text-xs text-slate-600">Đang dọn</span>
-          </div>
+          <p class="text-xs text-slate-500">Tổng bàn: {{ tables.length }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button
+            v-for="floor in floorOptions"
+            :key="floor.value"
+            type="button"
+            @click="selectFloor(floor.value)"
+            class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+            :class="selectedFloor === floor.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-slate-700 border-gray-200 hover:border-blue-300'"
+          >
+            {{ floor.label }}
+          </button>
         </div>
       </div>
     </div>
@@ -48,7 +71,7 @@
           >
             <!-- Tables with reservation info -->
             <div
-              v-for="table in tablesWithReservations"
+              v-for="table in tablesWithReservationsByFloor"
               :key="table.id"
               :style="{
                 position: 'absolute',
@@ -72,6 +95,14 @@
                   </span>
                 </div>
 
+                <div
+                  v-if="table.status === 'OCCUPIED'"
+                  class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow"
+                >
+                  <i class="fas fa-clock text-[10px]"></i>
+                  <span>{{ getOccupiedDuration(table.id) }}</span>
+                </div>
+
                 <!-- Check-in status (OCCUPIED) -->
                 <div v-if="table.status === 'OCCUPIED'" class="text-center mt-1">
                   <p class="text-xs font-bold text-white">
@@ -79,6 +110,9 @@
                   </p>
                   <p class="text-xs text-white/90 mt-0.5">
                     ({{ table.capacity }} chỗ)
+                  </p>
+                  <p v-if="table.status === 'OCCUPIED' && getTableTotalAmount(table.id) > 0" class="text-xs font-semibold text-yellow-300 mt-1">
+                    {{ formatCurrency(getTableTotalAmount(table.id)) }}
                   </p>
                 </div>
                 <!-- Bàn trống hoặc có reservation - chỉ hiển thị sức chứa -->
@@ -91,7 +125,7 @@
             </div>
 
             <!-- Empty state -->
-            <div v-if="tablesWithReservations.length === 0" class="absolute inset-0 flex items-center justify-center">
+            <div v-if="tablesWithReservationsByFloor.length === 0" class="absolute inset-0 flex items-center justify-center">
               <div class="text-center text-gray-400">
                 <i class="fas fa-chair text-6xl mb-3 opacity-50"></i>
                 <p class="text-lg font-medium">Chưa có bàn nào</p>
@@ -427,10 +461,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
+import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notification'
 import TableOrderDetailModal from '@/components/modals/TableOrderDetailModal.vue'
 
@@ -440,6 +475,7 @@ const notification = useNotificationStore()
 const loading = ref(false)
 const reservations = ref([])
 const tables = ref([])
+const orders = ref([])
 const selectedTable = ref(null)
 const selectedReservation = ref(null)
 const showDetailModal = ref(false)
@@ -456,6 +492,13 @@ const orderModalTableId = ref(null)
 const tableModalReservationId = ref(null) // Lưu reservationId khi mở modal bàn
 const searchQuery = ref('') // Search query for customer name
 const maxTableReservationTime = ref(45)
+const TABLE_TIMER_STORAGE_KEY = 'table_check_in_timers'
+const floorOptions = [
+  { label: 'Tầng 1', value: 'FLOOR_1' },
+  { label: 'Tầng 2', value: 'FLOOR_2' }
+]
+const selectedFloor = ref(floorOptions[0].value)
+const tableTimers = ref(loadTableTimers())
 
 // Min date for filter (today)
 const minDate = computed(() => {
@@ -530,6 +573,86 @@ const tablesWithReservations = computed(() => {
     }
   }).filter(Boolean) // Remove any null entries
 })
+
+const tablesWithReservationsByFloor = computed(() => {
+  return tablesWithReservations.value.filter(table => getTableFloor(table) === selectedFloor.value)
+})
+
+const totalTablesInSelectedFloor = computed(() => tablesWithReservationsByFloor.value.length)
+
+const availableCount = computed(() => tablesWithReservationsByFloor.value.filter(t => t.status === 'AVAILABLE').length)
+
+const occupiedCount = computed(() => tablesWithReservationsByFloor.value.filter(t => t.status === 'OCCUPIED').length)
+
+const selectedFloorLabel = computed(() => {
+  const found = floorOptions.find(floor => floor.value === selectedFloor.value)
+  return found ? found.label : 'Tầng 1'
+})
+
+function loadTableTimers() {
+  try {
+    const raw = localStorage.getItem(TABLE_TIMER_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveTableTimers() {
+  localStorage.setItem(TABLE_TIMER_STORAGE_KEY, JSON.stringify(tableTimers.value))
+}
+
+function normalizeApiArray(response) {
+  if (!response) return []
+  if (Array.isArray(response)) return response
+  if (response.success && Array.isArray(response.data)) return response.data
+  if (Array.isArray(response.data)) return response.data
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data.data
+  return []
+}
+
+function startOccupiedTimer(tableId) {
+  if (!tableId) return
+  const timers = tableTimers.value
+  if (!timers[tableId]) {
+    timers[tableId] = {}
+  }
+  timers[tableId].occupiedStart = Date.now()
+  saveTableTimers()
+}
+
+function clearOccupiedTimer(tableId) {
+  if (!tableId) return
+  const timers = tableTimers.value
+  if (timers[tableId]) {
+    delete timers[tableId]
+    saveTableTimers()
+  }
+}
+
+function getOccupiedDuration(tableId) {
+  const timer = tableTimers.value[tableId]
+  if (!timer?.occupiedStart) return '00:00'
+  const elapsed = Date.now() - timer.occupiedStart
+  const minutes = Math.floor(elapsed / (1000 * 60))
+  const seconds = Math.floor((elapsed % (1000 * 60)) / 1000)
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function syncTableTimerStatus(table) {
+  if (!table?.id) return
+  if (table.status === 'OCCUPIED') {
+    if (!tableTimers.value[table.id]?.occupiedStart) {
+      startOccupiedTimer(table.id)
+    }
+  } else {
+    clearOccupiedTimer(table.id)
+  }
+}
+
+function refreshOccupiedDurations() {
+  tableTimers.value = { ...tableTimers.value }
+}
 
 // Get upcoming reservations (future reservations)
 const upcomingReservations = computed(() => {
@@ -620,6 +743,35 @@ const upcomingReservations = computed(() => {
     })
 })
 
+const inferFloorFromLegacyData = (table) => {
+  const location = table?.location?.toLowerCase() || ''
+  const tableNumber = table?.tableNumber?.toLowerCase() || ''
+
+  if (location.includes('tầng 2') || location.includes('tang 2') || tableNumber.startsWith('t2')) {
+    return 'FLOOR_2'
+  }
+  if (location.includes('tầng 1') || location.includes('tang 1') || tableNumber.startsWith('t1')) {
+    return 'FLOOR_1'
+  }
+  return null
+}
+
+const getTableFloor = (table) => {
+  if (table?.floor) return table.floor
+  const inferred = inferFloorFromLegacyData(table)
+  return inferred || 'FLOOR_1'
+}
+
+const selectFloor = (floor) => {
+  selectedFloor.value = floor
+}
+
+watch(selectedFloor, (floor) => {
+  if (selectedTable.value && getTableFloor(selectedTable.value) !== floor) {
+    selectedTable.value = null
+  }
+})
+
 onMounted(() => {
   // Set default filter date to today
   const today = new Date()
@@ -633,6 +785,7 @@ onMounted(() => {
   // Update current time every second for countdown
   const timer = setInterval(() => {
     currentTime.value = new Date()
+    refreshOccupiedDurations()
   }, 1000)
   
   // Cleanup on unmount
@@ -644,33 +797,17 @@ onMounted(() => {
 async function loadData() {
   loading.value = true
   try {
-    const [reservationsRes, tablesRes] = await Promise.all([
+    const [reservationsRes, tablesRes, ordersRes] = await Promise.all([
       reservationService.getAll(),
-      tableService.getAll()
+      tableService.getAll(),
+      orderService.getAll()
     ])
-    
-    // Handle reservations response - ensure it's always an array
-    if (reservationsRes && reservationsRes.success && reservationsRes.data) {
-      reservations.value = Array.isArray(reservationsRes.data) ? reservationsRes.data : []
-    } else if (Array.isArray(reservationsRes?.data)) {
-      reservations.value = reservationsRes.data
-    } else {
-      reservations.value = []
-    }
-    
-    // Handle tables response - ensure it's always an array
-    let tablesData = []
-    if (tablesRes && tablesRes.success && tablesRes.data) {
-      tablesData = Array.isArray(tablesRes.data) ? tablesRes.data : []
-    } else if (Array.isArray(tablesRes?.data)) {
-      tablesData = tablesRes.data
-    } else if (tablesRes?.data?.data && Array.isArray(tablesRes.data.data)) {
-      tablesData = tablesRes.data.data
-    } else {
-      tablesData = []
-    }
-    
-    // Initialize table positions if not set
+
+    reservations.value = normalizeApiArray(reservationsRes)
+    orders.value = normalizeApiArray(ordersRes)
+
+    const tablesData = normalizeApiArray(tablesRes)
+
     tables.value = tablesData.map((table, index) => {
       if (!table || !table.id) {
         return null
@@ -688,13 +825,17 @@ async function loadData() {
         positionY = 50 + (row * spacing)
       }
       
-      return {
+      const normalizedTable = {
         ...table,
         positionX,
         positionY,
-        type: table.type || 'OFFLINE'
+        type: table.type || 'OFFLINE',
+        floor: getTableFloor(table)
       }
+      syncTableTimerStatus(normalizedTable)
+      return normalizedTable
     }).filter(Boolean) // Remove any null entries
+
   } catch (error) {
     console.error('Error loading data in TableCheckIn:', error)
     notification.error('Không thể tải dữ liệu: ' + (error.response?.data?.message || error.message))
@@ -775,29 +916,45 @@ function createOrder(reservation) {
   })
 }
 
-function goToOrderPage() {
+async function goToOrderPage() {
   if (!tableModalTable.value) {
     notification.error('Không tìm thấy thông tin bàn')
     return
   }
   
-  // Tìm reservation_id theo table_id và status = CHECKED_IN
-  const reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
+  // Đảm bảo data được reload trước khi tìm reservation
+  // Điều này đảm bảo reservation status được cập nhật đúng sau khi check-in
+  await loadData()
   
-  // if (!reservationId) {
-  //   notification.error('Bàn chưa có đặt bàn đã check-in')
-  //   return
-  // }
+  // Tìm reservation_id theo table_id và status = CHECKED_IN
+  // Logic giống với handleCheckIn: tìm reservation đã check-in
+  let reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
+  
+  // Nếu không tìm thấy reservation với status CHECKED_IN, thử sử dụng reservationId đã lưu
+  // (có thể reservation vừa được check-in nhưng status chưa được cập nhật trong state)
+  if (!reservationId && tableModalTable.value.reservationId) {
+    // Kiểm tra xem reservationId đã lưu có tồn tại và có status CHECKED_IN không
+    const savedReservation = reservations.value.find(r => 
+      r && r.id === tableModalTable.value.reservationId && r.status === 'CHECKED_IN'
+    )
+    if (savedReservation) {
+      reservationId = savedReservation.id
+    }
+  }
   
   // Navigate to create order page
-  // Nếu có reservationId thì chỉ truyền reservationId (bàn sẽ được lấy tự động từ đặt bàn)
-  // Nếu không có reservationId thì truyền tableId (cho walk-in customers)
+  // Logic giống với handleCheckIn: 
+  // - Nếu có reservationId thì chỉ truyền reservationId (bàn sẽ được lấy tự động từ đặt bàn)
+  // - Nếu không có reservationId thì truyền tableId (cho walk-in customers)
   const queryParams = {}
   if (reservationId) {
     queryParams.reservationId = reservationId
-    // Không truyền tableId khi có reservationId
+    // Không truyền tableId khi có reservationId (giống logic trong CreateOrder.vue)
+    // CreateOrder.vue sẽ tự động tìm order hiện tại theo reservationId
+    // Nếu có order → load order details (hiển thị đơn hàng hiện tại)
+    // Nếu không có order → tạo mới
   } else if (tableModalTable.value.id) {
-    // Chỉ truyền tableId khi không có reservationId
+    // Chỉ truyền tableId khi không có reservationId (cho walk-in customers)
     queryParams.tableId = tableModalTable.value.id
   }
   
@@ -816,15 +973,17 @@ async function viewOrderList() {
     return
   }
   
+  // Đảm bảo data được reload trước khi tìm reservation
+  // Điều này đảm bảo reservation status được cập nhật đúng sau khi check-in
+  await loadData()
+  
   // Tìm reservation_id theo table_id và status = CHECKED_IN
   const reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
   
-  // if (!reservationId) {
-  //   notification.error('Bàn chưa có đặt bàn đã check-in')
-  //   return
-  // }
-  
   // Set props for modal
+  // Logic giống với handleCheckIn:
+  // - Nếu có reservationId thì truyền reservationId
+  // - Nếu không có reservationId thì truyền tableId (cho walk-in customers)
   orderModalReservationId.value = reservationId
   orderModalTableId.value = tableModalTable.value.id || null
   
@@ -839,9 +998,19 @@ function closeOrderModal() {
   orderModalTableId.value = null
 }
 
-function handleOrderUpdated() {
-  // Reload data when order is updated
-  loadData()
+async function handleOrderUpdated() {
+  // Reload data when order is updated (sau khi thanh toán)
+  // Điều này đảm bảo trạng thái bàn được cập nhật và có thể thay đổi bình thường
+  await loadData()
+  
+  // Nếu đang mở modal quản lý bàn, cập nhật lại thông tin bàn
+  if (tableModalTable.value) {
+    const updatedTable = tables.value.find(t => t && t.id === tableModalTable.value.id)
+    if (updatedTable) {
+      tableModalTable.value = { ...updatedTable }
+      tableStatus.value = updatedTable.status || 'AVAILABLE'
+    }
+  }
 }
 
 function openTableModal(table) {
@@ -869,25 +1038,293 @@ function closeTableModal() {
   tableModalReservationId.value = null
 }
 
+// Kiểm tra xem bàn có đơn hàng chưa thanh toán không
+// Chỉ tính các đơn hàng có status: PENDING, CONFIRMED, PREPARING, SERVED (chưa thanh toán)
+// Không tính: PAID (đã thanh toán), CANCELLED (đã hủy), COMPLETED (đã hoàn thành - có thể đã thanh toán)
+function hasUnpaidOrder(tableId) {
+  if (!tableId || !Array.isArray(orders.value)) return false
+  
+  // Danh sách các status chưa thanh toán
+  const unpaidStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'SERVED']
+  
+  return orders.value.some(order => {
+    if (!order || order.tableId !== tableId) return false
+    // Chỉ kiểm tra các đơn hàng có status chưa thanh toán
+    return unpaidStatuses.includes(order.status)
+  })
+}
+
+// Kiểm tra xem bàn có món đã lên (served) trong đơn hàng chưa thanh toán không
+function hasServedItemsInUnpaidOrder(tableId) {
+  if (!tableId || !Array.isArray(orders.value)) return false
+  
+  const SERVED_KEYWORD = 'served'
+  
+  // Tìm các đơn hàng chưa thanh toán của bàn này
+  const unpaidOrders = orders.value.filter(order => {
+    if (!order || order.tableId !== tableId) return false
+    // Chỉ kiểm tra các đơn hàng chưa thanh toán
+    const unpaidStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'SERVED']
+    return unpaidStatuses.includes(order.status)
+  })
+  
+  // Kiểm tra xem có đơn hàng nào có món đã lên (served) không
+  return unpaidOrders.some(order => {
+    const items = order.items || order.orderDetails || []
+    if (!Array.isArray(items) || items.length === 0) return false
+    
+    // Kiểm tra xem có ít nhất 1 món đã lên (notes có chứa 'served')
+    return items.some(item => {
+      if (!item || !item.notes) return false
+      return item.notes.toLowerCase().includes(SERVED_KEYWORD)
+    })
+  })
+}
+
+// Kiểm tra xem bàn có đơn hàng đã xác nhận chưa thanh toán không (để hiển thị thông báo cụ thể)
+function hasUnpaidConfirmedOrder(tableId) {
+  if (!tableId || !Array.isArray(orders.value)) return false
+  
+  return orders.value.some(order => {
+    if (!order || order.tableId !== tableId) return false
+    // Kiểm tra đơn hàng có status CONFIRMED (chưa thanh toán)
+    return order.status === 'CONFIRMED'
+  })
+}
+
+// Lấy số tiền của đơn hàng đang sử dụng (đơn hàng hiện tại) của một bàn
+// CHỈ hiển thị số tiền khi đơn hàng đã có món (có order details/items)
+// VÀ chỉ hiển thị đơn hàng của reservation đang check-in (status = CHECKED_IN)
+function getTableTotalAmount(tableId) {
+  if (!tableId || !Array.isArray(orders.value)) return 0
+  
+  // Tìm reservation đang check-in của bàn này
+  const checkedInReservationId = findCheckedInReservationIdByTableId(tableId)
+  
+  // Lọc các đơn hàng của bàn này
+  const tableOrders = orders.value.filter(order => {
+    if (!order || order.tableId !== tableId) return false
+    
+    // Chỉ lấy các đơn hàng chưa thanh toán (không phải PAID và không phải CANCELLED)
+    if (order.status === 'PAID' || order.status === 'CANCELLED') return false
+    
+    // QUAN TRỌNG: Chỉ lấy đơn hàng của reservation đang check-in
+    // Nếu có reservation đang check-in, chỉ lấy đơn hàng của reservation đó
+    if (checkedInReservationId) {
+      return order.reservationId === checkedInReservationId
+    }
+    
+    // Nếu không có reservation đang check-in (walk-in customer), lấy đơn hàng mới nhất
+    // Nhưng vẫn phải kiểm tra xem đơn hàng có được tạo sau khi bàn chuyển sang OCCUPIED không
+    // (Để tránh hiển thị đơn hàng cũ)
+    return true
+  })
+  
+  // Nếu không có đơn hàng nào, trả về 0
+  if (tableOrders.length === 0) return 0
+  
+  // Sắp xếp theo thời gian tạo (mới nhất trước) và lấy đơn hàng mới nhất
+  const sortedOrders = tableOrders.sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+    return timeB - timeA // Mới nhất trước
+  })
+  
+  // Lấy đơn hàng mới nhất (đơn hàng đang sử dụng)
+  const currentOrder = sortedOrders[0]
+  
+  // Kiểm tra xem đơn hàng có món (order details/items) chưa
+  // Chỉ hiển thị số tiền khi đã có ít nhất 1 món
+  const orderItems = currentOrder.items || currentOrder.orderDetails || []
+  const hasItems = Array.isArray(orderItems) && orderItems.length > 0
+  
+  // Nếu chưa có món, trả về 0 (không hiển thị số tiền)
+  if (!hasItems) return 0
+  
+  // Trả về số tiền của đơn hàng đang sử dụng (chỉ khi đã có món)
+  const orderTotal = currentOrder.total || 0
+  return typeof orderTotal === 'number' ? orderTotal : parseFloat(orderTotal) || 0
+}
+
+// Format tiền tệ
+function formatCurrency(value) {
+  if (!value && value !== 0) return '0 ₫'
+  const numValue = typeof value === 'number' ? value : parseFloat(value) || 0
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numValue)
+}
+
 async function handleUpdateStatus() {
   if (!tableModalTable.value) {
     notification.error('Không tìm thấy thông tin bàn')
     return
   }
 
+  // Kiểm tra trạng thái hiện tại và trạng thái muốn chuyển
   if (tableStatus.value === tableModalTable.value.status) {
     notification.info('Trạng thái bàn không thay đổi')
     return
   }
 
+  const tableId = tableModalTable.value.id
+  
+  // Kiểm tra: Không cho phép check-in (OCCUPIED) khi bàn đang dọn (CLEANING)
+  if (
+    tableModalTable.value.status === 'CLEANING' &&
+    tableStatus.value === 'OCCUPIED'
+  ) {
+    notification.error('Bàn đang dọn, hãy chuyển sang trạng thái Trống trước khi Check-in')
+    return
+  }
+
+  // Kiểm tra xem bàn có món đã lên (served) trong đơn hàng chưa thanh toán không
+  // CHỈ chặn khi bàn đang OCCUPIED (có khách) và muốn chuyển sang AVAILABLE/CLEANING
+  // Cho phép chuyển giữa AVAILABLE và CLEANING bình thường
+  const hasServedItems = hasServedItemsInUnpaidOrder(tableId)
+  
+  // Chỉ chặn khi:
+  // 1. Có món đã lên VÀ
+  // 2. Bàn đang OCCUPIED (có khách) VÀ
+  // 3. Muốn chuyển sang AVAILABLE hoặc CLEANING
+  if (
+    hasServedItems &&
+    tableModalTable.value.status === 'OCCUPIED' &&
+    (tableStatus.value === 'AVAILABLE' || tableStatus.value === 'CLEANING')
+  ) {
+    // Có món đã lên trong đơn hàng chưa thanh toán → không cho chỉnh trạng thái
+    notification.error('Bàn có món đã lên chưa thanh toán. Vui lòng thanh toán trước khi chỉnh trạng thái bàn.')
+    return
+  }
+  
+  // Kiểm tra xem bàn có đơn hàng chưa thanh toán không
+  // CHỈ chặn khi muốn check-in (OCCUPIED) và bàn không trống (đã có khách)
+  // Bàn trống (AVAILABLE) → luôn cho phép check-in bình thường
+  if (tableStatus.value === 'OCCUPIED' && tableModalTable.value.status !== 'AVAILABLE') {
+    // Bàn không trống và muốn check-in → kiểm tra đơn hàng
+    const hasUnpaid = hasUnpaidOrder(tableId)
+    
+    if (hasUnpaid) {
+      // Có đơn hàng chưa thanh toán → chặn check-in
+      if (hasUnpaidConfirmedOrder(tableId)) {
+        notification.error('Bàn có đơn hàng đã xác nhận chưa thanh toán. Vui lòng thanh toán trước khi check-in.')
+      } else {
+        notification.error('Bàn có đơn hàng chưa thanh toán. Vui lòng thanh toán trước khi check-in.')
+      }
+      return
+    }
+  }
+  // Các trường hợp khác đều cho phép:
+  // - Bàn trống muốn check-in → cho phép
+  // - Chuyển sang AVAILABLE hoặc CLEANING → cho phép (trừ khi có món đã lên - đã kiểm tra ở trên)
+
   updatingStatus.value = true
   try {
-    await tableService.updateStatus(tableModalTable.value.id, tableStatus.value)
+    // Nếu chuyển sang OCCUPIED, thực hiện logic giống với check-in từ phần khách chờ check-in
+    if (tableStatus.value === 'OCCUPIED') {
+      const tableId = tableModalTable.value.id
+      
+      // Tìm reservation của bàn này với status CONFIRMED hoặc PENDING (chưa check-in)
+      const reservation = reservations.value.find(r => 
+        r && 
+        r.tableId === tableId && 
+        (r.status === 'CONFIRMED' || r.status === 'PENDING')
+      )
+      
+      // Lưu reservationId để sử dụng sau khi check-in
+      let checkedInReservationId = null
+      
+      // Nếu có reservation chưa check-in, tự động check-in reservation trước (giống handleCheckIn)
+      if (reservation) {
+        try {
+          // 0. Hủy các đơn hàng cũ của reservation này (nếu có)
+          // Tìm tất cả đơn hàng của reservation có status != PAID và != CANCELLED
+          const oldOrders = orders.value.filter(order => 
+            order && 
+            order.reservationId === reservation.id && 
+            order.status !== 'PAID' && 
+            order.status !== 'CANCELLED'
+          )
+          
+          // Hủy từng đơn hàng cũ
+          for (const oldOrder of oldOrders) {
+            try {
+              await orderService.updateStatus(oldOrder.id, 'CANCELLED')
+            } catch (error) {
+              console.error(`Error cancelling order ${oldOrder.id}:`, error)
+              // Tiếp tục hủy các đơn hàng khác
+            }
+          }
+          
+          // 1. Check-in reservation (giống handleCheckIn)
+          await reservationService.checkin(reservation.id)
+          checkedInReservationId = reservation.id
+        } catch (error) {
+          console.error('Error checking in reservation:', error)
+          // Không dừng lại, vẫn tiếp tục update table status
+        }
+      } else {
+        // Nếu không có reservation (walk-in customer), hủy các đơn hàng cũ của bàn này
+        const oldOrders = orders.value.filter(order => 
+          order && 
+          order.tableId === tableId && 
+          order.status !== 'PAID' && 
+          order.status !== 'CANCELLED'
+        )
+        
+        // Hủy từng đơn hàng cũ
+        for (const oldOrder of oldOrders) {
+          try {
+            await orderService.updateStatus(oldOrder.id, 'CANCELLED')
+          } catch (error) {
+            console.error(`Error cancelling order ${oldOrder.id}:`, error)
+            // Tiếp tục hủy các đơn hàng khác
+          }
+        }
+      }
+      
+      // 2. Update table status thành OCCUPIED (giống handleCheckIn)
+      await tableService.updateStatus(tableId, 'OCCUPIED')
+      
+      // 3. Start timer (giống handleCheckIn)
+      startOccupiedTimer(tableId)
+      
+      notification.success('Đã check-in thành công')
+      
+      // Reload data để cập nhật reservation status và orders
+      await loadData()
+      
+      // Lưu reservationId vào tableModalTable để sử dụng khi click "Thêm món"
+      // Điều này đảm bảo logic giống với handleCheckIn
+      if (checkedInReservationId) {
+        // Cập nhật reservation trong tableModalTable để có thể sử dụng sau
+        const updatedReservation = reservations.value.find(r => 
+          r && r.id === checkedInReservationId && r.status === 'CHECKED_IN'
+        )
+        if (updatedReservation) {
+          // Lưu reservationId vào tableModalTable để goToOrderPage có thể tìm thấy
+          tableModalTable.value.reservationId = checkedInReservationId
+        }
+      }
+    } else {
+      // Các trạng thái khác (AVAILABLE, CLEANING)
+      await tableService.updateStatus(tableModalTable.value.id, tableStatus.value)
+      
+      const statusLabel = getTableStatusLabel(tableStatus.value)
+      notification.success(`Đã cập nhật trạng thái bàn thành "${statusLabel}"`)
+      
+      // Clear timer nếu không phải OCCUPIED
+      if (tableStatus.value !== 'OCCUPIED') {
+        clearOccupiedTimer(tableModalTable.value.id)
+      }
+      
+      loadData()
+    }
     
-    const statusLabel = getTableStatusLabel(tableStatus.value)
-    notification.success(`Đã cập nhật trạng thái bàn thành "${statusLabel}"`)
     closeTableModal()
-    loadData()
   } catch (error) {
     console.error('Update status error:', error)
     notification.error('Không thể cập nhật trạng thái: ' + (error.response?.data?.message || error.message))
@@ -1265,7 +1702,6 @@ async function handleCheckIn(reservation) {
 
   // Lấy reservation_id trực tiếp từ reservation object
   const reservationId = reservation.id
-  console.log('reservationId', reservationId)
   if (!reservationId) {
     notification.error('Không tìm thấy ID đặt bàn')
     return
@@ -1279,10 +1715,9 @@ async function handleCheckIn(reservation) {
     return
   }
 
-  // Kiểm tra status của bàn - chỉ cho phép check-in nếu bàn không có status OCCUPIED
   const table = tables.value.find(t => t && t.id === tableId)
-  if (table && table.status === 'OCCUPIED') {
-    notification.error('Bàn này đang có khách, không thể check-in thêm')
+  if (table && table.status !== 'AVAILABLE') {
+    notification.error('Chỉ có thể check-in khi bàn đang ở trạng thái Trống')
     return
   }
 
@@ -1291,11 +1726,31 @@ async function handleCheckIn(reservation) {
   }
 
   try {
+    // 0. Hủy các đơn hàng cũ của reservation này (nếu có)
+    // Tìm tất cả đơn hàng của reservation có status != PAID và != CANCELLED
+    const oldOrders = orders.value.filter(order => 
+      order && 
+      order.reservationId === reservationId && 
+      order.status !== 'PAID' && 
+      order.status !== 'CANCELLED'
+    )
+    
+    // Hủy từng đơn hàng cũ
+    for (const oldOrder of oldOrders) {
+      try {
+        await orderService.updateStatus(oldOrder.id, 'CANCELLED')
+      } catch (error) {
+        console.error(`Error cancelling order ${oldOrder.id}:`, error)
+        // Tiếp tục hủy các đơn hàng khác
+      }
+    }
+    
     // 1. Update reservation status thành CHECKED_IN và confirmed_by
     await reservationService.checkin(reservationId)
     
     // 2. Update table status thành OCCUPIED
     await tableService.updateStatus(tableId, 'OCCUPIED')
+    startOccupiedTimer(tableId)
     
     notification.success('Đã check-in thành công')
     loadData()

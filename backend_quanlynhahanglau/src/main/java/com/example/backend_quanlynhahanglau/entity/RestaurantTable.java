@@ -1,5 +1,6 @@
 package com.example.backend_quanlynhahanglau.entity;
 
+import com.example.backend_quanlynhahanglau.enums.DiningFloor;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.enums.TableType;
 import jakarta.persistence.*;
@@ -31,6 +32,11 @@ public class RestaurantTable {
     @Column(nullable = false)
     @Builder.Default
     private TableType type = TableType.OFFLINE; // Loại bàn: OFFLINE hoặc ONLINE
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "floor_level", length = 50)
+    @Builder.Default
+    private DiningFloor floor = DiningFloor.FLOOR_1;
 
     @Column(length = 100)
     private String location; // Vị trí trong nhà hàng

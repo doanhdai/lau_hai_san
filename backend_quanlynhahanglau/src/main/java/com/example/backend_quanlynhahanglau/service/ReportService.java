@@ -227,16 +227,26 @@ public class ReportService {
         Map<LocalDate, List<Order>> ordersByDate = allOrders.stream()
                 .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
         
-        // Lấy doanh thu từ payments theo ngày
+        // Lấy doanh thu từ payments theo ngày (chỉ lấy payments có status COMPLETED)
+        // QUAN TRỌNG: Doanh thu phải lấy từ bảng payments, không phải từ orders
+        // Truyền string name của enum để tương thích với SQL Server
         List<Object[]> paymentsByDate = paymentRepository.calculateAmountByDateAndStatus(
-                startDateTime, endDateTime, PaymentStatus.COMPLETED);
+                startDateTime, endDateTime, PaymentStatus.COMPLETED.name());
         Map<LocalDate, BigDecimal> revenueByDateMap = new HashMap<>();
         for (Object[] row : paymentsByDate) {
             LocalDate date;
+            // Native query trả về java.sql.Date
             if (row[0] instanceof java.sql.Date) {
                 date = ((java.sql.Date) row[0]).toLocalDate();
+            } else if (row[0] instanceof java.util.Date) {
+                date = ((java.util.Date) row[0]).toInstant()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate();
             } else if (row[0] instanceof LocalDate) {
                 date = (LocalDate) row[0];
+            } else if (row[0] instanceof String) {
+                // Nếu là string, parse thành LocalDate
+                date = LocalDate.parse((String) row[0]);
             } else {
                 continue;
             }

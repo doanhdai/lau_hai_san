@@ -331,10 +331,10 @@ const notification = useNotificationStore()
 const SERVED_KEYWORD = 'served'
 
 // Thông tin ngân hàng - có thể thay đổi dễ dàng
-const bankAccountNumber = ref('1234567890')
+const bankAccountNumber = ref('19039243183019')
 const bankAccountName = ref('NHÀ HÀNG LẨU HẢI SẢN')
-const bankName = ref('Vietcombank')
-const bankCode = ref('VCB') // Xem bank code tại https://api.vietqr.io/v2/banks
+const bankName = ref('Techcombank')
+const bankCode = ref('TCB') // Xem bank code tại https://api.vietqr.io/v2/banks
 
 const selectedOrder = ref(null)
 const customerInfo = ref(null)

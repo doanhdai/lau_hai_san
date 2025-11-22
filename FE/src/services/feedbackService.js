@@ -1,4 +1,4 @@
-import api from './api'
+import api, { publicApiClient } from './api'
 
 export const feedbackService = {
   async getAll() {
@@ -21,6 +21,11 @@ export const feedbackService = {
     return response.data
   },
 
+  async createPublic(feedback) {
+    const response = await api.post('/feedbacks/public', feedback)
+    return response.data
+  },
+
   async update(id, feedback) {
     const response = await api.put(`/feedbacks/${id}`, feedback)
     return response.data
@@ -34,5 +39,17 @@ export const feedbackService = {
   async respond(id, response) {
     const resp = await api.put(`/feedbacks/${id}/respond`, { response })
     return resp.data
+  },
+
+  async getPublicFeedbacks(limit = 6) {
+    const response = await publicApiClient.get(`/feedbacks/public`, {
+      params: { limit }
+    })
+    return response.data
+  },
+
+  async getByReservationId(reservationId) {
+    const response = await publicApiClient.get(`/feedbacks/reservation/${reservationId}`)
+    return response.data
   }
 }

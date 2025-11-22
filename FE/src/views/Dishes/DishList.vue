@@ -39,6 +39,7 @@
             <option value="">Tất cả</option>
             <option value="AVAILABLE">Còn món</option>
             <option value="UNAVAILABLE">Hết món</option>
+            <option value="DISCONTINUED">Dừng kinh doanh</option>
           </select>
         </div>
         <div class="flex items-end">
@@ -75,8 +76,11 @@
             <span v-if="dish.status === 'AVAILABLE'" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
               Còn món
             </span>
-            <span v-else class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+            <span v-else-if="dish.status === 'UNAVAILABLE'" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
               Hết món
+            </span>
+            <span v-else-if="dish.status === 'DISCONTINUED'" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+              Dừng kinh doanh
             </span>
           </div>
           <!-- Promotion badge -->
@@ -109,11 +113,19 @@
               <span>Sửa</span>
             </button>
             <button 
+              v-if="dish.status !== 'DISCONTINUED'"
               @click.stop="toggleDishStatus(dish)" 
               :class="dish.status === 'AVAILABLE' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'"
               class="flex-1 text-white font-medium py-2 px-3 rounded-lg text-sm transition-colors"
             >
               {{ dish.status === 'AVAILABLE' ? 'Hết món' : 'Còn món' }}
+            </button>
+            <button 
+              v-else
+              disabled
+              class="flex-1 bg-gray-300 text-gray-500 font-medium py-2 px-3 rounded-lg text-sm cursor-not-allowed"
+            >
+              Dừng kinh doanh
             </button>
             <button @click.stop="deleteDish(dish)" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
               <i class="fas fa-trash text-sm"></i>
@@ -251,7 +263,13 @@ async function handleSave(payload) {
         await dishService.updateWithImage(selectedDish.value.id, payload.data)
       } else {
         // Send JSON if no new image file
-        await dishService.update(selectedDish.value.id, payload.data)
+        // Đảm bảo categoryId là number
+        const data = {
+          ...payload.data,
+          categoryId: Number(payload.data.categoryId),
+          price: Number(payload.data.price)
+        }
+        await dishService.update(selectedDish.value.id, data)
       }
       notification.success('Cập nhật món ăn thành công')
     } else {
@@ -259,14 +277,33 @@ async function handleSave(payload) {
       if (payload.isFormData) {
         await dishService.createWithImage(payload.data)
       } else {
-        await dishService.create(payload.data)
+        // Đảm bảo categoryId là number
+        const data = {
+          ...payload.data,
+          categoryId: Number(payload.data.categoryId),
+          price: Number(payload.data.price)
+        }
+        await dishService.create(data)
       }
       notification.success('Thêm món ăn thành công')
     }
     closeModal()
     loadDishes()
   } catch (error) {
-    notification.error('Không thể lưu thông tin món ăn')
+    console.error('Error saving dish:', error)
+    console.error('Error response:', error.response)
+    
+    // Xử lý lỗi validation từ backend
+    if (error.response?.data?.data && typeof error.response.data.data === 'object') {
+      // Lỗi validation - hiển thị từng field error
+      const validationErrors = error.response.data.data
+      const errorMessages = Object.values(validationErrors).join(', ')
+      notification.error('Lỗi validation: ' + errorMessages)
+    } else {
+      // Lỗi khác - hiển thị message từ backend hoặc message mặc định
+      const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu thông tin món ăn'
+      notification.error(errorMessage)
+    }
   }
 }
 

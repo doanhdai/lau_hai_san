@@ -2,14 +2,18 @@ package com.example.backend_quanlynhahanglau.service;
 
 import com.example.backend_quanlynhahanglau.dto.feedback.FeedbackRequest;
 import com.example.backend_quanlynhahanglau.dto.feedback.FeedbackResponse;
+import com.example.backend_quanlynhahanglau.dto.feedback.PublicFeedbackRequest;
 import com.example.backend_quanlynhahanglau.entity.Customer;
 import com.example.backend_quanlynhahanglau.entity.CustomerFeedback;
 import com.example.backend_quanlynhahanglau.entity.Order;
+import com.example.backend_quanlynhahanglau.entity.Reservation;
 import com.example.backend_quanlynhahanglau.entity.User;
+import com.example.backend_quanlynhahanglau.exception.BadRequestException;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.repository.CustomerFeedbackRepository;
 import com.example.backend_quanlynhahanglau.repository.CustomerRepository;
 import com.example.backend_quanlynhahanglau.repository.OrderRepository;
+import com.example.backend_quanlynhahanglau.repository.ReservationRepository;
 import com.example.backend_quanlynhahanglau.repository.UserRepository;
 import com.example.backend_quanlynhahanglau.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,7 @@ public class CustomerFeedbackService {
     private final CustomerFeedbackRepository feedbackRepository;
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
+    private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
@@ -73,6 +78,58 @@ public class CustomerFeedbackService {
     }
 
     @Transactional
+    public FeedbackResponse createFeedbackFromReservation(PublicFeedbackRequest request) {
+        // Tìm reservation
+        Reservation reservation = reservationRepository.findById(request.getReservationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", request.getReservationId()));
+
+        // Lấy customer từ reservation
+        Customer customer = reservation.getCustomer();
+        if (customer == null) {
+            throw new ResourceNotFoundException("Khách hàng", "reservationId", request.getReservationId());
+        }
+
+        // Kiểm tra xem đã có feedback cho reservation này chưa
+        List<CustomerFeedback> existingFeedbacks = feedbackRepository.findByCustomer(customer);
+        boolean hasFeedbackForReservation = existingFeedbacks.stream()
+                .anyMatch(f -> {
+                    if (f.getOrder() != null && f.getOrder().getReservation() != null) {
+                        return f.getOrder().getReservation().getId().equals(request.getReservationId());
+                    }
+                    return false;
+                });
+
+        if (hasFeedbackForReservation) {
+            throw new BadRequestException("Bạn đã đánh giá cho đặt bàn này rồi");
+        }
+
+        // Tìm order liên quan đến reservation này (nếu có)
+        Order order = null;
+        List<Order> orders = orderRepository.findByCustomer(customer);
+        for (Order o : orders) {
+            if (o.getReservation() != null && o.getReservation().getId().equals(request.getReservationId())) {
+                order = o;
+                break;
+            }
+        }
+
+        // Tạo feedback
+        CustomerFeedback feedback = CustomerFeedback.builder()
+                .customer(customer)
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .resolved(false)
+                .build();
+
+        if (order != null) {
+            feedback.setOrder(order);
+        }
+
+        feedback = feedbackRepository.save(feedback);
+        return mapToResponse(feedback);
+    }
+
+    @Transactional
     public FeedbackResponse respondToFeedback(Long id, String response) {
         CustomerFeedback feedback = feedbackRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Phản hồi", "id", id));
@@ -103,6 +160,26 @@ public class CustomerFeedbackService {
     public Double getAverageRating() {
         Double rating = feedbackRepository.calculateAverageRating();
         return rating != null ? rating : 0.0;
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeedbackResponse> getPublicFeedbacks(int limit) {
+        // Lấy feedbacks có comment và rating >= 4, sắp xếp theo ngày tạo mới nhất
+        return feedbackRepository.findPublicFeedbacks(4)
+                .stream()
+                .limit(limit)
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public FeedbackResponse getFeedbackByReservationId(Long reservationId) {
+        List<CustomerFeedback> feedbacks = feedbackRepository.findByReservationId(reservationId);
+        if (feedbacks.isEmpty()) {
+            return null;
+        }
+        // Trả về feedback đầu tiên (nếu có nhiều thì lấy cái mới nhất)
+        return mapToResponse(feedbacks.get(0));
     }
 
     private FeedbackResponse mapToResponse(CustomerFeedback feedback) {

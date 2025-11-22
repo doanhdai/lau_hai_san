@@ -135,8 +135,8 @@
       </div>
     </section>
 
-    <!-- Testimonials Section -->
-    <section class="py-20 bg-white">
+    <!-- Testimonials Section - Chỉ hiển thị khi có đánh giá -->
+    <section v-if="testimonials.length > 0" class="py-20 bg-white">
       <div class="container mx-auto px-4">
         <div class="text-center mb-12 scroll-animate">
           <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Khách Hàng Nói Gì?</h2>
@@ -146,22 +146,26 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div 
             v-for="(testimonial, index) in testimonials" 
-            :key="index"
+            :key="testimonial.id || index"
             class="scroll-animate"
             :style="{ animationDelay: `${index * 100}ms` }"
           >
             <div class="bg-white border border-gray-200 p-6 rounded-lg hover:shadow-md transition-all">
               <div class="flex items-center gap-1 text-amber-500 mb-3">
-                <i v-for="i in 5" :key="i" class="fas fa-star text-sm"></i>
+                <i 
+                  v-for="i in 5" 
+                  :key="i" 
+                  :class="['fas', 'fa-star', 'text-sm', i <= (testimonial.rating || 5) ? 'text-amber-500' : 'text-gray-300']"
+                ></i>
               </div>
               <p class="text-slate-700 text-sm mb-5 italic leading-relaxed">"{{ testimonial.comment }}"</p>
               <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
                 <div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {{ testimonial.name.charAt(0) }}
+                  {{ testimonial.name ? testimonial.name.charAt(0).toUpperCase() : 'K' }}
                 </div>
                 <div>
-                  <div class="font-semibold text-slate-900 text-sm">{{ testimonial.name }}</div>
-                  <div class="text-xs text-slate-500">{{ testimonial.role }}</div>
+                  <div class="font-semibold text-slate-900 text-sm">{{ testimonial.name || 'Khách hàng' }}</div>
+                  <div class="text-xs text-slate-500">{{ testimonial.role || 'Khách Hàng' }}</div>
                 </div>
               </div>
             </div>
@@ -192,8 +196,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { feedbackService } from '@/services/feedbackService'
 
 const scrollY = ref(0)
+const testimonials = ref([])
+const loadingTestimonials = ref(false)
 
 const features = [
   {
@@ -227,23 +234,39 @@ const stats = [
   { value: 100, label: 'Nhân Viên' }
 ]
 
-const testimonials = [
-  {
-    name: 'Nguyễn Văn A',
-    role: 'Khách Hàng Thân Thiết',
-    comment: 'Nhà hàng có không gian đẹp, món ăn ngon và phục vụ chu đáo. Gia đình tôi rất hài lòng và sẽ quay lại nhiều lần nữa!'
-  },
-  {
-    name: 'Trần Thị B',
-    role: 'Food Blogger',
-    comment: 'Lẩu ở đây thật sự là tuyệt vời! Nước lẩu đậm đà, nguyên liệu tươi ngon. Tôi đã giới thiệu cho rất nhiều bạn bè.'
-  },
-  {
-    name: 'Lê Văn C',
-    role: 'Doanh Nhân',
-    comment: 'Địa điểm lý tưởng cho các buổi gặp mặt đối tác. Không gian sang trọng, riêng tư và dịch vụ chuyên nghiệp.'
+async function loadTestimonials() {
+  loadingTestimonials.value = true
+  testimonials.value = [] // Reset về rỗng
+  
+  try {
+    const response = await feedbackService.getPublicFeedbacks(6)
+    
+    // Xử lý response - có thể là response.data hoặc response trực tiếp
+    let feedbacks = []
+    if (response && response.success !== false) {
+      feedbacks = response.data || response
+    } else if (Array.isArray(response)) {
+      feedbacks = response
+    }
+    
+    // Chỉ lấy feedbacks có comment và rating hợp lệ
+    testimonials.value = feedbacks
+      .filter(feedback => feedback && feedback.comment && feedback.comment.trim() !== '' && feedback.rating)
+      .map(feedback => ({
+        id: feedback.id,
+        name: feedback.customerName || 'Khách hàng',
+        role: 'Khách Hàng',
+        comment: feedback.comment.trim(),
+        rating: feedback.rating || 5
+      }))
+  } catch (error) {
+    console.error('Error loading testimonials:', error)
+    // Không set fallback data, để testimonials.value = [] (đã set ở đầu function)
+    testimonials.value = []
+  } finally {
+    loadingTestimonials.value = false
   }
-]
+}
 
 function handleScroll() {
   scrollY.value = window.scrollY
@@ -295,6 +318,7 @@ function formatPrice(price) {
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   handleScroll() // Initial check
+  loadTestimonials() // Load testimonials from API
 })
 
 onUnmounted(() => {

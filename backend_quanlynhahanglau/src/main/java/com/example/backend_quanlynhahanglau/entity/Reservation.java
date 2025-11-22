@@ -24,6 +24,9 @@ public class Reservation {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    @Column(length = 100)
+    private String customerName; // Tên khách hàng từ form đặt bàn (lưu riêng cho đơn này)
+
     @ManyToOne
     @JoinColumn(name = "table_id")
     private RestaurantTable table;

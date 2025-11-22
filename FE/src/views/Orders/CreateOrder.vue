@@ -357,12 +357,53 @@ async function handleQueryParams() {
       }
     }
   } else {
-    // Chỉ xử lý tableId khi không có reservationId
+    // Chỉ xử lý tableId khi không có reservationId (walk-in customers)
     if (tableId && tableId !== 'null' && tableId !== 'undefined') {
       const tableIdNum = parseInt(tableId)
       // Chỉ set nếu parse thành công (không phải NaN)
       if (!isNaN(tableIdNum)) {
         orderForm.value.tableId = tableIdNum
+        orderForm.value.reservationId = null // Đảm bảo reservationId là null
+        
+        // Load orders để tìm order theo tableId
+        await loadData()
+        
+        // Tìm tất cả orders có cùng tableId, loại bỏ CANCELLED và PAID, sắp xếp theo createdAt mới nhất
+        const matchingOrders = orders.value
+          .filter(o => {
+            // Tìm order có cùng tableId
+            const orderTableId = o.tableId
+            const matchesTableId = orderTableId === tableIdNum || 
+                                   orderTableId === Number(tableIdNum) || 
+                                   Number(orderTableId) === tableIdNum ||
+                                   String(orderTableId) === String(tableIdNum)
+            
+            // Chỉ lấy order chưa thanh toán (không phải PAID, CANCELLED)
+            const isUnpaid = o.status !== 'PAID' && o.status !== 'CANCELLED'
+            
+            // Không có reservationId (walk-in customer)
+            const isWalkIn = !o.reservationId || o.reservationId === null
+            
+            return matchesTableId && isUnpaid && isWalkIn
+          })
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0)
+            const dateB = new Date(b.createdAt || 0)
+            return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
+          })
+        
+        const foundOrder = matchingOrders.length > 0 ? matchingOrders[0] : null
+        
+        if (foundOrder) {
+          // Nếu có order, set orderId (để biết là update)
+          orderForm.value.orderId = foundOrder.id
+          await loadExistingOrderDetails(foundOrder.id)
+        } else {
+          // Nếu không có order, orderId = null (tạo mới)
+          orderForm.value.orderId = null
+          existingOrder.value = null
+          existingOrderDetails.value = []
+        }
       }
     }
   }
@@ -468,6 +509,12 @@ function formatDateTime(datetime) {
 }
 
 function addDishToOrder(dish) {
+  // Kiểm tra món đã dừng kinh doanh không
+  if (dish.status === 'DISCONTINUED') {
+    notification.error('Món ăn "' + dish.name + '" đã dừng kinh doanh. Không thể thêm vào đơn hàng.')
+    return
+  }
+  
   const existingItem = orderForm.value.items.find(item => item.dishId === dish.id)
   
   if (existingItem) {

@@ -66,6 +66,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/tables/check-availability").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reservations/public").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/reservations/public/*/cancel").permitAll()
+                        // Cho phép các endpoint feedbacks public
+                        .requestMatchers(HttpMethod.GET, "/api/feedbacks/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feedbacks/reservation/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feedbacks/average-rating").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/feedbacks/public").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
                         .anyRequest().authenticated()
                 );

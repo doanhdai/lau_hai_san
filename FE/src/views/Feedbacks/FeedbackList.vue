@@ -101,7 +101,7 @@
               </div>
               <div>
                 <h3 class="font-bold text-gray-900">{{ feedback.customerName || 'Khách hàng' }}</h3>
-                <p class="text-sm text-gray-500">{{ formatDate(feedback.feedbackDate) }}</p>
+                <p class="text-sm text-gray-500">{{ formatDate(feedback.createdAt || feedback.feedbackDate) }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
@@ -128,14 +128,13 @@
           <!-- Actions -->
           <div class="flex gap-2 pt-2 border-t">
             <button 
-              v-if="!feedback.response"
-              @click="respondToFeedback(feedback)" 
-              class="text-sm btn-secondary py-1 px-3"
+              @click="deleteFeedback(feedback)" 
+              :disabled="deletingFeedbackId === feedback.id"
+              class="text-sm text-red-600 hover:text-red-800 font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-red-50"
             >
-              Phản hồi
-            </button>
-            <button @click="deleteFeedback(feedback)" class="text-sm text-red-600 hover:text-red-800 font-medium px-3">
-              Xóa
+              <i v-if="deletingFeedbackId !== feedback.id" class="fas fa-trash text-xs"></i>
+              <i v-else class="fas fa-spinner fa-spin text-xs"></i>
+              <span>{{ deletingFeedbackId === feedback.id ? 'Đang xóa...' : 'Xóa' }}</span>
             </button>
           </div>
         </div>
@@ -162,6 +161,7 @@ const loading = ref(false)
 const feedbacks = ref([])
 const searchQuery = ref('')
 const filterRating = ref('')
+const deletingFeedbackId = ref(null)
 
 const averageRating = computed(() => {
   if (feedbacks.value.length === 0) return 0
@@ -187,7 +187,11 @@ const filteredFeedbacks = computed(() => {
     result = result.filter(f => f.rating === parseInt(filterRating.value))
   }
 
-  return result.sort((a, b) => new Date(b.feedbackDate) - new Date(a.feedbackDate))
+  return result.sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.feedbackDate || 0)
+    const dateB = new Date(b.createdAt || b.feedbackDate || 0)
+    return dateB - dateA
+  })
 })
 
 onMounted(() => {
@@ -222,14 +226,71 @@ async function respondToFeedback(feedback) {
 }
 
 async function deleteFeedback(feedback) {
-  if (confirm('Bạn có chắc muốn xóa phản hồi này?')) {
-    try {
-      await feedbackService.delete(feedback.id)
-      notification.success('Xóa phản hồi thành công')
-      loadFeedbacks()
-    } catch (error) {
-      notification.error('Không thể xóa phản hồi')
+  if (!feedback || !feedback.id) {
+    notification.error('Không tìm thấy thông tin phản hồi')
+    return
+  }
+
+  // Confirmation dialog với thông tin chi tiết
+  const confirmMessage = `Bạn có chắc muốn xóa phản hồi của "${feedback.customerName || 'Khách hàng'}"?\n\n` +
+    `Đánh giá: ${feedback.rating} sao\n` +
+    `Bình luận: ${feedback.comment ? (feedback.comment.length > 50 ? feedback.comment.substring(0, 50) + '...' : feedback.comment) : 'Không có'}\n\n` +
+    `Hành động này không thể hoàn tác!`
+
+  if (!confirm(confirmMessage)) {
+    return
+  }
+
+  deletingFeedbackId.value = feedback.id
+  try {
+    console.log('Deleting feedback with ID:', feedback.id)
+    const response = await feedbackService.delete(feedback.id)
+    console.log('Delete response:', response)
+    
+    // Response từ feedbackService.delete() đã là response.data (ApiResponse)
+    // Format: { success: true, message: "...", data: null }
+    if (response && response.success !== false) {
+      notification.success(response.message || 'Đã xóa phản hồi thành công')
+      
+      // Xóa khỏi danh sách ngay lập tức (optimistic update)
+      const index = feedbacks.value.findIndex(f => f.id === feedback.id)
+      if (index !== -1) {
+        feedbacks.value.splice(index, 1)
+      }
+      
+      // Reload để đảm bảo đồng bộ với server
+      await loadFeedbacks()
+    } else {
+      notification.error(response?.message || 'Không thể xóa phản hồi')
     }
+  } catch (error) {
+    console.error('Error deleting feedback:', error)
+    console.error('Error response:', error.response)
+    console.error('Error response data:', error.response?.data)
+    
+    // Xử lý các loại lỗi khác nhau
+    let errorMessage = 'Không thể xóa phản hồi. Vui lòng thử lại.'
+    
+    if (error.response) {
+      // Lỗi từ server
+      if (error.response.status === 403) {
+        errorMessage = 'Bạn không có quyền xóa phản hồi. Chỉ ADMIN và MANAGER mới có thể xóa.'
+      } else if (error.response.status === 404) {
+        errorMessage = 'Không tìm thấy phản hồi cần xóa.'
+      } else if (error.response.status === 401) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+      } else {
+        errorMessage = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      `Lỗi ${error.response.status}: ${error.response.statusText}`
+      }
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    notification.error(errorMessage)
+  } finally {
+    deletingFeedbackId.value = null
   }
 }
 

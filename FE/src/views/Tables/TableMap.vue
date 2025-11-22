@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-bold text-slate-900">Cài đặt Sơ đồ Bàn</h1>
       <div class="flex items-center gap-2">
-        <button @click="showCreateModal = true"
+        <button @click="openCreateModal"
           class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
           <i class="fas fa-plus text-xs"></i>
           <span>Thêm Bàn</span>
@@ -21,6 +21,42 @@
 
     <!-- Filter and Summary Section -->
     <div class="space-y-2">
+      <!-- Floor Selector -->
+      <div class="bg-white border border-gray-200 rounded-lg p-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-800">Khu vực (Tầng)</p>
+            <p class="text-xs text-slate-500">
+              Mỗi tầng tối đa {{ FLOOR_CAPACITY_LIMIT }} chỗ. {{ selectedFloorLabel }} còn lại {{ remainingCapacityForSelectedFloor }} chỗ.
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-500">
+              Đã dùng {{ FLOOR_CAPACITY_LIMIT - remainingCapacityForSelectedFloor }} / {{ FLOOR_CAPACITY_LIMIT }} chỗ
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="floor in floorOptions"
+            :key="floor.value"
+            type="button"
+            @click="selectFloor(floor.value)"
+            class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors flex flex-col gap-1"
+            :class="selectedFloor === floor.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-slate-700 border-gray-200 hover:border-blue-300'"
+          >
+            <span>{{ floor.label }}</span>
+            <span
+              class="text-xs"
+              :class="selectedFloor === floor.value ? 'text-blue-100' : 'text-slate-500'"
+            >
+              Đã dùng {{ FLOOR_CAPACITY_LIMIT - getFloorRemaining(floor.value) }} / {{ FLOOR_CAPACITY_LIMIT }} ·
+              Còn {{ getFloorRemaining(floor.value) }} chỗ
+            </span>
+          </button>
+        </div>
+      </div>
+
       <!-- Filters -->
       <!-- <div class="bg-white border border-gray-200 rounded-lg p-2">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -71,15 +107,15 @@
       </div> -->
 
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
         <div class="bg-white border border-gray-200 rounded-lg p-2">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
               <i class="fas fa-chair text-slate-600 text-sm"></i>
             </div>
             <div>
-              <p class="text-xs text-slate-500 mb-0.5">Tổng bàn</p>
-              <p class="text-lg font-bold text-slate-900">{{ tables.length }}</p>
+              <p class="text-xs text-slate-500 mb-0.5">Tổng bàn ({{ selectedFloorLabel }})</p>
+              <p class="text-lg font-bold text-slate-900">{{ totalTablesInSelectedFloor }}</p>
             </div>
           </div>
         </div>
@@ -127,6 +163,20 @@
             </div>
           </div>
         </div>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-layer-group text-indigo-600 text-sm"></i>
+            </div>
+            <div>
+              <p class="text-xs text-indigo-600 mb-0.5">Sức chứa/Tầng</p>
+              <p class="text-lg font-bold text-slate-900">
+                {{ FLOOR_CAPACITY_LIMIT - remainingCapacityForSelectedFloor }} / {{ FLOOR_CAPACITY_LIMIT }}
+              </p>
+              <p class="text-[11px] text-indigo-600">Còn {{ remainingCapacityForSelectedFloor }} chỗ</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Legend -->
@@ -162,6 +212,15 @@
       <!-- Visual Table Layout Area (Left - 2 columns) -->
       <div class="lg:col-span-2">
         <div class="bg-white border border-gray-200 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <p class="text-sm font-semibold text-slate-900">{{ selectedFloorLabel }}</p>
+              <p class="text-xs text-slate-500">Còn {{ remainingCapacityForSelectedFloor }} / {{ FLOOR_CAPACITY_LIMIT }} chỗ trống</p>
+            </div>
+            <div class="text-xs text-slate-500">
+              <span>Bàn: {{ totalTablesInSelectedFloor }}</span>
+            </div>
+          </div>
           <!-- Edit Mode Instruction -->
           <div v-if="editMode" class="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
             <p class="text-xs text-blue-700">
@@ -331,11 +390,22 @@
               </div>
             </div>
 
+            <div>
+              <p class="text-xs font-medium text-gray-600 mb-1">Tầng hiện tại</p>
+              <p class="text-sm font-semibold text-slate-900">
+                {{ getFloorLabel(getTableFloor(selectedTable)) }}
+              </p>
+              <p class="text-xs text-gray-500">
+                Còn {{ getFloorRemaining(getTableFloor(selectedTable)) }} / {{ FLOOR_CAPACITY_LIMIT }} chỗ tại tầng này
+              </p>
+            </div>
+
             <!-- Online Reservation / Type Toggle -->
             <div>
               <label class="flex items-center gap-2">
                 <input type="checkbox" :checked="selectedTable.type === 'ONLINE'" @change="toggleOnlineType"
-                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  :disabled="updatingSelectedTable"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60" />
                 <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
               </label>
               <p class="text-xs text-gray-500 mt-1 ml-6">
@@ -389,9 +459,39 @@
               <label class="block text-sm font-medium text-slate-700 mb-2">
                 Sức chứa <span class="text-red-500">*</span>
               </label>
-              <input v-model.number="newTable.capacity" type="number" required min="1"
+              <input
+                v-model.number="newTable.capacity"
+                type="number"
+                required
+                min="1"
+                :max="remainingCapacityForNewTable || FLOOR_CAPACITY_LIMIT"
+                :disabled="remainingCapacityForNewTable <= 0"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                 placeholder="4" />
+              <p class="text-xs text-gray-500 mt-1">
+                Còn lại {{ remainingCapacityForNewTable }} / {{ FLOOR_CAPACITY_LIMIT }} chỗ cho {{ floorOptions.find(f => f.value === newTable.floor)?.label || '' }}.
+              </p>
+              <p v-if="newTable.capacity > remainingCapacityForNewTable && remainingCapacityForNewTable > 0"
+                class="text-xs text-red-600 mt-1">
+                Vượt quá số chỗ còn lại. Vui lòng giảm sức chứa.
+              </p>
+              <p v-if="remainingCapacityForNewTable <= 0" class="text-xs text-red-600 mt-1">
+                Tầng này đã đủ 100 chỗ. Hãy chọn tầng khác.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Tầng <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="newTable.floor"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
+              >
+                <option v-for="floor in floorOptions" :key="floor.value" :value="floor.value">
+                  {{ floor.label }}
+                </option>
+              </select>
             </div>
 
             <div>
@@ -410,7 +510,7 @@
                 class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors">
                 Hủy
               </button>
-              <button type="submit" :disabled="creating"
+              <button type="submit" :disabled="isCreateDisabled"
                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span v-if="!creating">Thêm Bàn</span>
                 <span v-else>Đang thêm...</span>
@@ -465,6 +565,13 @@ import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
+const FLOOR_CAPACITY_LIMIT = 100
+const floorOptions = [
+  { label: 'Tầng 1', value: 'FLOOR_1' },
+  { label: 'Tầng 2', value: 'FLOOR_2' }
+]
+
+const selectedFloor = ref(floorOptions[0].value)
 
 const tables = ref([])
 const selectedTable = ref(null)
@@ -477,6 +584,7 @@ const creating = ref(false)
 const mapContainer = ref(null)
 const tableToDelete = ref(null)
 const showDeleteModal = ref(false)
+const updatingSelectedTable = ref(false)
 
 // Filters
 const filterArea = ref('')
@@ -484,12 +592,62 @@ const filterOnline = ref('')
 const searchTable = ref('')
 
 // New table form
-const newTable = ref({
+const getDefaultNewTable = () => ({
   tableNumber: '',
   capacity: 4,
   allowOnlineReservation: false,
   type: 'OFFLINE',
-  status: 'AVAILABLE'
+  status: 'AVAILABLE',
+  floor: selectedFloor.value
+})
+
+const newTable = ref(getDefaultNewTable())
+
+const inferFloorFromLegacyData = (table) => {
+  const location = table?.location?.toLowerCase() || ''
+  const tableNumber = table?.tableNumber?.toLowerCase() || ''
+
+  if (location.includes('tầng 2') || location.includes('tang 2') || location.includes('floor 2')) {
+    return 'FLOOR_2'
+  }
+
+  // If table number follows pattern like T2-xx or starts with 2
+  if (tableNumber.startsWith('t2') || tableNumber.startsWith('2') || tableNumber.includes('t2-')) {
+    return 'FLOOR_2'
+  }
+
+  if (location.includes('tầng 1') || location.includes('tang 1') || location.includes('floor 1') || tableNumber.startsWith('t1')) {
+    return 'FLOOR_1'
+  }
+
+  return null
+}
+
+const getTableFloor = (table) => {
+  if (table?.floor) return table.floor
+  const inferred = inferFloorFromLegacyData(table)
+  return inferred || 'FLOOR_1'
+}
+
+watch(selectedFloor, (floor) => {
+  if (!showCreateModal.value) {
+    newTable.value.floor = floor
+  }
+
+  if (selectedTable.value && getTableFloor(selectedTable.value) !== floor) {
+    selectedTable.value = null
+  }
+
+  if (editMode.value) {
+    isDragging.value = false
+    draggedTable.value = null
+  }
+})
+
+watch(showCreateModal, (isOpen) => {
+  if (isOpen) {
+    newTable.value.floor = selectedFloor.value
+  }
 })
 
 // Watch allowOnlineReservation to update type
@@ -502,24 +660,86 @@ watch(() => newTable.value.allowOnlineReservation, (isOnline) => {
 })
 
 // Computed
+const floorCapacityUsage = computed(() => {
+  const usage = {}
+  floorOptions.forEach(floor => {
+    usage[floor.value] = 0
+  })
+
+  tables.value.forEach(table => {
+    const floor = getTableFloor(table)
+    usage[floor] = (usage[floor] || 0) + (table.capacity || 0)
+  })
+
+  return usage
+})
+
+const getFloorRemaining = (floor) => {
+  const used = floorCapacityUsage.value[floor] || 0
+  return Math.max(0, FLOOR_CAPACITY_LIMIT - used)
+}
+
+const getFloorLabel = (floor) => {
+  const found = floorOptions.find(item => item.value === floor)
+  return found ? found.label : floor
+}
+
+const selectFloor = (floor) => {
+  selectedFloor.value = floor
+}
+
+const openCreateModal = () => {
+  newTable.value = {
+    ...getDefaultNewTable(),
+    floor: selectedFloor.value
+  }
+  showCreateModal.value = true
+}
+
+const selectedFloorLabel = computed(() => {
+  const found = floorOptions.find(floor => floor.value === selectedFloor.value)
+  return found ? found.label : 'Tầng 1'
+})
+
+const tablesInSelectedFloor = computed(() =>
+  tables.value.filter(t => getTableFloor(t) === selectedFloor.value)
+)
+
+const totalTablesInSelectedFloor = computed(() => tablesInSelectedFloor.value.length)
+
 const availableCount = computed(() =>
-  tables.value.filter(t => t.status === 'AVAILABLE').length
+  tablesInSelectedFloor.value.filter(t => t.status === 'AVAILABLE').length
 )
 
 const occupiedCount = computed(() =>
-  tables.value.filter(t => t.status === 'OCCUPIED').length
+  tablesInSelectedFloor.value.filter(t => t.status === 'OCCUPIED').length
 )
 
 const reservedCount = computed(() =>
-  tables.value.filter(t => t.status === 'RESERVED').length
+  tablesInSelectedFloor.value.filter(t => t.status === 'RESERVED').length
 )
 
 const onlineReservationCount = computed(() =>
-  tables.value.filter(t => t.type === 'ONLINE').length
+  tablesInSelectedFloor.value.filter(t => t.type === 'ONLINE').length
 )
 
+const remainingCapacityForSelectedFloor = computed(() => getFloorRemaining(selectedFloor.value))
+const remainingCapacityForNewTable = computed(() => getFloorRemaining(newTable.value.floor))
+const isCreateDisabled = computed(() => {
+  const remaining = remainingCapacityForNewTable.value
+  if (remaining <= 0) return true
+  return creating.value || newTable.value.capacity > remaining
+})
+
+watch(() => newTable.value.floor, (floor) => {
+  const remaining = getFloorRemaining(floor)
+  if (remaining > 0 && newTable.value.capacity > remaining) {
+    newTable.value.capacity = remaining
+  }
+})
+
 const filteredTables = computed(() => {
-  let result = [...tables.value]
+  let result = [...tablesInSelectedFloor.value]
 
   // Filter by area/table type
   if (filterArea.value) {
@@ -587,6 +807,7 @@ const loadTables = async () => {
     tables.value = tablesData.map((table, index) => {
       let positionX = table.positionX
       let positionY = table.positionY
+      const floor = getTableFloor(table)
 
       // If position not set (null or undefined), arrange in a grid
       if (positionX === null || positionX === undefined || positionY === null || positionY === undefined) {
@@ -609,7 +830,8 @@ const loadTables = async () => {
         ...table,
         positionX,
         positionY,
-        type: table.type || 'OFFLINE'
+        type: table.type || 'OFFLINE',
+        floor
       }
     })
 
@@ -716,6 +938,62 @@ const onMouseUp = (event) => {
 let saveTimer = null
 const pendingSaves = new Set()
 
+const buildTablePayload = (table) => ({
+  tableNumber: table.tableNumber,
+  capacity: table.capacity,
+  status: table.status || 'AVAILABLE',
+  type: table.type || 'OFFLINE',
+  floor: getTableFloor(table),
+  location: table.location || null,
+  notes: table.notes || null,
+  positionX: table.positionX ?? null,
+  positionY: table.positionY ?? null
+})
+
+const applyTableUpdate = (apiTable) => {
+  if (!apiTable) return null
+  const normalized = {
+    ...apiTable,
+    floor: getTableFloor(apiTable),
+    type: apiTable.type || 'OFFLINE'
+  }
+  const index = tables.value.findIndex(t => t.id === normalized.id)
+  if (index !== -1) {
+    tables.value[index] = {
+      ...tables.value[index],
+      ...normalized
+    }
+  }
+  return normalized
+}
+
+const persistSelectedTable = async (overrides = {}, successMessage = 'Cập nhật bàn thành công') => {
+  if (!selectedTable.value) return
+  updatingSelectedTable.value = true
+  try {
+    const payload = buildTablePayload({ ...selectedTable.value, ...overrides })
+    const response = await tableService.update(selectedTable.value.id, payload)
+    if (response.success !== false && response.data) {
+      const normalized = applyTableUpdate(response.data) || payload
+      selectedTable.value = {
+        ...normalized,
+        allowOnlineReservation: normalized.type === 'ONLINE'
+      }
+      const updatedFloor = getTableFloor(normalized)
+      if (updatedFloor !== selectedFloor.value) {
+        selectedFloor.value = updatedFloor
+      }
+      notificationStore.success(successMessage)
+    } else {
+      throw new Error(response.message || 'Cập nhật bàn thất bại')
+    }
+  } catch (error) {
+    notificationStore.error(error.response?.data?.message || error.message || 'Cập nhật bàn thất bại')
+  } finally {
+    updatingSelectedTable.value = false
+  }
+}
+
 const saveTablePosition = async (table) => {
   if (!table || !table.id) return
 
@@ -761,6 +1039,7 @@ const saveTablePosition = async (table) => {
 const selectTable = (table) => {
   selectedTable.value = { 
     ...table,
+    floor: getTableFloor(table),
     allowOnlineReservation: table.type === 'ONLINE'
   }
 }
@@ -768,6 +1047,7 @@ const selectTable = (table) => {
 const editTable = (table) => {
   selectedTable.value = { 
     ...table,
+    floor: getTableFloor(table),
     allowOnlineReservation: table.type === 'ONLINE'
   }
 }
@@ -790,50 +1070,19 @@ const toggleOnlineType = async (event) => {
 
   const isChecked = event.target.checked
   const newType = isChecked ? 'ONLINE' : 'OFFLINE'
-
-  try {
-    // Update type using update API
-    await tableService.update(selectedTable.value.id, {
-      ...selectedTable.value,
-      type: newType
-    })
-    selectedTable.value.type = newType
-    selectedTable.value.allowOnlineReservation = isChecked
-
-    // Update local state
-    const tableIndex = tables.value.findIndex(t => t.id === selectedTable.value.id)
-    if (tableIndex !== -1) {
-      tables.value[tableIndex].type = newType
-      tables.value[tableIndex].allowOnlineReservation = isChecked
-    }
-    notificationStore.success('Cập nhật thành công')
-  } catch (error) {
-    notificationStore.error('Cập nhật thất bại')
-  }
+  await persistSelectedTable({ type: newType }, 'Cập nhật thành công')
 }
 
 const createTable = async () => {
   creating.value = true
   try {
-    // Prepare table data with type field
-    const tableData = {
-      tableNumber: newTable.value.tableNumber,
-      capacity: newTable.value.capacity,
-      type: newTable.value.type,
-      status: newTable.value.status
-    }
+    const tableData = buildTablePayload(newTable.value)
     
     const response = await tableService.create(tableData)
     if (response.success) {
       notificationStore.success('Thêm bàn thành công')
       showCreateModal.value = false
-      newTable.value = {
-        tableNumber: '',
-        capacity: 4,
-        allowOnlineReservation: false,
-        type: 'OFFLINE',
-        status: 'AVAILABLE'
-      }
+      newTable.value = getDefaultNewTable()
       loadTables()
     } else {
       notificationStore.error(response.message || 'Thêm bàn thất bại')

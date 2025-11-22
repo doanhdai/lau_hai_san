@@ -299,7 +299,6 @@ const ratingForm = ref({
   comment: ''
 })
 
-// Watch for authentication changes
 watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   if (isAuthenticated) {
     loadReservations()
@@ -309,7 +308,6 @@ watch(() => authStore.isAuthenticated, (isAuthenticated) => {
 })
 
 onMounted(() => {
-  // Initialize auth store if needed
   if (!authStore.user && localStorage.getItem('token')) {
     authStore.initAuth()
   }
@@ -322,20 +320,16 @@ onMounted(() => {
 async function loadReservations() {
   loading.value = true
   try {
-    // Get user ID from auth store - try multiple possible fields
     const user = authStore.user
     const userId = user?.id || user?.userId || user?.user?.id
     
     if (!userId) {
-      console.error('User ID not found in auth store. User object:', user)
       notification.error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.')
       reservations.value = []
       return
     }
 
-    console.log('Loading reservations for user ID:', userId)
     const response = await reservationService.getByUserId(userId)
-    console.log('Reservations API response:', response)
     
     // Handle both wrapped and unwrapped responses
     let reservationsData = []
@@ -350,25 +344,63 @@ async function loadReservations() {
       reservationsData = response
     }
     
-    console.log('Parsed reservations data:', reservationsData)
     
-    // Sort by reservation date (newest first)
-    reservations.value = reservationsData.sort((a, b) => {
-      const dateA = new Date(a.reservationTime || a.reservationDateTime || 0)
-      const dateB = new Date(b.reservationTime || b.reservationDateTime || 0)
+    reservationsData = reservationsData.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0)
+      const dateB = new Date(b.createdAt || 0)
       return dateB - dateA
     })
     
-    console.log('Final reservations count:', reservations.value.length)
+    await loadFeedbacksForReservations(reservationsData)
+    
   } catch (error) {
-    console.error('Error loading reservations:', error)
-    console.error('Error response:', error.response?.data)
     const errorMessage = error.response?.data?.message || error.message || 'Không thể tải lịch sử đặt bàn'
     notification.error(errorMessage)
     reservations.value = []
   } finally {
     loading.value = false
   }
+}
+
+async function loadFeedbacksForReservations(reservationsData) {
+  const feedbackPromises = reservationsData.map(async (reservation) => {
+    try {
+      const feedbackResponse = await feedbackService.getByReservationId(reservation.id)
+      const feedback = feedbackResponse?.data || feedbackResponse
+      
+      if (feedback && feedback.id) {
+        return {
+          reservationId: reservation.id,
+          hasRated: true,
+          rating: feedback.rating
+        }
+      }
+      return {
+        reservationId: reservation.id,
+        hasRated: false,
+        rating: null
+      }
+    } catch (error) {
+      console.error(`Error loading feedback for reservation ${reservation.id}:`, error)
+      return {
+        reservationId: reservation.id,
+        hasRated: false,
+        rating: null
+      }
+    }
+  })
+  
+  const feedbackResults = await Promise.all(feedbackPromises)
+  
+  // Map feedbacks to reservations
+  reservations.value = reservationsData.map(reservation => {
+    const feedbackInfo = feedbackResults.find(f => f.reservationId === reservation.id)
+    return {
+      ...reservation,
+      hasRated: feedbackInfo?.hasRated || false,
+      rating: feedbackInfo?.rating || null
+    }
+  })
 }
 
 function getStatusBadgeClass(status) {
@@ -443,15 +475,8 @@ function formatDateTime(dateTime) {
 }
 
 function canRate(reservation) {
-  // Can rate if status is COMPLETED and reservation date has passed
   if (reservation.status !== 'COMPLETED') return false
-  try {
-    const reservationDate = new Date(reservation.reservationTime || reservation.reservationDateTime)
-    const now = new Date()
-    return reservationDate < now
-  } catch (error) {
-    return false
-  }
+  return true
 }
 
 function openRatingModal(reservation) {
@@ -478,16 +503,20 @@ async function submitRating() {
     return
   }
 
+  if (!selectedReservation.value) {
+    notification.error('Không tìm thấy thông tin đặt bàn')
+    return
+  }
+
   submittingRating.value = true
   try {
     const feedbackData = {
       reservationId: selectedReservation.value.id,
       rating: ratingForm.value.rating,
-      comment: ratingForm.value.comment,
-      customerName: selectedReservation.value.customerName
+      comment: ratingForm.value.comment || ''
     }
 
-    const response = await feedbackService.create(feedbackData)
+    const response = await feedbackService.createPublic(feedbackData)
     
     if (response.success) {
       notification.success('Cảm ơn bạn đã đánh giá!')
@@ -500,9 +529,13 @@ async function submitRating() {
       }
       
       closeRatingModal()
+    } else {
+      notification.error(response.message || 'Không thể gửi đánh giá')
     }
   } catch (error) {
-    notification.error('Không thể gửi đánh giá, vui lòng thử lại')
+    console.error('Error submitting rating:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể gửi đánh giá, vui lòng thử lại'
+    notification.error(errorMessage)
   } finally {
     submittingRating.value = false
   }

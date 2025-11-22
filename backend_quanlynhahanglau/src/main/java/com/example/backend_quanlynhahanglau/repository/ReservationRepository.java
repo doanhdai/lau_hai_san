@@ -56,4 +56,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByCustomerPhoneOrEmailOrderByReservationTimeDesc(
             @Param("phone") String phone,
             @Param("email") String email);
+    
+    // Tính tổng số người đã đặt trong khoảng thời gian cho một tầng cụ thể
+    @Query("SELECT COALESCE(SUM(r.numberOfGuests), 0) FROM Reservation r " +
+           "WHERE r.table.floor = :floor " +
+           "AND r.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN') " +
+           "AND r.reservationTime >= :startTime AND r.reservationTime <= :endTime")
+    Integer sumGuestsByFloorAndTimeRange(
+            @Param("floor") com.example.backend_quanlynhahanglau.enums.DiningFloor floor,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }

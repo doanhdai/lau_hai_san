@@ -1,5 +1,6 @@
 package com.example.backend_quanlynhahanglau.dto.table;
 
+import com.example.backend_quanlynhahanglau.enums.DiningFloor;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.enums.TableType;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +23,8 @@ public class TableRequest {
 
     private TableStatus status;
     private TableType type; // Loại bàn: OFFLINE hoặc ONLINE
+    @NotNull(message = "Tầng không được để trống")
+    private DiningFloor floor;
     private String location;
     private String notes;
     private Integer positionX; // Vị trí X trên bản đồ (pixels)

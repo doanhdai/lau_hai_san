@@ -62,7 +62,7 @@ CREATE TABLE `dishes`(
 	`category_id` BIGINT NOT NULL,
 	`promotion_id` BIGINT NULL,
 	PRIMARY KEY (`id`),
-	CONSTRAINT `CHK_dishes_status` CHECK (`status`='UNAVAILABLE' OR `status`='AVAILABLE')
+	CONSTRAINT `CHK_dishes_status` CHECK (`status`='UNAVAILABLE' OR `status`='AVAILABLE' OR `status`='DISCONTINUED')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: order_details

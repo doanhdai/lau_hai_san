@@ -121,6 +121,7 @@
             <select v-model="form.status" class="input-field">
               <option value="AVAILABLE">Còn món</option>
               <option value="UNAVAILABLE">Hết món</option>
+              <option value="DISCONTINUED">Dừng kinh doanh</option>
             </select>
           </div>
 
@@ -192,7 +193,22 @@ const form = ref({
 
 watch(() => props.dish, (newVal) => {
   if (newVal) {
-    form.value = { ...newVal }
+    // Đảm bảo status là một trong các giá trị hợp lệ
+    let status = newVal.status || 'AVAILABLE'
+    if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE' && status !== 'DISCONTINUED') {
+      console.warn('Invalid status value:', status, 'Defaulting to AVAILABLE')
+      status = 'AVAILABLE'
+    }
+    
+    form.value = {
+      name: newVal.name || '',
+      description: newVal.description || '',
+      categoryId: newVal.categoryId || '',
+      price: newVal.price || 0,
+      status: status,
+      imageUrl: newVal.imageUrl || '',
+      isPromotion: newVal.isPromotion || false
+    }
     originalImageUrl.value = newVal.imageUrl || ''
     selectedFile.value = null
   } else {
@@ -247,21 +263,50 @@ function removeImage() {
 }
 
 function handleSubmit() {
+  // Validate required fields
+  if (!form.value.name || !form.value.name.trim()) {
+    notification.error('Vui lòng nhập tên món ăn')
+    return
+  }
+  
+  if (!form.value.categoryId) {
+    notification.error('Vui lòng chọn danh mục')
+    return
+  }
+  
+  if (!form.value.price || form.value.price <= 0) {
+    notification.error('Vui lòng nhập giá hợp lệ')
+    return
+  }
+  
   // If there's a new file selected, prepare FormData
   if (selectedFile.value) {
     const formData = new FormData()
-    formData.append('name', form.value.name)
-    formData.append('description', form.value.description || '')
+    formData.append('name', form.value.name.trim())
+    formData.append('description', (form.value.description || '').trim())
     formData.append('price', form.value.price.toString())
     formData.append('categoryId', form.value.categoryId.toString())
-    formData.append('status', form.value.status)
-    formData.append('isPromotion', form.value.isPromotion.toString())
+    formData.append('status', form.value.status || 'AVAILABLE')
+    formData.append('isPromotion', (form.value.isPromotion || false).toString())
+    if (form.value.imageUrl && !selectedFile.value) {
+      formData.append('imageUrl', form.value.imageUrl)
+    }
     formData.append('image', selectedFile.value)
     
     emit('save', { isFormData: true, data: formData })
   } else {
     // No new file, send JSON as usual
-    emit('save', { isFormData: false, data: form.value })
+    // Đảm bảo dữ liệu đúng format
+    const data = {
+      name: form.value.name.trim(),
+      description: (form.value.description || '').trim(),
+      price: Number(form.value.price),
+      categoryId: Number(form.value.categoryId),
+      status: form.value.status || 'AVAILABLE',
+      imageUrl: form.value.imageUrl || null,
+      isPromotion: form.value.isPromotion || false
+    }
+    emit('save', { isFormData: false, data })
   }
 }
 </script>

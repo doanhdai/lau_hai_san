@@ -1,5 +1,6 @@
 package com.example.backend_quanlynhahanglau.dto.table;
 
+import com.example.backend_quanlynhahanglau.enums.DiningFloor;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.enums.TableType;
 import lombok.*;
@@ -15,6 +16,7 @@ public class TableResponse {
     private Integer capacity;
     private TableStatus status;
     private TableType type; // Loại bàn: OFFLINE hoặc ONLINE
+    private DiningFloor floor;
     private String location;
     private Boolean active;
     private String notes;

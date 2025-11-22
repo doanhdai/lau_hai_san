@@ -15,6 +15,7 @@ import java.util.List;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByOrderId(Long orderId);
     
+    // Tính tổng amount từ payments - chỉ lấy payments có payment_status = COMPLETED
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE " +
            "p.createdAt >= :startDate AND p.createdAt <= :endDate " +
            "AND p.paymentStatus = :status")
@@ -23,25 +24,31 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("endDate") LocalDateTime endDate,
             @Param("status") PaymentStatus status);
     
-    // Tính tổng amount từ payments theo order_id và theo ngày
-    @Query("SELECT FUNCTION('DATE', p.createdAt) as date, SUM(p.amount) as total " +
-           "FROM Payment p WHERE " +
-           "p.createdAt >= :startDate AND p.createdAt <= :endDate " +
-           "AND p.paymentStatus = :status " +
-           "GROUP BY FUNCTION('DATE', p.createdAt)")
+    // Tính tổng amount từ payments theo ngày
+    // Chỉ lấy payments có payment_status = COMPLETED (không quan trọng order status)
+    // Sử dụng CAST() để tương thích với cả MySQL và SQL Server
+    // Sử dụng String parameter để tương thích với cả MySQL và SQL Server
+    @Query(value = "SELECT CAST(p.created_at AS DATE) as date, SUM(p.amount) as total " +
+           "FROM payments p WHERE " +
+           "p.created_at >= :startDate AND p.created_at <= :endDate " +
+           "AND p.payment_status = :status " +
+           "GROUP BY CAST(p.created_at AS DATE) " +
+           "ORDER BY CAST(p.created_at AS DATE)", nativeQuery = true)
     List<Object[]> calculateAmountByDateAndStatus(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
-            @Param("status") PaymentStatus status);
+            @Param("status") String status);
     
-    // Tính doanh thu theo ngày (chỉ lấy payments đã thanh toán thành công)
+    // Tính doanh thu theo ngày
+    // Chỉ lấy payments có payment_status = COMPLETED (không quan trọng order status)
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE " +
            "p.createdAt >= :startDate AND p.createdAt <= :endDate " +
            "AND p.paymentStatus = 'COMPLETED'")
     BigDecimal calculateRevenueByDate(@Param("startDate") LocalDateTime startDate, 
                                       @Param("endDate") LocalDateTime endDate);
     
-    // Tính doanh thu theo tháng (chỉ lấy payments đã thanh toán thành công)
+    // Tính doanh thu theo tháng
+    // Chỉ lấy payments có payment_status = COMPLETED (không quan trọng order status)
     @Query("SELECT FUNCTION('MONTH', p.createdAt), SUM(p.amount) FROM Payment p WHERE " +
            "FUNCTION('YEAR', p.createdAt) = :year " +
            "AND p.paymentStatus = 'COMPLETED' " +

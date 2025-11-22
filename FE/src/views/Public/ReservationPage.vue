@@ -245,21 +245,36 @@
             </form>
           </div>
 
-          <!-- Success Message -->
-          <div v-if="showSuccess" class="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-            <i class="fas fa-check-circle text-5xl mb-3 text-green-600"></i>
-            <h3 class="text-xl font-bold text-slate-900 mb-2">Đặt Bàn Thành Công!</h3>
-            <p class="text-slate-700 mb-3 text-sm">
-              Chúng tôi đã nhận được yêu cầu đặt bàn của bạn.<br/>
-              Mã đặt bàn: <strong class="text-slate-900">{{ reservationCode }}</strong>
-            </p>
-            <p class="text-slate-600 mb-4 text-sm">
-              Vui lòng kiểm tra email/SMS để xác nhận. Chúng tôi sẽ liên hệ trong vòng 15 phút.
-            </p>
-            <button @click="resetForm" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors">
-              Đặt Bàn Mới
-            </button>
-          </div>
+          <!-- Success Modal -->
+          <Teleport to="body">
+            <div
+              v-if="showSuccess"
+              class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+              @click.self="closeSuccessModal"
+            >
+              <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-auto" @click.stop>
+                <div class="p-6 text-center">
+                  <i class="fas fa-check-circle text-5xl mb-3 text-green-600"></i>
+                  <h3 class="text-xl font-bold text-slate-900 mb-2">Đặt Bàn Thành Công!</h3>
+                  <p class="text-slate-700 mb-3 text-sm">
+                    Chúng tôi đã nhận được yêu cầu đặt bàn của bạn.<br/>
+                    Mã đặt bàn: <strong class="text-slate-900">{{ reservationCode }}</strong>
+                  </p>
+                  <p class="text-slate-600 mb-4 text-sm">
+                    Vui lòng kiểm tra email/SMS để xác nhận. Chúng tôi sẽ liên hệ trong vòng 15 phút.
+                  </p>
+                  <div class="flex gap-3 justify-center">
+                    <button @click="closeSuccessModal" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors">
+                      Đóng
+                    </button>
+                    <button @click="resetForm" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors">
+                      Đặt Bàn Mới
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Teleport>
         </div>
       </div>
     </section>
@@ -608,7 +623,10 @@ async function submitReservation(e) {
     if (response.success) {
       notification.success('Đặt bàn thành công!')
       
-      // Reset form
+      // Lấy mã đặt bàn từ response
+      reservationCode.value = response.data?.id || response.data?.reservationCode || 'N/A'
+      
+      // Reset form nhưng giữ lại thông tin đã chọn để hiển thị
       form.value = {
         name: '',
         phone: '',
@@ -627,18 +645,16 @@ async function submitReservation(e) {
         date: '',
         time: ''
       }
-      showSuccess.value = false
       
-      // Navigate based on authentication status
-      setTimeout(() => {
-        if (authStore.isAuthenticated) {
-          // Nếu đã login, chuyển về trang lịch sử đặt bàn
-          router.push('/my-reservations')
-        } else {
-          // Nếu chưa login, chuyển về trang home
-          router.push('/home')
-        }
-      }, 1000)
+      // Reset availability check
+      isTableAvailable.value = false
+      availabilityChecked.value = false
+      
+      // Hiển thị thông báo thành công
+      showSuccess.value = true
+      
+      // Scroll to top để hiển thị thông báo thành công
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       notification.error(response.message || 'Có lỗi xảy ra, vui lòng thử lại!')
     }
@@ -654,6 +670,10 @@ async function submitReservation(e) {
   } finally {
     submitting.value = false
   }
+}
+
+function closeSuccessModal() {
+  showSuccess.value = false
 }
 
 function resetForm() {

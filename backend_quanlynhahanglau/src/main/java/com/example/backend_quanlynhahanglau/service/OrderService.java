@@ -2,6 +2,7 @@ package com.example.backend_quanlynhahanglau.service;
 
 import com.example.backend_quanlynhahanglau.dto.order.*;
 import com.example.backend_quanlynhahanglau.entity.*;
+import com.example.backend_quanlynhahanglau.enums.DishStatus;
 import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import com.example.backend_quanlynhahanglau.enums.ReservationStatus;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
@@ -198,6 +199,11 @@ public class OrderService {
             if (!dish.getActive()) {
                 throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
             }
+            
+            // Không cho phép thêm món đã dừng kinh doanh vào đơn hàng
+            if (dish.getStatus() == DishStatus.DISCONTINUED) {
+                throw new BadRequestException("Món ăn " + dish.getName() + " đã dừng kinh doanh. Không thể thêm vào đơn hàng");
+            }
 
             // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
             for (int i = 0; i < itemRequest.getQuantity(); i++) {
@@ -282,6 +288,11 @@ public class OrderService {
         if (!dish.getActive()) {
             throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
         }
+        
+        // Không cho phép thêm món đã dừng kinh doanh vào đơn hàng
+        if (dish.getStatus() == DishStatus.DISCONTINUED) {
+            throw new BadRequestException("Món ăn " + dish.getName() + " đã dừng kinh doanh. Không thể thêm vào đơn hàng");
+        }
 
         // Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
         // Mỗi record = 1 món (quantity = 1)
@@ -348,6 +359,11 @@ public class OrderService {
                 
                 if (!dish.getActive()) {
                     throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
+                }
+                
+                // Không cho phép thêm món đã dừng kinh doanh vào đơn hàng
+                if (dish.getStatus() == DishStatus.DISCONTINUED) {
+                    throw new BadRequestException("Món ăn " + dish.getName() + " đã dừng kinh doanh. Không thể thêm vào đơn hàng");
                 }
 
                 // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
@@ -527,6 +543,11 @@ public class OrderService {
             
             if (!dish.getActive()) {
                 throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
+            }
+            
+            // Không cho phép thêm món đã dừng kinh doanh vào đơn hàng
+            if (dish.getStatus() == DishStatus.DISCONTINUED) {
+                throw new BadRequestException("Món ăn " + dish.getName() + " đã dừng kinh doanh. Không thể thêm vào đơn hàng");
             }
 
             // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)

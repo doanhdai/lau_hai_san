@@ -10,55 +10,99 @@
 
     <!-- Filter Section -->
     <div class="card">
-      <div class="flex flex-wrap items-end gap-4">
-        <!-- Combobox -->
-        <div class="flex-1 min-w-[200px]">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Loại lọc</label>
-          <select v-model="filterType" @change="handleFilterChange"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
-            <option value="TODAY">Hôm nay</option>
-            <option value="THIS_MONTH">Tháng hiện tại</option>
-            <option value="THIS_YEAR">Năm nay</option>
-            <option value="CUSTOM">Tùy chọn</option>
-          </select>
+      <div class="space-y-4">
+        <!-- Quick Filter Buttons -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">Lọc nhanh</label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="option in quickFilterOptions"
+              :key="option.value"
+              @click="selectQuickFilter(option.value)"
+              :class="[
+                'px-4 py-2 rounded-lg font-medium text-sm transition-all',
+                filterType === option.value
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              <i :class="['mr-2', option.icon]"></i>
+              {{ option.label }}
+            </button>
+            <button
+              @click="selectQuickFilter('CUSTOM')"
+              :class="[
+                'px-4 py-2 rounded-lg font-medium text-sm transition-all',
+                filterType === 'CUSTOM'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              <i class="fas fa-calendar-alt mr-2"></i>
+              Tùy chọn
+            </button>
+          </div>
         </div>
 
-        <!-- Date pickers - chỉ hiện khi chọn "Tùy chọn" -->
-        <template v-if="filterType === 'CUSTOM'">
-          <div class="flex-1 min-w-[200px]">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
+        <!-- Date Range Picker - Hiển thị cho tất cả các option -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>
+              Từ ngày
+            </label>
             <div class="relative">
-              <input v-model="filters.startDate" type="date" :min="getMinDate()" :max="getMaxDate()"
-                @change="validateDateRange"
-                class="w-full px-4 py-2 pr-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
-              <!-- <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-              <div v-if="!filters.startDate" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                DD/MM/YYYY
-              </div> -->
+              <input
+                v-model="filters.startDate"
+                type="date"
+                :min="getMinDate()"
+                :max="getMaxDate()"
+                @change="handleDateChange"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm"
+                placeholder="Chọn ngày bắt đầu"
+              />
+              <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px]">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-calendar-check mr-2 text-green-600"></i>
+              Đến ngày
+            </label>
             <div class="relative">
-              <input v-model="filters.endDate" type="date" :min="getMinEndDate()" :max="getMaxEndDate()"
-                @change="validateDateRange"
-                class="w-full px-4 py-2 pr-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition" />
-              <!-- <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-              <div v-if="!filters.endDate" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                DD/MM/YYYY
-              </div> -->
+              <input
+                v-model="filters.endDate"
+                type="date"
+                :min="getMinEndDate()"
+                :max="getMaxEndDate()"
+                @change="handleDateChange"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm"
+                placeholder="Chọn ngày kết thúc"
+              />
+              <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
             </div>
           </div>
-        </template>
 
-        <!-- Button Tạo báo cáo -->
-        <div v-if="filterType === 'CUSTOM'" class="flex items-end">
-          <button @click="loadReports"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
-            <i class="fas fa-chart-bar"></i>
-            <span>Tạo báo cáo</span>
-          </button>
+          <div class="flex items-end">
+            <button
+              @click="loadReports"
+              :disabled="!canLoadReport"
+              class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors shadow-md"
+            >
+              <i class="fas fa-chart-bar"></i>
+              <span>Tạo báo cáo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Date Range Info -->
+        <div v-if="filters.startDate && filters.endDate" class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
+          <i class="fas fa-info-circle text-blue-600"></i>
+          <span>
+            Khoảng thời gian: <strong>{{ formatDateDisplay(filters.startDate) }}</strong> đến <strong>{{ formatDateDisplay(filters.endDate) }}</strong>
+            <span class="ml-2 text-blue-600">({{ getDateRangeDays() }} ngày)</span>
+          </span>
         </div>
       </div>
     </div>
@@ -146,23 +190,104 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"></th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Số đơn</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Doanh thu</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Đã giảm</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao tác</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="day in revenueReport.dailyRevenue" :key="day.date">
-                <td class="px-6 py-4 text-sm text-gray-900">{{ formatDateForTable(day.date) }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ day.orderCount }}</td>
-                <td class="px-6 py-4 text-sm font-medium text-primary-600 text-right">
-                  {{ formatCurrency(day.revenue) }}
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-purple-600 text-right">
-                  {{ formatCurrency(day.discount) }}
-                </td>
-              </tr>
+              <template v-for="day in revenueReport.dailyRevenue" :key="day.date">
+                <tr 
+                  @click="toggleDayOrders(day.date)"
+                  class="cursor-pointer hover:bg-blue-50 transition-colors"
+                >
+                  <td class="px-6 py-4 text-sm text-gray-900 font-medium">
+                    <div class="flex items-center gap-2">
+                      <i :class="['fas', expandedDays.has(day.date) ? 'fa-chevron-down' : 'fa-chevron-right', 'text-blue-600']"></i>
+                      {{ formatDateForTable(day.date) }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ day.orderCount }}</td>
+                  <td class="px-6 py-4 text-sm font-medium text-primary-600 text-right">
+                    {{ formatCurrency(day.revenue) }}
+                  </td>
+                  <td class="px-6 py-4 text-sm font-medium text-purple-600 text-right">
+                    {{ formatCurrency(day.discount) }}
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <button
+                      @click.stop="viewDayOrders(day.date)"
+                      class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center justify-center gap-1"
+                    >
+                      <i class="fas fa-eye"></i>
+                      <span>Xem đơn</span>
+                    </button>
+                  </td>
+                </tr>
+                <!-- Expanded Orders List -->
+                <tr v-if="expandedDays.has(day.date)">
+                  <td colspan="5" class="px-6 py-4 bg-gray-50">
+                    <div v-if="loadingOrders[day.date]" class="text-center py-4">
+                      <div class="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <p class="mt-2 text-sm text-gray-600">Đang tải đơn hàng...</p>
+                    </div>
+                    <div v-else-if="dayOrders[day.date] && dayOrders[day.date].length > 0" class="space-y-3">
+                      <h4 class="font-semibold text-gray-900 mb-3">
+                        Danh sách đơn hàng ngày {{ formatDateForTable(day.date) }} ({{ dayOrders[day.date].length }} đơn)
+                      </h4>
+                      <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
+                          <thead class="bg-gray-100">
+                            <tr>
+                              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Mã đơn</th>
+                              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Khách hàng</th>
+                              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Bàn</th>
+                              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Trạng thái</th>
+                              <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase">Tổng tiền</th>
+                              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Thời gian</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-200">
+                            <tr 
+                              v-for="order in dayOrders[day.date]" 
+                              :key="order.id"
+                              class="hover:bg-gray-50"
+                            >
+                              <td class="px-4 py-3 text-sm font-mono font-semibold text-blue-600">
+                                #{{ order.orderNumber || order.id }}
+                              </td>
+                              <td class="px-4 py-3 text-sm text-gray-900">
+                                {{ order.customerName || 'Khách vãng lai' }}
+                              </td>
+                              <td class="px-4 py-3 text-sm text-gray-700">
+                                <span v-if="order.tableNumber">Bàn {{ order.tableNumber }}</span>
+                                <span v-else-if="order.tableId">Đã phân bàn</span>
+                                <span v-else class="text-gray-400">-</span>
+                              </td>
+                              <td class="px-4 py-3 text-sm">
+                                <span :class="getStatusBadgeClass(order.status)" class="px-2 py-1 rounded-full text-xs font-medium">
+                                  {{ getStatusText(order.status) }}
+                                </span>
+                              </td>
+                              <td class="px-4 py-3 text-sm font-semibold text-green-600 text-right">
+                                {{ formatCurrency(order.total) }}
+                              </td>
+                              <td class="px-4 py-3 text-sm text-gray-600">
+                                {{ formatDateTime(order.createdAt) }}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div v-else class="text-center py-4 text-gray-500 text-sm">
+                      Không có đơn hàng nào trong ngày này
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -176,6 +301,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Line, Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { reportService } from '@/services/reportService'
+import { orderService } from '@/services/orderService'
 import { useNotificationStore } from '@/stores/notification'
 
 ChartJS.register(
@@ -210,92 +336,204 @@ const filters = reactive({
   endDate: ''
 })
 
+// Orders by day
+const expandedDays = ref(new Set())
+const dayOrders = ref({})
+const loadingOrders = ref({})
 
-function handleFilterChange() {
-  if (filterType.value !== 'CUSTOM') {
-    // Tự động load khi chọn các option khác
-    loadReports()
-  } else {
-    // Reset custom dates khi chọn "Tùy chọn"
-    console.log("acbcb")
-    filters.startDate = ''
-    filters.endDate = ''
+// Quick filter options
+const quickFilterOptions = [
+  { value: 'TODAY', label: 'Hôm nay', icon: 'fas fa-calendar-day' },
+  // { value: 'YESTERDAY', label: 'Hôm qua', icon: 'fas fa-calendar-minus' },
+  { value: 'LAST_7_DAYS', label: '7 ngày qua', icon: 'fas fa-calendar-week' },
+  { value: 'LAST_30_DAYS', label: '30 ngày qua', icon: 'fas fa-calendar-alt' },
+  { value: 'THIS_WEEK', label: 'Tuần này', icon: 'fas fa-calendar' },
+  { value: 'LAST_WEEK', label: 'Tuần trước', icon: 'fas fa-calendar' },
+  { value: 'THIS_MONTH', label: 'Tháng này', icon: 'fas fa-calendar' },
+  { value: 'LAST_MONTH', label: 'Tháng trước', icon: 'fas fa-calendar' },
+  { value: 'THIS_YEAR', label: 'Năm nay', icon: 'fas fa-calendar' }
+]
+
+// Computed để kiểm tra có thể load report không
+const canLoadReport = computed(() => {
+  if (filterType.value === 'CUSTOM') {
+    return filters.startDate && filters.endDate && validateDateRangeSilent()
+  }
+  return true
+})
+
+
+function selectQuickFilter(type) {
+  filterType.value = type
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  switch (type) {
+    case 'TODAY':
+      filters.startDate = today.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'YESTERDAY':
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      filters.startDate = yesterday.toISOString().split('T')[0]
+      filters.endDate = yesterday.toISOString().split('T')[0]
+      break
+    case 'LAST_7_DAYS':
+      const last7Days = new Date(today)
+      last7Days.setDate(last7Days.getDate() - 6)
+      filters.startDate = last7Days.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'LAST_30_DAYS':
+      const last30Days = new Date(today)
+      last30Days.setDate(last30Days.getDate() - 29)
+      filters.startDate = last30Days.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'THIS_WEEK':
+      const thisWeekStart = new Date(today)
+      thisWeekStart.setDate(today.getDate() - today.getDay())
+      filters.startDate = thisWeekStart.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'LAST_WEEK':
+      const lastWeekStart = new Date(today)
+      lastWeekStart.setDate(today.getDate() - today.getDay() - 7)
+      const lastWeekEnd = new Date(lastWeekStart)
+      lastWeekEnd.setDate(lastWeekStart.getDate() + 6)
+      filters.startDate = lastWeekStart.toISOString().split('T')[0]
+      filters.endDate = lastWeekEnd.toISOString().split('T')[0]
+      break
+    case 'THIS_MONTH':
+      const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+      filters.startDate = thisMonthStart.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'LAST_MONTH':
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+      filters.startDate = lastMonthStart.toISOString().split('T')[0]
+      filters.endDate = lastMonthEnd.toISOString().split('T')[0]
+      break
+    case 'THIS_YEAR':
+      const thisYearStart = new Date(today.getFullYear(), 0, 1)
+      filters.startDate = thisYearStart.toISOString().split('T')[0]
+      filters.endDate = today.toISOString().split('T')[0]
+      break
+    case 'CUSTOM':
+      // Không tự động set dates, để user tự chọn
+      if (!filters.startDate || !filters.endDate) {
+        filters.startDate = ''
+        filters.endDate = ''
+      }
+      return // Không tự động load
+  }
+
+  // Tự động load sau khi set dates (trừ CUSTOM)
+  if (type !== 'CUSTOM') {
+    setTimeout(() => {
+      loadReports()
+    }, 100)
+  }
+}
+
+function handleDateChange() {
+  if (filters.startDate && filters.endDate) {
+    validateDateRange()
+    // Nếu đã chọn đủ 2 ngày và hợp lệ, tự động load
+    if (validateDateRangeSilent()) {
+      filterType.value = 'CUSTOM'
+    }
   }
 }
 
 function getMinDate() {
-  // Không giới hạn min date
-  return null
-}
-
-function getMaxDate() {
-  // Max date là 31 ngày từ hôm nay
-  const maxDate = new Date()
-  maxDate.setDate(maxDate.getDate() + 31)
-  return maxDate.toISOString().split('T')[0]
-}
-
-function getMinEndDate() {
-  // Min end date là startDate + 1 ngày
-  if (!filters.startDate) return null
-  const minDate = new Date(filters.startDate)
-  minDate.setDate(minDate.getDate() + 1)
+  // Cho phép chọn từ 1 năm trước
+  const minDate = new Date()
+  minDate.setFullYear(minDate.getFullYear() - 1)
   return minDate.toISOString().split('T')[0]
 }
 
+function getMaxDate() {
+  // Cho phép chọn đến hôm nay
+  return new Date().toISOString().split('T')[0]
+}
+
+function getMinEndDate() {
+  // Min end date là startDate (cho phép chọn cùng ngày)
+  if (!filters.startDate) return getMinDate()
+  return filters.startDate
+}
+
 function getMaxEndDate() {
-  // Max end date là startDate + 31 ngày
-  if (!filters.startDate) return getMaxDate()
+  // Max end date là hôm nay hoặc startDate + 365 ngày (tùy cái nào nhỏ hơn)
+  const today = new Date().toISOString().split('T')[0]
+  if (!filters.startDate) return today
+  
   const maxDate = new Date(filters.startDate)
-  maxDate.setDate(maxDate.getDate() + 31)
-  return maxDate.toISOString().split('T')[0]
+  maxDate.setDate(maxDate.getDate() + 365)
+  const maxDateStr = maxDate.toISOString().split('T')[0]
+  
+  return maxDateStr < today ? maxDateStr : today
 }
 
 function validateDateRange() {
-  if (!filters.startDate || !filters.endDate) return
+  if (!filters.startDate || !filters.endDate) return false
 
   const start = new Date(filters.startDate)
   const end = new Date(filters.endDate)
+  
+  // Đảm bảo startDate <= endDate
+  if (start > end) {
+    notification.error('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc')
+    filters.endDate = filters.startDate
+    return false
+  }
+
   const diffTime = Math.abs(end - start)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 vì tính cả 2 ngày
 
-  if (diffDays < 1) {
-    notification.error('Khoảng ngày phải tối thiểu 1 ngày')
-    filters.endDate = new Date(start.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    return
-  }
+  // Không giới hạn số ngày, chỉ cần đảm bảo startDate <= endDate
+  return true
+}
 
-  if (diffDays > 31) {
-    notification.error('Khoảng ngày không được vượt quá 31 ngày')
-    const maxEndDate = new Date(start.getTime() + 31 * 24 * 60 * 60 * 1000)
-    filters.endDate = maxEndDate.toISOString().split('T')[0]
-    return
-  }
+function validateDateRangeSilent() {
+  if (!filters.startDate || !filters.endDate) return false
+  const start = new Date(filters.startDate)
+  const end = new Date(filters.endDate)
+  return start <= end
+}
+
+function getDateRangeDays() {
+  if (!filters.startDate || !filters.endDate) return 0
+  const start = new Date(filters.startDate)
+  const end = new Date(filters.endDate)
+  const diffTime = Math.abs(end - start)
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+}
+
+function formatDateDisplay(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
 }
 
 async function loadReports() {
-  // Nếu là CUSTOM và chưa chọn đủ ngày
-  if (filterType.value === 'CUSTOM' && (!filters.startDate || !filters.endDate)) {
+  // Validate: Phải có đủ startDate và endDate
+  if (!filters.startDate || !filters.endDate) {
     notification.error('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc')
     return
   }
 
   // Validate date range
-  if (filterType.value === 'CUSTOM' && filters.startDate && filters.endDate) {
-    const start = new Date(filters.startDate)
-    const end = new Date(filters.endDate)
-    const diffTime = Math.abs(end - start)
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays < 1) {
-      notification.error('Khoảng ngày phải tối thiểu 1 ngày')
-      return
-    }
-
-    if (diffDays > 31) {
-      notification.error('Khoảng ngày không được vượt quá 31 ngày')
-      return
-    }
+  if (!validateDateRangeSilent()) {
+    notification.error('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc')
+    return
   }
 
   loading.value = true
@@ -484,6 +722,110 @@ function formatDateForTable(dateString) {
   return formatDate(dateString)
 }
 
+function formatDateTime(dateTime) {
+  if (!dateTime) return ''
+  try {
+    const date = new Date(dateTime)
+    return date.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    return ''
+  }
+}
+
+function getStatusBadgeClass(status) {
+  const classes = {
+    PENDING: 'bg-amber-100 text-amber-800',
+    CONFIRMED: 'bg-green-100 text-green-800',
+    PREPARING: 'bg-blue-100 text-blue-800',
+    SERVED: 'bg-purple-100 text-purple-800',
+    COMPLETED: 'bg-gray-100 text-gray-800',
+    CANCELLED: 'bg-red-100 text-red-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+function getStatusText(status) {
+  const texts = {
+    PENDING: 'Chờ xác nhận',
+    CONFIRMED: 'Đã xác nhận',
+    PREPARING: 'Đang chuẩn bị',
+    SERVED: 'Đã phục vụ',
+    COMPLETED: 'Hoàn thành',
+    CANCELLED: 'Đã hủy'
+  }
+  return texts[status] || status
+}
+
+async function toggleDayOrders(date) {
+  if (expandedDays.value.has(date)) {
+    expandedDays.value.delete(date)
+  } else {
+    expandedDays.value.add(date)
+    await loadDayOrders(date)
+  }
+}
+
+async function viewDayOrders(date) {
+  if (!expandedDays.value.has(date)) {
+    expandedDays.value.add(date)
+  }
+  await loadDayOrders(date)
+}
+
+async function loadDayOrders(date) {
+  // Nếu đã load rồi thì không load lại
+  if (dayOrders.value[date]) {
+    return
+  }
+
+  loadingOrders.value[date] = true
+  try {
+    // Tạo startDate và endDate cho ngày đó (00:00:00 đến 23:59:59)
+    const dateObj = new Date(date)
+    const startDate = new Date(dateObj)
+    startDate.setHours(0, 0, 0, 0)
+    
+    const endDate = new Date(dateObj)
+    endDate.setHours(23, 59, 59, 999)
+
+    // Format theo ISO 8601 cho API
+    const startDateStr = startDate.toISOString()
+    const endDateStr = endDate.toISOString()
+
+    const response = await orderService.getByDate(startDateStr, endDateStr)
+    
+    let orders = []
+    if (response && response.success && response.data) {
+      orders = Array.isArray(response.data) ? response.data : []
+    } else if (Array.isArray(response)) {
+      orders = response
+    } else if (response && response.data && Array.isArray(response.data)) {
+      orders = response.data
+    }
+
+    // Sort by createdAt descending
+    orders.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0)
+      const dateB = new Date(b.createdAt || 0)
+      return dateB - dateA
+    })
+
+    dayOrders.value[date] = orders
+  } catch (error) {
+    console.error(`Error loading orders for date ${date}:`, error)
+    notification.error('Không thể tải danh sách đơn hàng')
+    dayOrders.value[date] = []
+  } finally {
+    loadingOrders.value[date] = false
+  }
+}
+
 // Chart options
 const chartOptions = computed(() => ({
   responsive: true,
@@ -616,7 +958,7 @@ const ordersChartData = computed(() => {
 })
 
 onMounted(() => {
-  // Tự động load báo cáo khi vào trang với filterType mặc định
-  loadReports()
+  // Tự động set và load báo cáo khi vào trang với filterType mặc định (TODAY)
+  selectQuickFilter('TODAY')
 })
 </script>

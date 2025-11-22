@@ -49,6 +49,10 @@ public class TableController {
     public ResponseEntity<ApiResponse<Boolean>> checkTableAvailability(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reservationTime,
             @RequestParam(required = false) Integer numberOfGuests) {
+        // Validate numberOfGuests
+        if (numberOfGuests == null || numberOfGuests <= 0) {
+            return ResponseEntity.ok(ApiResponse.success(false));
+        }
         Boolean isAvailable = tableService.checkTableAvailability(reservationTime, numberOfGuests);
         return ResponseEntity.ok(ApiResponse.success(isAvailable));
     }

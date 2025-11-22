@@ -101,14 +101,14 @@
                   <button @click="printOrder(order)" class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Xuất hóa đơn PDF">
                     <i class="fas fa-print text-sm"></i>
                   </button>
-                  <button 
+                  <!-- <button 
                     v-if="order.status !== 'COMPLETED' && order.status !== 'CANCELLED'"
                     @click="updateOrderStatus(order)"
                     class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                     title="Cập nhật trạng thái"
                   >
                     <i class="fas fa-check-circle text-sm"></i>
-                  </button>
+                  </button> -->
                   <button 
                     v-if="order.status === 'PENDING'"
                     @click="cancelOrder(order)"

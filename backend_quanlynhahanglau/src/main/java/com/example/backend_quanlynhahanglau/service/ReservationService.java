@@ -135,13 +135,28 @@ public class ReservationService {
                     return customerRepository.save(customerBuilder.build());
                 });
 
+        // Cập nhật email customer nếu có (không cập nhật tên vì tên sẽ lưu riêng trong reservation)
+        boolean customerUpdated = false;
+        if (request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()) {
+            String newEmail = request.getCustomerEmail().trim();
+            if (!newEmail.equals(customer.getEmail())) {
+                customer.setEmail(newEmail);
+                customerUpdated = true;
+            }
+        }
+
         // Nếu customer đã tồn tại nhưng chưa có user và có userId, cập nhật liên kết
         if (customer.getUser() == null && finalUserId != null) {
             User user = userRepository.findById(finalUserId)
                     .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", finalUserId));
             customer.setUser(user);
-            customer = customerRepository.save(customer);
+            customerUpdated = true;
             log.info("Linked existing customer {} with user {}", customer.getId(), finalUserId);
+        }
+        
+        // Lưu customer sau khi cập nhật (chỉ save nếu có thay đổi)
+        if (customerUpdated) {
+            customer = customerRepository.save(customer);
         }
 
         if (customer.getBlocked()) {
@@ -184,8 +199,14 @@ public class ReservationService {
         }
 
         // Tạo reservation (có thể không có table)
-        Reservation reservation = Reservation.builder()
+        // Lưu tên khách hàng từ form đặt bàn vào reservation (riêng cho đơn này)
+        String reservationCustomerName = request.getCustomerName() != null && !request.getCustomerName().isBlank() 
+                ? request.getCustomerName().trim() 
+                : null;
+        
+        Reservation savedReservation = Reservation.builder()
                 .customer(customer)
+                .customerName(reservationCustomerName) // Lưu tên từ form đặt bàn
                 .table(table)
                 .reservationTime(request.getReservationDateTime())
                 .numberOfGuests(request.getNumberOfGuests())
@@ -195,8 +216,16 @@ public class ReservationService {
                 .emailSent(false)
                 .build();
 
-        reservation = reservationRepository.save(reservation);
-        log.info("Public reservation created successfully with ID: {}", reservation.getId());
+        savedReservation = reservationRepository.save(savedReservation);
+        log.info("Public reservation created successfully with ID: {}", savedReservation.getId());
+        
+        // Refresh reservation để đảm bảo customer được load với dữ liệu mới nhất
+        final Long reservationId = savedReservation.getId();
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", reservationId));
+        
+        log.info("Reservation {} mapped with customer name: {}", reservation.getId(), 
+                reservation.getCustomer() != null ? reservation.getCustomer().getFullName() : "null");
         
         return mapToResponse(reservation);
     }
@@ -596,11 +625,18 @@ public class ReservationService {
     }
 
     private ReservationResponse mapToResponse(Reservation reservation) {
+        // Ưu tiên lấy tên từ reservation.customerName (tên từ form đặt bàn)
+        // Nếu không có thì lấy từ customer.fullName
+        String customerName = reservation.getCustomerName();
+        if (customerName == null || customerName.isBlank()) {
+            customerName = reservation.getCustomer() != null ? reservation.getCustomer().getFullName() : null;
+        }
+        
         return ReservationResponse.builder()
                 .id(reservation.getId())
-                .customerName(reservation.getCustomer().getFullName())
-                .customerPhone(reservation.getCustomer().getPhone())
-                .customerId(reservation.getCustomer().getId())
+                .customerName(customerName)
+                .customerPhone(reservation.getCustomer() != null ? reservation.getCustomer().getPhone() : null)
+                .customerId(reservation.getCustomer() != null ? reservation.getCustomer().getId() : null)
                 .tableNumber(reservation.getTable() != null ? reservation.getTable().getTableNumber() : null)
                 .tableId(reservation.getTable() != null ? reservation.getTable().getId() : null)
                 .reservationTime(reservation.getReservationTime())

@@ -4,6 +4,8 @@ import com.example.backend_quanlynhahanglau.dto.ApiResponse;
 import com.example.backend_quanlynhahanglau.dto.dish.DishRequest;
 import com.example.backend_quanlynhahanglau.dto.dish.DishResponse;
 import com.example.backend_quanlynhahanglau.enums.DishStatus;
+import com.example.backend_quanlynhahanglau.exception.BadRequestException;
+import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.service.DishService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -69,20 +71,53 @@ public class DishController {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam("price") java.math.BigDecimal price,
             @RequestParam("categoryId") Long categoryId,
-            @RequestParam(value = "status", required = false) DishStatus status,
+            @RequestParam(value = "status", required = false) String statusStr,
             @RequestParam(value = "imageUrl", required = false) String imageUrl,
-            @RequestParam(value = "isPromotion", required = false) Boolean isPromotion,
+            @RequestParam(value = "isPromotion", required = false) String isPromotionStr,
             @RequestParam(value = "promotionId", required = false) Long promotionId,
             @RequestParam(value = "image", required = false) MultipartFile imageFile) {
         try {
+            // Parse isPromotion từ string (FormData gửi boolean dưới dạng string)
+            Boolean isPromotion = null;
+            if (isPromotionStr != null && !isPromotionStr.isEmpty()) {
+                isPromotion = Boolean.parseBoolean(isPromotionStr);
+            }
+            
+            // Parse status từ string và validate
+            DishStatus status = null;
+            if (statusStr != null && !statusStr.trim().isEmpty()) {
+                try {
+                    status = DishStatus.valueOf(statusStr.toUpperCase().trim());
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Trạng thái không hợp lệ. Giá trị hợp lệ: AVAILABLE, UNAVAILABLE, DISCONTINUED"));
+                }
+            }
+            
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Tên món ăn không được để trống"));
+            }
+            
+            if (categoryId == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Danh mục không được để trống"));
+            }
+            
+            if (price == null || price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Giá phải là số dương"));
+            }
+            
             // Tạo DishRequest từ các tham số
             DishRequest request = DishRequest.builder()
-                    .name(name)
-                    .description(description)
+                    .name(name.trim())
+                    .description(description != null ? description.trim() : null)
                     .price(price)
                     .categoryId(categoryId)
                     .status(status)
-                    .imageUrl(imageUrl)
+                    .imageUrl(imageUrl != null && !imageUrl.isEmpty() ? imageUrl : null)
                     .isPromotion(isPromotion)
                     .promotionId(promotionId)
                     .build();
@@ -99,10 +134,17 @@ public class DishController {
             DishResponse dish = dishService.createDishWithImage(request, imageFile);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Tạo món ăn thành công", dish));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Lỗi khi upload ảnh: " + e.getMessage()));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Lỗi khi tạo món ăn: " + e.getMessage()));
         }
@@ -125,20 +167,53 @@ public class DishController {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam("price") java.math.BigDecimal price,
             @RequestParam("categoryId") Long categoryId,
-            @RequestParam(value = "status", required = false) DishStatus status,
+            @RequestParam(value = "status", required = false) String statusStr,
             @RequestParam(value = "imageUrl", required = false) String imageUrl,
-            @RequestParam(value = "isPromotion", required = false) Boolean isPromotion,
+            @RequestParam(value = "isPromotion", required = false) String isPromotionStr,
             @RequestParam(value = "promotionId", required = false) Long promotionId,
             @RequestParam(value = "image", required = false) MultipartFile imageFile) {
         try {
+            // Parse isPromotion từ string (FormData gửi boolean dưới dạng string)
+            Boolean isPromotion = null;
+            if (isPromotionStr != null && !isPromotionStr.isEmpty()) {
+                isPromotion = Boolean.parseBoolean(isPromotionStr);
+            }
+            
+            // Parse status từ string và validate
+            DishStatus status = null;
+            if (statusStr != null && !statusStr.trim().isEmpty()) {
+                try {
+                    status = DishStatus.valueOf(statusStr.toUpperCase().trim());
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Trạng thái không hợp lệ. Giá trị hợp lệ: AVAILABLE, UNAVAILABLE, DISCONTINUED"));
+                }
+            }
+            
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Tên món ăn không được để trống"));
+            }
+            
+            if (categoryId == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Danh mục không được để trống"));
+            }
+            
+            if (price == null || price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Giá phải là số dương"));
+            }
+            
             // Tạo DishRequest từ các tham số
             DishRequest request = DishRequest.builder()
-                    .name(name)
-                    .description(description)
+                    .name(name.trim())
+                    .description(description != null ? description.trim() : null)
                     .price(price)
                     .categoryId(categoryId)
                     .status(status)
-                    .imageUrl(imageUrl)
+                    .imageUrl(imageUrl != null && !imageUrl.isEmpty() ? imageUrl : null)
                     .isPromotion(isPromotion)
                     .promotionId(promotionId)
                     .build();
@@ -154,10 +229,17 @@ public class DishController {
 
             DishResponse dish = dishService.updateDishWithImage(id, request, imageFile);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật món ăn thành công", dish));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Lỗi khi upload ảnh: " + e.getMessage()));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Lỗi khi cập nhật món ăn: " + e.getMessage()));
         }

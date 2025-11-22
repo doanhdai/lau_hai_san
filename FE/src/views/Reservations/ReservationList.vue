@@ -433,18 +433,67 @@ const filteredReservations = computed(() => {
     }
   }
 
-  // Sort by reservationTime (newest first)
+  // Sort: ưu tiên ngày gần nhất lên trước, sau đó đến trạng thái, cuối cùng là giờ gần nhất
   try {
+    const now = new Date()
     return result.sort((a, b) => {
       const timeA = a.reservationTime || a.reservationDateTime
       const timeB = b.reservationTime || b.reservationDateTime
+      
+      // Bước 1: Sắp xếp theo ngày gần nhất (chỉ so sánh phần ngày, không tính giờ)
+      if (timeA && timeB) {
+        const dateA = new Date(timeA)
+        const dateB = new Date(timeB)
+        if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+          // Lấy chỉ phần ngày (bỏ qua giờ, phút, giây)
+          const dayA = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate())
+          const dayB = new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate())
+          
+          // Tính khoảng cách ngày từ ngày đặt bàn đến ngày hiện tại (giá trị tuyệt đối)
+          const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          const diffDayA = Math.abs(dayA.getTime() - nowDay.getTime())
+          const diffDayB = Math.abs(dayB.getTime() - nowDay.getTime())
+          
+          // Nếu khác ngày, sắp xếp theo ngày gần nhất lên trước
+          if (diffDayA !== diffDayB) {
+            return diffDayA - diffDayB
+          }
+        }
+      }
+      
+      // Bước 2: Nếu cùng ngày, sắp xếp theo trạng thái
+      // Ưu tiên theo trạng thái: CONFIRMED > PENDING > CANCELLED > COMPLETED
+      const statusPriority = {
+        'CONFIRMED': 1,
+        'PENDING': 2,
+        'CANCELLED': 3,
+        'COMPLETED': 4,
+        'CHECKED_IN': 1 // CHECKED_IN cũng ưu tiên như CONFIRMED
+      }
+      
+      const priorityA = statusPriority[a.status] || 5
+      const priorityB = statusPriority[b.status] || 5
+      
+      // Nếu khác trạng thái, sắp xếp theo priority
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+      
+      // Bước 3: Nếu cùng ngày và cùng trạng thái, sắp xếp theo giờ gần nhất
       if (!timeA && !timeB) return 0
       if (!timeA) return 1
       if (!timeB) return -1
+      
       const dateA = new Date(timeA)
       const dateB = new Date(timeB)
       if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0
-      return dateB - dateA
+      
+      // Tính khoảng cách thời gian (giờ, phút) từ thời gian đặt bàn đến hiện tại (giá trị tuyệt đối)
+      const diffTimeA = Math.abs(dateA.getTime() - now.getTime())
+      const diffTimeB = Math.abs(dateB.getTime() - now.getTime())
+      
+      // Sắp xếp theo thời gian gần nhất lên trước
+      return diffTimeA - diffTimeB
     })
   } catch (error) {
     console.error('Error sorting reservations:', error)
