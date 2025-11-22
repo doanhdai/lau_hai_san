@@ -358,22 +358,6 @@
                     />
                     <span>Check-in</span>
                   </label>
-                  <label
-                    :class="[
-                      'flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all flex items-center justify-center gap-2',
-                      tableStatus === 'CLEANING'
-                        ? 'bg-gray-500 text-white'
-                        : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                    ]"
-                  >
-                    <input
-                      type="radio"
-                      value="CLEANING"
-                      v-model="tableStatus"
-                      class="w-3 h-3 text-gray-600 focus:ring-1 focus:ring-gray-500"
-                    />
-                    <span>Đang dọn</span>
-                  </label>
                 </div>
                 <button
                   @click="handleUpdateStatus"
@@ -1015,7 +999,8 @@ async function handleOrderUpdated() {
 
 function openTableModal(table) {
   tableModalTable.value = { ...table }
-  tableStatus.value = table.status || 'AVAILABLE'
+  // Nếu bàn đang ở trạng thái CLEANING, tự động chuyển về AVAILABLE vì không còn option CLEANING
+  tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
   
   // Lưu reservationId: ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
   let reservationId = table.reservation?.id || null
