@@ -39,22 +39,34 @@ public class TableController {
 
     @GetMapping("/filter")
     public ResponseEntity<ApiResponse<List<TableResponse>>> getAvailableTablesByTime(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reservationTime,
+            @RequestParam String reservationTime,
             @RequestParam(required = false) Integer numberOfGuests) {
-        List<TableResponse> tables = tableService.getAvailableTablesByTime(reservationTime, numberOfGuests);
-        return ResponseEntity.ok(ApiResponse.success(tables));
+        try {
+            LocalDateTime dateTime = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(reservationTime);
+            List<TableResponse> tables = tableService.getAvailableTablesByTime(dateTime, numberOfGuests);
+            return ResponseEntity.ok(ApiResponse.success(tables));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
+        }
     }
 
     @GetMapping("/check-availability")
     public ResponseEntity<ApiResponse<Boolean>> checkTableAvailability(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reservationTime,
+            @RequestParam String reservationTime,
             @RequestParam(required = false) Integer numberOfGuests) {
-        // Validate numberOfGuests
-        if (numberOfGuests == null || numberOfGuests <= 0) {
-            return ResponseEntity.ok(ApiResponse.success(false));
+        try {
+            // Validate numberOfGuests
+            if (numberOfGuests == null || numberOfGuests <= 0) {
+                return ResponseEntity.ok(ApiResponse.success(false));
+            }
+            LocalDateTime dateTime = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(reservationTime);
+            Boolean isAvailable = tableService.checkTableAvailability(dateTime, numberOfGuests);
+            return ResponseEntity.ok(ApiResponse.success(isAvailable));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
         }
-        Boolean isAvailable = tableService.checkTableAvailability(reservationTime, numberOfGuests);
-        return ResponseEntity.ok(ApiResponse.success(isAvailable));
     }
 
     @GetMapping("/suitable")

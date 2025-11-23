@@ -228,11 +228,15 @@
       ↑
     </button>
   </div>
+  
+  <!-- Chat Widget for Customer -->
+  <CustomerChatWidget />
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import CustomerChatWidget from '@/components/CustomerChatWidget.vue'
 
 const router = useRouter()
 

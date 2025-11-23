@@ -104,19 +104,19 @@ public class TableService {
                     /* COMMENT: Tắt kiểm tra sức chứa tầng
                     // Kiểm tra sức chứa tầng: tính số người đã đặt trong tầng này
                     if (table.getFloor() != null) {
-                        Integer bookedGuests = floorBookedGuests.get(table.getFloor());
-                        if (bookedGuests == null) {
-                            bookedGuests = 0;
-                        }
-                        
-                        // Tính sức chứa còn lại của tầng
+                    Integer bookedGuests = floorBookedGuests.get(table.getFloor());
+                    if (bookedGuests == null) {
+                        bookedGuests = 0;
+                    }
+                    
+                    // Tính sức chứa còn lại của tầng
                         int floorCapacityLimit = table.getFloor().getCapacityLimit();
                         int remainingCapacity = floorCapacityLimit - bookedGuests;
-                        
-                        // Kiểm tra xem tầng này còn đủ chỗ cho số người đặt không
-                        if (numberOfGuests != null && remainingCapacity < numberOfGuests) {
-                            return false;
-                        }
+                    
+                    // Kiểm tra xem tầng này còn đủ chỗ cho số người đặt không
+                    if (numberOfGuests != null && remainingCapacity < numberOfGuests) {
+                        return false;
+                    }
                     }
                     */
                     

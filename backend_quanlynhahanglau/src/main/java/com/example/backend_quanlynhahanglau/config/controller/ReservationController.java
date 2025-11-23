@@ -40,10 +40,25 @@ public class ReservationController {
     @GetMapping("/by-date")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservationsByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        List<ReservationResponse> reservations = reservationService.getReservationsByDate(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(reservations));
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDateTime start = parseDateTime(startDate);
+            LocalDateTime end = parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            List<ReservationResponse> reservations = reservationService.getReservationsByDate(start, end);
+            return ResponseEntity.ok(ApiResponse.success(reservations));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
+        }
+    }
+    
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        return com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(dateTimeStr);
     }
 
     @GetMapping("/search")

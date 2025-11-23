@@ -66,4 +66,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("floor") com.example.backend_quanlynhahanglau.enums.DiningFloor floor,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
+    
+    // Tìm các đặt bàn sắp đến trong khoảng thời gian (dùng cho notification 30 phút trước)
+    @Query("SELECT r FROM Reservation r WHERE " +
+           "r.status IN ('PENDING', 'CONFIRMED') " +
+           "AND r.reservationTime >= :startTime AND r.reservationTime <= :endTime " +
+           "ORDER BY r.reservationTime ASC")
+    List<Reservation> findUpcomingReservations(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }

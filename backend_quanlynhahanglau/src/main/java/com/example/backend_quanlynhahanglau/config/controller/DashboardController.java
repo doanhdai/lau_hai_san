@@ -27,23 +27,34 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyRole('ROLE_STAFF','ADMIN', 'MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF')")
     public ResponseEntity<ApiResponse<DashboardStats>> getDashboardStats() {
         DashboardStats stats = dashboardService.getDashboardStats();
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 
     @GetMapping("/revenue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<ApiResponse<RevenueReport>> getRevenueReport(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        RevenueReport report = dashboardService.getRevenueReport(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(report));
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
+            LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            RevenueReport report = dashboardService.getRevenueReport(start, end);
+            return ResponseEntity.ok(ApiResponse.success(report));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
+        }
     }
 
     @GetMapping("/best-selling-dishes")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF')")
     public ResponseEntity<ApiResponse<List<BestSellingDish>>> getBestSellingDishes(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
         List<BestSellingDish> dishes = dashboardService.getBestSellingDishes(limit);
@@ -51,7 +62,7 @@ public class DashboardController {
     }
 
     @GetMapping("/monthly-revenue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<ApiResponse<Map<Integer, BigDecimal>>> getMonthlyRevenue(
             @RequestParam Integer year) {
         Map<Integer, BigDecimal> revenue = dashboardService.getMonthlyRevenue(year);
@@ -59,12 +70,18 @@ public class DashboardController {
     }
 
     @GetMapping("/export/revenue-excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<byte[]> exportRevenueToExcel(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
         try {
-            RevenueReport report = dashboardService.getRevenueReport(startDate, endDate);
+            LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
+            LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            RevenueReport report = dashboardService.getRevenueReport(start, end);
             byte[] excelData = dashboardService.exportRevenueToExcel(report);
             
             HttpHeaders headers = new HttpHeaders();
@@ -79,12 +96,18 @@ public class DashboardController {
     }
 
     @GetMapping("/export/revenue-pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<byte[]> exportRevenueToPdf(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
         try {
-            RevenueReport report = dashboardService.getRevenueReport(startDate, endDate);
+            LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
+            LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            RevenueReport report = dashboardService.getRevenueReport(start, end);
             byte[] pdfData = dashboardService.exportRevenueToPdf(report);
             
             HttpHeaders headers = new HttpHeaders();
@@ -99,7 +122,7 @@ public class DashboardController {
     }
 
     @GetMapping("/export/best-selling-excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<byte[]> exportBestSellingDishesToExcel(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
         try {
@@ -118,7 +141,7 @@ public class DashboardController {
     }
 
     @GetMapping("/export/best-selling-pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<byte[]> exportBestSellingDishesToPdf(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
         try {

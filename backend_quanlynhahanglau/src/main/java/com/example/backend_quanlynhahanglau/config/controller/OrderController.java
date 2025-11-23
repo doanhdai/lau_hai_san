@@ -41,10 +41,21 @@ public class OrderController {
     @GetMapping("/by-date")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        List<OrderResponse> orders = orderService.getOrdersByDate(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(orders));
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
+            LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            List<OrderResponse> orders = orderService.getOrdersByDate(start, end);
+            return ResponseEntity.ok(ApiResponse.success(orders));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
+        }
     }
 
     @PostMapping

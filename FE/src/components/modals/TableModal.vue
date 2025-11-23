@@ -17,9 +17,13 @@
               v-model="form.tableNumber"
               type="text"
               required
-              class="input-field"
+              :class="['input-field', tableNumberError ? 'border-red-500 focus:ring-red-500' : '']"
               placeholder="T-01"
+              @blur="checkDuplicateTableNumber"
             />
+            <p v-if="tableNumberError" class="text-red-500 text-xs mt-1">
+              {{ tableNumberError }}
+            </p>
           </div>
 
           <div>
@@ -88,12 +92,19 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useNotificationStore } from '@/stores/notification'
+
+const notification = useNotificationStore()
 
 const props = defineProps({
   table: {
     type: Object,
     default: null
+  },
+  tables: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -107,13 +118,71 @@ const form = ref({
   notes: ''
 })
 
+const tableNumberError = ref('')
+
 watch(() => props.table, (newVal) => {
   if (newVal) {
     form.value = { ...newVal }
+  } else {
+    // Reset form when creating new table
+    form.value = {
+      tableNumber: '',
+      capacity: 4,
+      status: 'AVAILABLE',
+      location: '',
+      notes: ''
+    }
   }
+  tableNumberError.value = ''
 }, { immediate: true })
 
+watch(() => form.value.tableNumber, () => {
+  // Clear error when user types
+  if (tableNumberError.value) {
+    tableNumberError.value = ''
+  }
+})
+
+function checkDuplicateTableNumber() {
+  if (!form.value.tableNumber || !form.value.tableNumber.trim()) {
+    tableNumberError.value = 'Vui lòng nhập số bàn'
+    return false
+  }
+
+  const tableNumber = form.value.tableNumber.trim()
+  
+  // Check if table number already exists (excluding current table if editing)
+  const existingTable = props.tables.find(t => {
+    // Exclude deleted tables and current table if editing
+    if (t.isDeleted) return false
+    if (props.table && props.table.id && t.id === props.table.id) return false
+    return t.tableNumber && t.tableNumber.trim().toLowerCase() === tableNumber.toLowerCase()
+  })
+
+  if (existingTable) {
+    tableNumberError.value = `Số bàn "${tableNumber}" đã tồn tại`
+    return false
+  }
+
+  tableNumberError.value = ''
+  return true
+}
+
 function handleSubmit() {
+  // Clear previous error
+  tableNumberError.value = ''
+
+  // Validate table number
+  if (!checkDuplicateTableNumber()) {
+    return
+  }
+
+  // Validate capacity
+  if (!form.value.capacity || form.value.capacity < 1) {
+    notification.error('Sức chứa phải lớn hơn 0')
+    return
+  }
+
   emit('save', form.value)
 }
 </script>

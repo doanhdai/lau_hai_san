@@ -35,10 +35,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                                       @Param("endDate") LocalDateTime endDate);
     
     // Thống kê doanh thu theo tháng (tính từ đơn đã xác nhận trở đi)
-    @Query("SELECT FUNCTION('MONTH', o.createdAt), SUM(o.total) FROM Order o WHERE " +
-           "FUNCTION('YEAR', o.createdAt) = :year " +
+    // Sử dụng native query với MONTH() và YEAR() tương thích với cả MySQL và SQL Server
+    @Query(value = "SELECT MONTH(o.created_at) as month, SUM(o.total) as revenue " +
+           "FROM orders o WHERE YEAR(o.created_at) = :year " +
            "AND o.status IN ('CONFIRMED', 'PREPARING', 'SERVED', 'COMPLETED') " +
-           "GROUP BY FUNCTION('MONTH', o.createdAt)")
+           "GROUP BY MONTH(o.created_at) " +
+           "ORDER BY MONTH(o.created_at)", nativeQuery = true)
     List<Object[]> calculateMonthlyRevenue(@Param("year") int year);
 }
 

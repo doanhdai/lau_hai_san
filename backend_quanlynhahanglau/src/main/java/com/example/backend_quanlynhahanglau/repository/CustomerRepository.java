@@ -3,6 +3,7 @@ package com.example.backend_quanlynhahanglau.repository;
 import com.example.backend_quanlynhahanglau.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -27,5 +28,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findTopCustomers();
     
     // Tìm Customer theo User ID (có thể có nhiều Customer cho 1 User)
-    List<Customer> findByUserId(Long userId);
+    @Query("SELECT c FROM Customer c WHERE c.user.id = :userId")
+    List<Customer> findByUserId(@Param("userId") Long userId);
 }

@@ -29,10 +29,21 @@ public class TableHistoryController {
     @GetMapping("/by-date")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<TableHistoryResponse>>> getHistoryByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        List<TableHistoryResponse> history = historyService.getHistoryByDateRange(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(history));
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
+            LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
+            // If only date provided, set end time to end of day
+            if (endDate.length() == 10) {
+                end = end.withHour(23).withMinute(59).withSecond(59);
+            }
+            List<TableHistoryResponse> history = historyService.getHistoryByDateRange(start, end);
+            return ResponseEntity.ok(ApiResponse.success(history));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format. Use yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss"));
+        }
     }
 
     @GetMapping("/table/{tableId}")

@@ -50,7 +50,7 @@
 
     <!-- Filters -->
     <div class="card">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
           <input
@@ -70,6 +70,22 @@
             <option value="2">2 sao</option>
             <option value="1">1 sao</option>
           </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
+          <input
+            v-model="filterDateFrom"
+            type="date"
+            class="input-field"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
+          <input
+            v-model="filterDateTo"
+            type="date"
+            class="input-field"
+          />
         </div>
         <div class="flex items-end">
           <button @click="loadFeedbacks" class="btn-secondary w-full flex items-center justify-center gap-2">
@@ -161,6 +177,8 @@ const loading = ref(false)
 const feedbacks = ref([])
 const searchQuery = ref('')
 const filterRating = ref('')
+const filterDateFrom = ref('')
+const filterDateTo = ref('')
 const deletingFeedbackId = ref(null)
 
 const averageRating = computed(() => {
@@ -185,6 +203,39 @@ const filteredFeedbacks = computed(() => {
 
   if (filterRating.value) {
     result = result.filter(f => f.rating === parseInt(filterRating.value))
+  }
+
+  // Lọc theo khoảng thời gian
+  if (filterDateFrom.value || filterDateTo.value) {
+    result = result.filter(f => {
+      const feedbackDate = f.createdAt || f.feedbackDate
+      if (!feedbackDate) return false
+      
+      try {
+        const date = new Date(feedbackDate)
+        if (isNaN(date.getTime())) return false
+        
+        // Chỉ lấy phần ngày (bỏ qua giờ)
+        const feedbackDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+        
+        if (filterDateFrom.value) {
+          const fromDate = new Date(filterDateFrom.value)
+          fromDate.setHours(0, 0, 0, 0)
+          if (feedbackDateOnly < fromDate) return false
+        }
+        
+        if (filterDateTo.value) {
+          const toDate = new Date(filterDateTo.value)
+          toDate.setHours(23, 59, 59, 999)
+          if (feedbackDateOnly > toDate) return false
+        }
+        
+        return true
+      } catch (error) {
+        console.error('Error filtering by date:', error)
+        return false
+      }
+    })
   }
 
   return result.sort((a, b) => {

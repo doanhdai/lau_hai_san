@@ -76,7 +76,7 @@ const router = createRouter({
           path: 'dashboard',
           name: 'Dashboard',
           component: () => import('@/views/DashboardView.vue'),
-          meta: { roles: ['ROLE_ADMIN'] }
+          meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
         },
         {
           path: 'users',
@@ -124,6 +124,12 @@ const router = createRouter({
           path: 'reservations',
           name: 'Reservations',
           component: () => import('@/views/Reservations/ReservationList.vue'),
+          meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
+        },
+        {
+          path: 'chat',
+          name: 'StaffChat',
+          component: () => import('@/views/Chat/StaffChatViewSimple.vue'),
           meta: { roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'] }
         },
         {

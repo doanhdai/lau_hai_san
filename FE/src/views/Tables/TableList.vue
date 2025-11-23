@@ -164,6 +164,7 @@
     <TableModal
       v-if="showCreateModal || selectedTable"
       :table="selectedTable"
+      :tables="tables"
       @close="closeModal"
       @save="handleSave"
     />
@@ -339,16 +340,30 @@ async function deleteTable() {
 async function handleSave(tableData) {
   try {
     if (selectedTable.value && selectedTable.value.id) {
-      await tableService.update(selectedTable.value.id, tableData)
-      notification.success('Cập nhật bàn thành công')
+      const response = await tableService.update(selectedTable.value.id, tableData)
+      if (response.success !== false) {
+        notification.success('Cập nhật bàn thành công')
+        closeModal()
+        loadTables()
+      } else {
+        notification.error(response.message || 'Không thể cập nhật bàn')
+      }
     } else {
-      await tableService.create(tableData)
-      notification.success('Thêm bàn thành công')
+      const response = await tableService.create(tableData)
+      if (response.success !== false) {
+        notification.success('Thêm bàn thành công')
+        closeModal()
+        loadTables()
+      } else {
+        notification.error(response.message || 'Không thể thêm bàn')
+      }
     }
-    closeModal()
-    loadTables()
   } catch (error) {
-    notification.error('Không thể lưu thông tin bàn')
+    console.error('Error saving table:', error)
+    const errorMessage = error.response?.data?.message || 
+                         error.message || 
+                         'Không thể lưu thông tin bàn'
+    notification.error(errorMessage)
   }
 }
 

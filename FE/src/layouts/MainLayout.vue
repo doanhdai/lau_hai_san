@@ -61,10 +61,86 @@
 
         <div class="flex items-center gap-4">
           <!-- Notifications -->
-          <button class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <i class="fas fa-bell text-slate-600"></i>
-            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <div class="relative">
+            <button
+              @click="toggleNotificationDropdown"
+              class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <i class="fas fa-bell text-slate-600"></i>
+              <span
+                v-if="reservationNotificationStore.unreadCount > 0"
+                class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold"
+              >
+                {{ reservationNotificationStore.unreadCount > 9 ? '9+' : reservationNotificationStore.unreadCount }}
+              </span>
+            </button>
+
+            <!-- Notification Dropdown -->
+            <div
+              v-if="showNotificationDropdown"
+              ref="notificationDropdown"
+              class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col"
+            >
+              <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-semibold text-slate-900">Thông báo đặt bàn</h3>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-if="reservationNotificationStore.unreadCount > 0"
+                    @click="markAllAsRead"
+                    class="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Đánh dấu đã đọc
+                  </button>
+                  <button @click="closeNotificationDropdown" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-sm"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="overflow-y-auto flex-1">
+                <div v-if="reservationNotificationStore.notifications.length === 0" class="p-8 text-center text-gray-500">
+                  <i class="fas fa-bell-slash text-3xl mb-2 opacity-50"></i>
+                  <p class="text-sm">Không có thông báo</p>
+                </div>
+
+                <div v-else class="divide-y divide-gray-100">
+                  <button
+                    v-for="notification in reservationNotificationStore.notifications"
+                    :key="notification.id"
+                    @click="handleNotificationClick(notification)"
+                    class="w-full p-4 text-left hover:bg-gray-50 transition-colors"
+                    :class="{ 'bg-blue-50': !notification.read }"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div
+                        class="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                        :class="{
+                          'bg-blue-500': notification.type === 'info',
+                          'bg-yellow-500': notification.type === 'warning',
+                          'bg-green-500': notification.type === 'success',
+                          'bg-red-500': notification.type === 'error'
+                        }"
+                      ></div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-900" :class="{ 'font-semibold': !notification.read }">
+                          {{ notification.message }}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                          {{ formatNotificationTime(notification.createdAt) }}
+                        </p>
+                      </div>
+                      <button
+                        @click.stop="removeNotification(notification.id)"
+                        class="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      >
+                        <i class="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -88,42 +164,59 @@
 
     <!-- Notifications -->
     <NotificationList />
+    
+    <!-- Chat Widget -->
+    <ChatWidget />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-// Temporarily comment out heroicons to fix loading issue
-// import {
-//   HomeIcon,
-//   UsersIcon,
-//   TableCellsIcon,
-//   BuildingStorefrontIcon,
-//   CakeIcon,
-//   TagIcon,
-//   ShoppingBagIcon,
-//   CalendarDaysIcon,
-//   GiftIcon,
-//   ChatBubbleLeftRightIcon,
-//   ChartBarIcon,
-//   Bars3Icon,
-//   BellIcon,
-//   ArrowRightOnRectangleIcon
-// } from '@heroicons/vue/24/outline'
+import { useReservationNotificationStore } from '@/stores/reservationNotification'
+
 import NotificationList from '@/components/NotificationList.vue'
+import ChatWidget from '@/components/ChatWidget.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const reservationNotificationStore = useReservationNotificationStore()
 const sidebarOpen = ref(false)
+const showNotificationDropdown = ref(false)
+const notificationDropdown = ref(null)
+
+// Helper function to get primary role (highest priority)
+function getPrimaryRole(roles) {
+  if (!roles || roles.length === 0) return null
+  
+  // Priority order: ADMIN > MANAGER > STAFF > CUSTOMER
+  const rolePriority = {
+    'ROLE_ADMIN': 1,
+    'ROLE_MANAGER': 2,
+    'ROLE_STAFF': 3,
+    'ROLE_CUSTOMER': 4
+  }
+  
+  // Filter out CUSTOMER role and find the highest priority role
+  const staffRoles = roles.filter(role => role !== 'ROLE_CUSTOMER')
+  if (staffRoles.length === 0) return roles[0] // Fallback to first role if only CUSTOMER
+  
+  // Sort by priority and return the highest (lowest number = highest priority)
+  return staffRoles.sort((a, b) => {
+    const priorityA = rolePriority[a] || 999
+    const priorityB = rolePriority[b] || 999
+    return priorityA - priorityB
+  })[0]
+}
 
 const menuItems = computed(() => {
   const userRoles = authStore.user?.roles || []
+  const primaryRole = getPrimaryRole(userRoles)
   
-  // Admin menu
-  if (userRoles.includes('ROLE_ADMIN')) {
+  // Admin menu - only if primary role is ADMIN
+  if (primaryRole === 'ROLE_ADMIN') {
     return [
       { path: '/admin/dashboard', label: 'Tổng quan', icon: 'fa-home' },
       { path: '/admin/users', label: 'Người dùng', icon: 'fa-users' },
@@ -140,8 +233,8 @@ const menuItems = computed(() => {
     ]
   }
   
-  // Manager menu
-  if (userRoles.includes('ROLE_MANAGER')) {
+  // Manager menu - only if primary role is MANAGER (and not ADMIN)
+  if (primaryRole === 'ROLE_MANAGER') {
     return [
       { path: '/manager/dashboard', label: 'Tổng quan', icon: 'fa-home' },
       { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
@@ -151,20 +244,22 @@ const menuItems = computed(() => {
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
       { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
+      { path: '/admin/chat', label: 'Chat', icon: 'fa-comments' },
       { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
       { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
       { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },
     ]
   }
   
-  // Staff menu
-  if (userRoles.includes('ROLE_STAFF')) {
+  // Staff menu - only if primary role is STAFF (and not ADMIN or MANAGER)
+  if (primaryRole === 'ROLE_STAFF') {
     return [
-      { path: '/staff/dashboard', label: 'Tổng quan', icon: 'fa-home' },
+      { path: '/admin/dashboard', label: 'Tổng quan', icon: 'fa-home' },
       { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
       { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
       { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
+      { path: '/admin/chat', label: 'Chat', icon: 'fa-comments' },
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
     ]
   }
@@ -206,8 +301,87 @@ function closeSidebar() {
 
 function handleLogout() {
   if (confirm('Bạn có chắc muốn đăng xuất?')) {
+    reservationNotificationStore.stopPolling()
+    reservationNotificationStore.clear()
     authStore.logout()
     router.push('/login')
+  }
+}
+
+function toggleNotificationDropdown() {
+  showNotificationDropdown.value = !showNotificationDropdown.value
+}
+
+function closeNotificationDropdown() {
+  showNotificationDropdown.value = false
+}
+
+function handleNotificationClick(notification) {
+  reservationNotificationStore.markAsRead(notification.id)
+  closeNotificationDropdown()
+  router.push('/admin/reservations')
+}
+
+function markAllAsRead() {
+  reservationNotificationStore.markAllAsRead()
+}
+
+function removeNotification(notificationId) {
+  reservationNotificationStore.remove(notificationId)
+}
+
+function formatNotificationTime(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) {
+    return 'Vừa xong'
+  } else if (diffMins < 60) {
+    return `${diffMins} phút trước`
+  } else if (diffMins < 1440) {
+    const hours = Math.floor(diffMins / 60)
+    return `${hours} giờ trước`
+  } else {
+    return date.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+}
+
+onMounted(() => {
+  // Only start notifications if user is staff/admin/manager
+  const userRoles = authStore.user?.roles || []
+  if (userRoles.some(role => ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_STAFF'].includes(role))) {
+    reservationNotificationStore.start()
+  }
+
+  // Handle click outside notification dropdown
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  reservationNotificationStore.stop()
+  document.removeEventListener('click', handleClickOutside)
+})
+
+function handleClickOutside(event) {
+  if (!showNotificationDropdown.value) return
+  
+  const target = event.target
+  const dropdown = notificationDropdown.value
+  
+  // Check if click is outside dropdown and not on the bell button
+  if (dropdown && !dropdown.contains(target)) {
+    const bellButton = target.closest('button')
+    if (!bellButton || !bellButton.querySelector('.fa-bell')) {
+      closeNotificationDropdown()
+    }
   }
 }
 </script>

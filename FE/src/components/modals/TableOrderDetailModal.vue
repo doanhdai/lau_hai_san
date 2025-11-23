@@ -91,7 +91,7 @@
                   :class="isItemServed(item) ? 'border-green-300 bg-green-50' : 'border-slate-200'"
                 >
                   <button
-                    v-if="selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED'"
+                    v-if="selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED' && !isItemServed(item)"
                     @click="removeOrderItem(item.id)"
                     class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
                     title="Hủy món"
@@ -688,13 +688,19 @@ async function removeOrderItem(itemId) {
   const item = selectedOrder.value.items.find(i => i.id === itemId)
   if (!item) return
   
+  // Kiểm tra món đã lên chưa - không cho phép xóa món đã lên
+  if (isItemServed(item)) {
+    notification.error('Không thể hủy món đã được xác nhận đã lên')
+    return
+  }
+  
   // Kiểm tra nếu đây là món duy nhất trong đơn hàng
   if (selectedOrder.value.items && selectedOrder.value.items.length === 1) {
     notification.error('Không thể hủy món duy nhất trong đơn hàng')
     return
   }
   
-  if (!confirm(`Bạn có chắc muốn hủy món "${item.dishName} khỏi đơn hàng"?`)) {
+  if (!confirm(`Bạn có chắc muốn hủy món "${item.dishName}" khỏi đơn hàng?`)) {
     return
   }
   

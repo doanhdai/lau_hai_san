@@ -49,10 +49,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     // Tính doanh thu theo tháng
     // Chỉ lấy payments có payment_status = COMPLETED (không quan trọng order status)
-    @Query("SELECT FUNCTION('MONTH', p.createdAt), SUM(p.amount) FROM Payment p WHERE " +
-           "FUNCTION('YEAR', p.createdAt) = :year " +
-           "AND p.paymentStatus = 'COMPLETED' " +
-           "GROUP BY FUNCTION('MONTH', p.createdAt)")
-    List<Object[]> calculateMonthlyRevenue(@Param("year") int year);
+    // Sử dụng native query với MONTH() và YEAR() tương thích với cả MySQL và SQL Server
+    @Query(value = "SELECT MONTH(p.created_at) as month, SUM(p.amount) as revenue " +
+           "FROM payments p WHERE YEAR(p.created_at) = :year " +
+           "AND p.payment_status = :status " +
+           "GROUP BY MONTH(p.created_at) " +
+           "ORDER BY MONTH(p.created_at)", nativeQuery = true)
+    List<Object[]> calculateMonthlyRevenue(
+            @Param("year") int year,
+            @Param("status") String status);
 }
 

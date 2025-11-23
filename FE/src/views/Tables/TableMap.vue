@@ -358,21 +358,138 @@
       </div>
     </div>
 
-    <!-- Table Detail Modal -->
+    <!-- Table Detail/Edit Modal -->
     <Teleport to="body">
       <div v-if="selectedTable" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
         @click.self="selectedTable = null">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-2xl font-bold text-slate-900">Bàn {{ selectedTable.tableNumber }}</h3>
-            <button @click="selectedTable = null" class="text-gray-400 hover:text-gray-600">
+            <h3 class="text-2xl font-bold text-slate-900">{{ isEditingTable ? 'Chỉnh sửa bàn' : `Bàn ${selectedTable.tableNumber}` }}</h3>
+            <button @click="cancelEditTable" class="text-gray-400 hover:text-gray-600">
               <i class="fas fa-times"></i>
             </button>
           </div>
 
-          <div class="space-y-4">
-            <!-- Status -->
+          <!-- Edit Form -->
+          <form v-if="isEditingTable" @submit.prevent="updateTable" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Số bàn <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="editTableForm.tableNumber"
+                type="text"
+                required
+                :class="['w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent', tableNumberError ? 'border-red-500' : 'border-gray-300']"
+                placeholder="T-01"
+                @blur="checkDuplicateTableNumber"
+              />
+              <p v-if="tableNumberError" class="text-red-500 text-xs mt-1">
+                {{ tableNumberError }}
+              </p>
+            </div>
 
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                  Sức chứa <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model.number="editTableForm.capacity"
+                  type="number"
+                  required
+                  min="1"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                  placeholder="4"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                  Trạng thái
+                </label>
+                <select v-model="editTableForm.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white">
+                  <option value="AVAILABLE">Trống</option>
+                  <option value="OCCUPIED">Đang phục vụ</option>
+                  <option value="RESERVED">Đã đặt</option>
+                  <option value="MAINTENANCE">Bảo trì</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Tầng <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="editTableForm.floor"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
+              >
+                <option v-for="floor in floorOptions" :key="floor.value" :value="floor.value">
+                  {{ floor.label }}
+                </option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">
+                Còn {{ getFloorRemaining(editTableForm.floor) }} / {{ FLOOR_CAPACITY_LIMIT }} chỗ tại tầng này
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Vị trí
+              </label>
+              <input
+                v-model="editTableForm.location"
+                type="text"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                placeholder="Tầng 1 - Khu A"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Ghi chú
+              </label>
+              <textarea
+                v-model="editTableForm.notes"
+                rows="2"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                placeholder="Ghi chú về bàn..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  v-model="editTableForm.allowOnlineReservation"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="text-sm text-slate-700">Cho phép đặt bàn online</span>
+              </label>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                @click="cancelEditTable"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                :disabled="updatingSelectedTable || !!tableNumberError"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="!updatingSelectedTable">Cập nhật</span>
+                <span v-else>Đang cập nhật...</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- View Mode -->
+          <div v-else class="space-y-4">
             <!-- Info -->
             <div class="grid grid-cols-2 gap-4">
               <div class="bg-gray-50 rounded-lg p-3">
@@ -420,12 +537,21 @@
               </p>
             </div>
 
-            <!-- Delete Button -->
-            <div class="pt-4 border-t border-gray-200">
-              <button @click="confirmDeleteTable(selectedTable)"
-                class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+            <!-- Action Buttons -->
+            <div class="pt-4 border-t border-gray-200 flex gap-3">
+              <button
+                @click="startEditTable"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-edit"></i>
+                <span>Sửa</span>
+              </button>
+              <button
+                @click="confirmDeleteTable(selectedTable)"
+                class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
                 <i class="fas fa-trash"></i>
-                <span>Xóa bàn</span>
+                <span>Xóa</span>
               </button>
             </div>
           </div>
@@ -450,9 +576,17 @@
               <label class="block text-sm font-medium text-slate-700 mb-2">
                 Số bàn <span class="text-red-500">*</span>
               </label>
-              <input v-model="newTable.tableNumber" type="text" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                placeholder="T01" />
+              <input
+                v-model="newTable.tableNumber"
+                type="text"
+                required
+                :class="['w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent', newTableNumberError ? 'border-red-500' : 'border-gray-300']"
+                placeholder="T01"
+                @blur="checkDuplicateTableNumberForNew"
+              />
+              <p v-if="newTableNumberError" class="text-red-500 text-xs mt-1">
+                {{ newTableNumberError }}
+              </p>
             </div>
 
             <div>
@@ -510,7 +644,7 @@
                 class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors">
                 Hủy
               </button>
-              <button type="submit" :disabled="isCreateDisabled"
+              <button type="submit" :disabled="isCreateDisabled || !!newTableNumberError"
                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span v-if="!creating">Thêm Bàn</span>
                 <span v-else>Đang thêm...</span>
@@ -585,6 +719,18 @@ const mapContainer = ref(null)
 const tableToDelete = ref(null)
 const showDeleteModal = ref(false)
 const updatingSelectedTable = ref(false)
+const isEditingTable = ref(false)
+const editTableForm = ref({
+  tableNumber: '',
+  capacity: 4,
+  status: 'AVAILABLE',
+  floor: 'FLOOR_1',
+  location: '',
+  notes: '',
+  allowOnlineReservation: false
+})
+const tableNumberError = ref('')
+const newTableNumberError = ref('')
 
 // Filters
 const filterArea = ref('')
@@ -659,6 +805,18 @@ watch(() => newTable.value.allowOnlineReservation, (isOnline) => {
   }
 })
 
+watch(() => newTable.value.tableNumber, () => {
+  if (newTableNumberError.value) {
+    newTableNumberError.value = ''
+  }
+})
+
+watch(() => editTableForm.value.tableNumber, () => {
+  if (tableNumberError.value) {
+    tableNumberError.value = ''
+  }
+})
+
 // Computed
 const floorCapacityUsage = computed(() => {
   const usage = {}
@@ -693,6 +851,7 @@ const openCreateModal = () => {
     ...getDefaultNewTable(),
     floor: selectedFloor.value
   }
+  newTableNumberError.value = ''
   showCreateModal.value = true
 }
 
@@ -1042,13 +1201,156 @@ const selectTable = (table) => {
     floor: getTableFloor(table),
     allowOnlineReservation: table.type === 'ONLINE'
   }
+  isEditingTable.value = false
+  tableNumberError.value = ''
 }
+
+watch(() => selectedTable.value, (newVal) => {
+  if (!newVal) {
+    isEditingTable.value = false
+    tableNumberError.value = ''
+  }
+})
 
 const editTable = (table) => {
   selectedTable.value = { 
     ...table,
     floor: getTableFloor(table),
     allowOnlineReservation: table.type === 'ONLINE'
+  }
+  startEditTable()
+}
+
+const startEditTable = () => {
+  if (!selectedTable.value) return
+  isEditingTable.value = true
+  tableNumberError.value = ''
+  editTableForm.value = {
+    tableNumber: selectedTable.value.tableNumber || '',
+    capacity: selectedTable.value.capacity || 4,
+    status: selectedTable.value.status || 'AVAILABLE',
+    floor: getTableFloor(selectedTable.value),
+    location: selectedTable.value.location || '',
+    notes: selectedTable.value.notes || '',
+    allowOnlineReservation: selectedTable.value.type === 'ONLINE'
+  }
+}
+
+const cancelEditTable = () => {
+  isEditingTable.value = false
+  tableNumberError.value = ''
+  if (!selectedTable.value) return
+  // Reset form to original values
+  editTableForm.value = {
+    tableNumber: selectedTable.value.tableNumber || '',
+    capacity: selectedTable.value.capacity || 4,
+    status: selectedTable.value.status || 'AVAILABLE',
+    floor: getTableFloor(selectedTable.value),
+    location: selectedTable.value.location || '',
+    notes: selectedTable.value.notes || '',
+    allowOnlineReservation: selectedTable.value.type === 'ONLINE'
+  }
+}
+
+const checkDuplicateTableNumber = () => {
+  if (!editTableForm.value.tableNumber || !editTableForm.value.tableNumber.trim()) {
+    tableNumberError.value = 'Vui lòng nhập số bàn'
+    return false
+  }
+
+  const tableNumber = editTableForm.value.tableNumber.trim()
+  
+  // Check if table number already exists (excluding current table)
+  const existingTable = tables.value.find(t => {
+    if (t.isDeleted) return false
+    if (selectedTable.value && selectedTable.value.id && t.id === selectedTable.value.id) return false
+    return t.tableNumber && t.tableNumber.trim().toLowerCase() === tableNumber.toLowerCase()
+  })
+
+  if (existingTable) {
+    tableNumberError.value = `Số bàn "${tableNumber}" đã tồn tại`
+    return false
+  }
+
+  tableNumberError.value = ''
+  return true
+}
+
+const checkDuplicateTableNumberForNew = () => {
+  if (!newTable.value.tableNumber || !newTable.value.tableNumber.trim()) {
+    newTableNumberError.value = 'Vui lòng nhập số bàn'
+    return false
+  }
+
+  const tableNumber = newTable.value.tableNumber.trim()
+  
+  // Check if table number already exists
+  const existingTable = tables.value.find(t => {
+    if (t.isDeleted) return false
+    return t.tableNumber && t.tableNumber.trim().toLowerCase() === tableNumber.toLowerCase()
+  })
+
+  if (existingTable) {
+    newTableNumberError.value = `Số bàn "${tableNumber}" đã tồn tại`
+    return false
+  }
+
+  newTableNumberError.value = ''
+  return true
+}
+
+const updateTable = async () => {
+  if (!selectedTable.value) return
+
+  // Validate table number
+  if (!checkDuplicateTableNumber()) {
+    return
+  }
+
+  // Validate capacity
+  if (!editTableForm.value.capacity || editTableForm.value.capacity < 1) {
+    notificationStore.error('Sức chứa phải lớn hơn 0')
+    return
+  }
+
+  updatingSelectedTable.value = true
+  try {
+    const payload = {
+      tableNumber: editTableForm.value.tableNumber.trim(),
+      capacity: editTableForm.value.capacity,
+      status: editTableForm.value.status,
+      type: editTableForm.value.allowOnlineReservation ? 'ONLINE' : 'OFFLINE',
+      floor: editTableForm.value.floor,
+      location: editTableForm.value.location || null,
+      notes: editTableForm.value.notes || null,
+      positionX: selectedTable.value.positionX ?? null,
+      positionY: selectedTable.value.positionY ?? null
+    }
+
+    const response = await tableService.update(selectedTable.value.id, payload)
+    if (response.success !== false && response.data) {
+      const normalized = applyTableUpdate(response.data) || payload
+      selectedTable.value = {
+        ...normalized,
+        allowOnlineReservation: normalized.type === 'ONLINE'
+      }
+      const updatedFloor = getTableFloor(normalized)
+      if (updatedFloor !== selectedFloor.value) {
+        selectedFloor.value = updatedFloor
+      }
+      isEditingTable.value = false
+      tableNumberError.value = ''
+      notificationStore.success('Cập nhật bàn thành công')
+      loadTables()
+    } else {
+      throw new Error(response.message || 'Cập nhật bàn thất bại')
+    }
+  } catch (error) {
+    console.error('Error updating table:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Cập nhật bàn thất bại'
+    notificationStore.error(errorMessage)
+  } finally {
+    updatingSelectedTable.value = false
   }
 }
 
@@ -1074,6 +1376,17 @@ const toggleOnlineType = async (event) => {
 }
 
 const createTable = async () => {
+  // Validate table number
+  if (!checkDuplicateTableNumberForNew()) {
+    return
+  }
+
+  // Validate capacity
+  if (!newTable.value.capacity || newTable.value.capacity < 1) {
+    notificationStore.error('Sức chứa phải lớn hơn 0')
+    return
+  }
+
   creating.value = true
   try {
     const tableData = buildTablePayload(newTable.value)
@@ -1083,12 +1396,15 @@ const createTable = async () => {
       notificationStore.success('Thêm bàn thành công')
       showCreateModal.value = false
       newTable.value = getDefaultNewTable()
+      newTableNumberError.value = ''
       loadTables()
     } else {
       notificationStore.error(response.message || 'Thêm bàn thất bại')
     }
   } catch (error) {
-    notificationStore.error(error.response?.data?.message || 'Thêm bàn thất bại')
+    console.error('Error creating table:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Thêm bàn thất bại'
+    notificationStore.error(errorMessage)
   } finally {
     creating.value = false
   }

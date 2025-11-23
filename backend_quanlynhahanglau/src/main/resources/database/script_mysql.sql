@@ -233,6 +233,43 @@ CREATE TABLE `payments`(
 	CONSTRAINT `CHK_payments_payment_status` CHECK (`payment_status`='PENDING' OR `payment_status`='COMPLETED' OR `payment_status`='FAILED' OR `payment_status`='REFUNDED')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table: conversations
+CREATE TABLE `conversations`(
+	`id` BIGINT AUTO_INCREMENT NOT NULL,
+	`user_id` BIGINT NOT NULL,
+	`user_name` VARCHAR(100) NOT NULL,
+	`customer_id` BIGINT NULL,
+	`customer_name` VARCHAR(100) NULL,
+	`is_active` TINYINT(1) DEFAULT 1,
+	`last_message_at` DATETIME(6) NULL,
+	`unread_count` BIGINT DEFAULT 0,
+	`created_at` DATETIME(6) NOT NULL,
+	`updated_at` DATETIME(6) NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_user_conversation` (`user_id`),
+	INDEX `idx_user_id` (`user_id`),
+	INDEX `idx_last_message_at` (`last_message_at`),
+	INDEX `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: chat_messages
+CREATE TABLE `chat_messages`(
+	`id` BIGINT AUTO_INCREMENT NOT NULL,
+	`conversation_id` BIGINT NOT NULL,
+	`sender_type` VARCHAR(20) NOT NULL,
+	`sender_id` BIGINT NOT NULL,
+	`sender_name` VARCHAR(100) NULL,
+	`content` VARCHAR(2000) NOT NULL,
+	`is_read` TINYINT(1) DEFAULT 0,
+	`read_at` DATETIME(6) NULL,
+	`created_at` DATETIME(6) NOT NULL,
+	`sender_user_id` BIGINT NULL,
+	PRIMARY KEY (`id`),
+	INDEX `idx_conversation_id` (`conversation_id`),
+	INDEX `idx_sender` (`sender_type`, `sender_id`),
+	INDEX `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- Insert data: customers
 INSERT INTO `customers` (`id`, `active`, `address`, `blocked`, `created_at`, `customer_code`, `email`, `full_name`, `is_vip`, `notes`, `phone`, `updated_at`) VALUES 
@@ -385,6 +422,12 @@ ALTER TABLE `orders` ADD CONSTRAINT `FKtjwuphstqm46uffgc7l1r27a9` FOREIGN KEY(`c
 
 ALTER TABLE `payments` ADD CONSTRAINT `FK_payments_order` FOREIGN KEY(`order_id`) REFERENCES `orders`(`id`);
 
+ALTER TABLE `conversations` ADD CONSTRAINT `FK_conversation_user` FOREIGN KEY(`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;
+ALTER TABLE `conversations` ADD CONSTRAINT `FK_conversation_customer` FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL;
+
+ALTER TABLE `chat_messages` ADD CONSTRAINT `FK_chat_message_conversation` FOREIGN KEY(`conversation_id`) REFERENCES `conversations`(`id`) ON DELETE CASCADE;
+ALTER TABLE `chat_messages` ADD CONSTRAINT `FK_chat_sender_user` FOREIGN KEY(`sender_user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL;
+
 ALTER TABLE `reservations` ADD CONSTRAINT `FK7m03pg0gvesrflloshk7h40d2` FOREIGN KEY(`confirmed_by`) REFERENCES `users`(`id`);
 ALTER TABLE `reservations` ADD CONSTRAINT `FK8eccffekcj27jkdiyw2e9r8ks` FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`);
 ALTER TABLE `reservations` ADD CONSTRAINT `FKljt6q1tp205b0h26eiegc5mx6` FOREIGN KEY(`room_id`) REFERENCES `rooms`(`id`);
@@ -471,3 +514,43 @@ WHERE od.created_at IS NULL;
 -- Đặt NOT NULL sau khi đã cập nhật dữ liệu
 ALTER TABLE order_details 
 MODIFY COLUMN created_at DATETIME(6) NOT NULL;
+
+-- Xóa các cột cũ từ chat_messages (nếu có) - từ cấu trúc cũ
+-- Kiểm tra và xóa receiver_type nếu tồn tại
+SET @dbname = DATABASE();
+SET @tablename = 'chat_messages';
+SET @columnname = 'receiver_type';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (TABLE_SCHEMA = @dbname)
+      AND (TABLE_NAME = @tablename)
+      AND (COLUMN_NAME = @columnname)
+  ) > 0,
+  CONCAT('ALTER TABLE ', @tablename, ' DROP COLUMN ', @columnname),
+  'SELECT 1'
+));
+PREPARE alterIfExists FROM @preparedStatement;
+EXECUTE alterIfExists;
+DEALLOCATE PREPARE alterIfExists;
+
+-- Kiểm tra và xóa receiver_id nếu tồn tại
+SET @columnname = 'receiver_id';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (TABLE_SCHEMA = @dbname)
+      AND (TABLE_NAME = @tablename)
+      AND (COLUMN_NAME = @columnname)
+  ) > 0,
+  CONCAT('ALTER TABLE ', @tablename, ' DROP COLUMN ', @columnname),
+  'SELECT 1'
+));
+PREPARE alterIfExists FROM @preparedStatement;
+EXECUTE alterIfExists;
+DEALLOCATE PREPARE alterIfExists;
+
+-- Xóa index cũ nếu tồn tại
+DROP INDEX IF EXISTS `idx_receiver` ON `chat_messages`;

@@ -1,3 +1,8 @@
+// Polyfill for global (needed for sockjs-client)
+if (typeof global === 'undefined') {
+  var global = globalThis
+}
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'

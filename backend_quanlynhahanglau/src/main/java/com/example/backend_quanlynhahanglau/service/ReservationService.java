@@ -32,6 +32,7 @@ public class ReservationService {
     private final RestaurantTableRepository tableRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final WebSocketNotificationService webSocketNotificationService;
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getAllReservations() {
@@ -227,7 +228,12 @@ public class ReservationService {
         log.info("Reservation {} mapped with customer name: {}", reservation.getId(), 
                 reservation.getCustomer() != null ? reservation.getCustomer().getFullName() : "null");
         
-        return mapToResponse(reservation);
+        ReservationResponse response = mapToResponse(reservation);
+        
+        // Send WebSocket notification for new reservation
+        webSocketNotificationService.notifyNewReservation(response);
+        
+        return response;
     }
 
     @Transactional
@@ -326,7 +332,13 @@ public class ReservationService {
 
         reservation = reservationRepository.save(reservation);
         log.info("Reservation created successfully with ID: {}", reservation.getId());
-        return mapToResponse(reservation);
+        
+        ReservationResponse response = mapToResponse(reservation);
+        
+        // Send WebSocket notification for new reservation
+        webSocketNotificationService.notifyNewReservation(response);
+        
+        return response;
     }
 
     @Transactional

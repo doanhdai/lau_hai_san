@@ -222,7 +222,8 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public Map<Integer, BigDecimal> getMonthlyRevenue(Integer year) {
-        List<Object[]> monthlyData = paymentRepository.calculateMonthlyRevenue(year);
+        List<Object[]> monthlyData = paymentRepository.calculateMonthlyRevenue(
+                year, com.example.backend_quanlynhahanglau.enums.PaymentStatus.COMPLETED.name());
         Map<Integer, BigDecimal> result = new HashMap<>();
         
         // Initialize all months with 0
@@ -232,7 +233,7 @@ public class DashboardService {
         
         // Fill in actual data
         for (Object[] data : monthlyData) {
-            Integer month = (Integer) data[0];
+            Integer month = ((Number) data[0]).intValue(); // Handle both Integer and Number
             BigDecimal revenue = (BigDecimal) data[1];
             result.put(month, revenue != null ? revenue : BigDecimal.ZERO);
         }
