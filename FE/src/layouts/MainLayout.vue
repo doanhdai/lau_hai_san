@@ -145,7 +145,10 @@
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-y-auto p-6">
+      <main 
+        class="flex-1"
+        :class="route.path === '/admin/chat' ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'"
+      >
         <transition
           name="fade"
           mode="out-in"
@@ -165,8 +168,8 @@
     <!-- Notifications -->
     <NotificationList />
     
-    <!-- Chat Widget -->
-    <ChatWidget />
+    <!-- Chat Widget - Removed because chat is available in sidebar -->
+    <!-- <ChatWidget /> -->
   </div>
 </template>
 
@@ -177,7 +180,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useReservationNotificationStore } from '@/stores/reservationNotification'
 
 import NotificationList from '@/components/NotificationList.vue'
-import ChatWidget from '@/components/ChatWidget.vue'
+// ChatWidget removed - chat is available in sidebar navigation
+// import ChatWidget from '@/components/ChatWidget.vue'
 
 const route = useRoute()
 const router = useRouter()

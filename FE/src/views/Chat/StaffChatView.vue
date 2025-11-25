@@ -1,89 +1,121 @@
 <template>
-  <div class="h-screen flex bg-[#18191a] text-white">
+  <div class="h-screen flex bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white">
     <!-- Left Panel - Chat List -->
-    <div class="w-80 border-r border-gray-800 flex flex-col bg-[#242526]">
+    <div class="w-96 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-800 shadow-lg">
       <!-- Header -->
-      <div class="p-4 border-b border-gray-800">
-        <h2 class="text-xl font-semibold mb-3 text-white">Đoạn chat</h2>
+      <div class="p-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700">
+        <h2 class="text-2xl font-bold mb-4 text-white flex items-center gap-2">
+          <i class="fas fa-comments"></i>
+          <span>Tin nhắn khách hàng</span>
+        </h2>
         <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+          <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Tìm kiếm trên Messenger"
-            class="w-full pl-10 pr-4 py-2.5 bg-[#3a3b3c] border-0 rounded-full text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Tìm kiếm cuộc trò chuyện..."
+            class="w-full pl-11 pr-4 py-3 bg-white dark:bg-gray-700 border-0 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500 shadow-sm transition-all"
           />
         </div>
       </div>
 
       <!-- Tabs -->
-      <div class="flex border-b border-gray-800">
+      <div class="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <button
           @click="activeTab = 'all'"
-          class="flex-1 px-4 py-3 text-sm font-medium transition-colors relative"
-          :class="activeTab === 'all' ? 'text-blue-400' : 'text-gray-400 hover:text-white'"
+          class="flex-1 px-4 py-3.5 text-sm font-semibold transition-all relative group"
+          :class="activeTab === 'all' 
+            ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800' 
+            : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'"
         >
-          Tất cả
-          <span v-if="activeTab === 'all'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></span>
+          <span class="flex items-center justify-center gap-2">
+            <i class="fas fa-comments"></i>
+            <span>Tất cả</span>
+          </span>
+          <span v-if="activeTab === 'all'" class="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
         </button>
         <button
           @click="activeTab = 'unread'"
-          class="flex-1 px-4 py-3 text-sm font-medium transition-colors relative"
-          :class="activeTab === 'unread' ? 'text-blue-400' : 'text-gray-400 hover:text-white'"
+          class="flex-1 px-4 py-3.5 text-sm font-semibold transition-all relative group"
+          :class="activeTab === 'unread' 
+            ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800' 
+            : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'"
         >
-          Chưa đọc
-          <span v-if="activeTab === 'unread'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></span>
-          <span v-if="unreadCount > 0" class="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-            {{ unreadCount }}
+          <span class="flex items-center justify-center gap-2">
+            <i class="fas fa-envelope"></i>
+            <span>Chưa đọc</span>
+            <span v-if="unreadCount > 0" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold min-w-[24px] text-center">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
           </span>
+          <span v-if="activeTab === 'unread'" class="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
         </button>
       </div>
 
       <!-- Conversations List -->
       <div class="flex-1 overflow-y-auto">
-        <div v-if="loading" class="flex items-center justify-center py-8">
-          <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+        <div v-if="loading" class="flex flex-col items-center justify-center py-12">
+          <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
         </div>
-        <div v-else-if="filteredConversations.length === 0" class="text-center py-8 text-gray-400">
-          <i class="fas fa-comments text-4xl mb-2"></i>
-          <p class="text-sm">Không có cuộc trò chuyện nào</p>
+        <div v-else-if="filteredConversations.length === 0" class="text-center py-12 px-4">
+          <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <i class="fas fa-comments text-3xl text-gray-400"></i>
+          </div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Không có cuộc trò chuyện nào</p>
+          <p class="text-xs text-gray-500 dark:text-gray-500">Cuộc trò chuyện sẽ xuất hiện khi khách hàng gửi tin nhắn</p>
         </div>
-        <div v-else>
+        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
           <div
             v-for="conv in filteredConversations"
             :key="conv.id || conv.conversationId"
             @click.stop.prevent="handleConversationClick(conv)"
-            @mousedown="() => console.log('Mouse down on conversation:', conv.conversationId)"
-            class="w-full p-3 hover:bg-[#3a3b3c] transition-colors text-left cursor-pointer"
-            :class="{ 'bg-[#3a3b3c]': selectedConversation?.id === conv.id || selectedConversation?.conversationId === conv.conversationId }"
+            class="w-full p-4 hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-all cursor-pointer group relative"
+            :class="{ 
+              'bg-blue-50 dark:bg-gray-700/70 border-l-4 border-blue-500': 
+                selectedConversation?.id === conv.id || selectedConversation?.conversationId === conv.conversationId 
+            }"
           >
-            <div class="flex items-center gap-3">
-              <!-- Avatar (mặc định) -->
-              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 ring-2 ring-transparent"
-                   :class="{ 'ring-blue-400': selectedConversation?.id === conv.id || selectedConversation?.conversationId === conv.conversationId }">
-                <span class="text-sm font-semibold text-white">
-                  {{ getInitials(conv.userName || conv.customerName || 'Người dùng') }}
+            <div class="flex items-start gap-3">
+              <!-- Avatar -->
+              <div class="relative flex-shrink-0">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800"
+                     :class="{ 'ring-blue-400 ring-4': selectedConversation?.id === conv.id || selectedConversation?.conversationId === conv.conversationId }">
+                  <span class="text-base font-bold text-white">
+                    {{ getInitials(conv.userName || conv.customerName || 'Người dùng') }}
+                  </span>
+                </div>
+                <span v-if="conv.unreadCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold ring-2 ring-white dark:ring-gray-800">
+                  {{ conv.unreadCount > 9 ? '9+' : conv.unreadCount }}
                 </span>
               </div>
               
               <!-- Content -->
               <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between mb-1">
-                  <p class="font-semibold text-sm truncate text-white">{{ conv.userName || conv.customerName || 'Người dùng' }}</p>
-                  <span v-if="conv.lastMessageAt || conv.lastMessageTime" class="text-xs text-gray-400 flex-shrink-0 ml-2">
+                <div class="flex items-center justify-between mb-1.5">
+                  <p class="font-bold text-sm truncate text-gray-900 dark:text-white">
+                    {{ conv.userName || conv.customerName || 'Người dùng' }}
+                  </p>
+                  <span v-if="conv.lastMessageAt || conv.lastMessageTime" class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2 whitespace-nowrap">
                     {{ formatTime(conv.lastMessageAt || conv.lastMessageTime) }}
                   </span>
                 </div>
-                <div class="flex items-center justify-between gap-2">
-                  <p v-if="conv.lastMessage && conv.lastMessage.content" class="text-xs text-gray-400 truncate flex-1">
-                    <span v-if="conv.lastMessage.senderType === 'SYSTEM'" class="text-gray-500">Bạn: </span>
+                <div class="flex items-center gap-2">
+                  <p v-if="conv.lastMessage && conv.lastMessage.content" 
+                     class="text-xs text-gray-600 dark:text-gray-300 truncate flex-1"
+                     :class="{ 'font-semibold text-gray-900 dark:text-white': conv.unreadCount > 0 }">
+                    <span v-if="conv.lastMessage.senderType === 'SYSTEM'" class="text-blue-600 dark:text-blue-400 font-medium">Bạn: </span>
                     {{ conv.lastMessage.content }}
                   </p>
-                  <p v-else class="text-xs text-gray-500 truncate flex-1 italic">
+                  <p v-else class="text-xs text-gray-400 dark:text-gray-500 truncate flex-1 italic">
                     Chưa có tin nhắn
                   </p>
-                  <span v-if="conv.unreadCount > 0" class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
-                    {{ conv.unreadCount }}
+                </div>
+                <!-- User info -->
+                <div v-if="conv.userPhone || conv.userEmail" class="flex items-center gap-2 mt-1.5">
+                  <i class="fas fa-phone text-xs text-gray-400"></i>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {{ conv.userPhone || conv.userEmail }}
                   </span>
                 </div>
               </div>
@@ -94,163 +126,157 @@
     </div>
 
     <!-- Right Panel - Chat Messages -->
-    <div class="flex-1 flex flex-col bg-[#18191a]" v-if="selectedConversation">
+    <div class="flex-1 flex flex-col bg-white dark:bg-gray-900" v-if="selectedConversation">
       <!-- Chat Header -->
-      <div class="p-3 border-b border-gray-800 flex items-center justify-between bg-[#242526]">
-        <div class="flex items-center gap-3">
-          <!-- Avatar mặc định -->
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <span class="text-sm font-semibold text-white">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shadow-md">
+        <div class="flex items-center gap-4">
+          <!-- Avatar -->
+          <div class="w-12 h-12 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-lg ring-2 ring-white/50">
+            <span class="text-base font-bold text-blue-600 dark:text-blue-400">
               {{ getInitials(selectedConversation.userName || selectedConversation.customerName || 'Người dùng') }}
             </span>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">{{ selectedConversation.userName || selectedConversation.customerName || 'Người dùng' }}</p>
-            <p class="text-xs text-gray-400">{{ selectedConversation.userPhone || selectedConversation.customerPhone || selectedConversation.userEmail || selectedConversation.customerEmail }}</p>
+            <p class="font-bold text-white text-base">
+              {{ selectedConversation.userName || selectedConversation.customerName || 'Người dùng' }}
+            </p>
+            <div class="flex items-center gap-3 mt-0.5">
+              <p v-if="selectedConversation.userPhone || selectedConversation.customerPhone" class="text-xs text-blue-100 flex items-center gap-1">
+                <i class="fas fa-phone text-xs"></i>
+                {{ selectedConversation.userPhone || selectedConversation.customerPhone }}
+              </p>
+              <p v-if="selectedConversation.userEmail || selectedConversation.customerEmail" class="text-xs text-blue-100 flex items-center gap-1">
+                <i class="fas fa-envelope text-xs"></i>
+                {{ selectedConversation.userEmail || selectedConversation.customerEmail }}
+              </p>
+            </div>
           </div>
         </div>
-        <div class="flex items-center gap-1">
-          <button class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-phone text-gray-300 text-sm"></i>
+        <div class="flex items-center gap-2">
+          <button class="p-2.5 hover:bg-white/20 rounded-lg transition-colors text-white" title="Gọi điện">
+            <i class="fas fa-phone text-sm"></i>
           </button>
-          <button class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-video text-gray-300 text-sm"></i>
-          </button>
-          <button class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-info-circle text-gray-300 text-sm"></i>
+          <button class="p-2.5 hover:bg-white/20 rounded-lg transition-colors text-white" title="Thông tin">
+            <i class="fas fa-info-circle text-sm"></i>
           </button>
         </div>
       </div>
 
       <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto p-4 bg-[#18191a] space-y-1" ref="messagesContainer">
-        <!-- Debug Info -->
-        <div class="text-xs text-gray-500 p-2 bg-gray-800 rounded mb-2">
-          <div>loadingMessages: {{ loadingMessages }}</div>
-          <div>selectedConversation exists: {{ !!selectedConversation }}</div>
-          <div>messages exists: {{ !!selectedConversation?.messages }}</div>
-          <div>messages length: {{ selectedConversation?.messages?.length || 0 }}</div>
-          <div>messages is array: {{ Array.isArray(selectedConversation?.messages) }}</div>
-        </div>
-        
-        <div v-if="loadingMessages" class="flex items-center justify-center py-8">
-          <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+      <div class="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 space-y-4" ref="messagesContainer">
+        <div v-if="loadingMessages" class="flex flex-col items-center justify-center py-12">
+          <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Đang tải tin nhắn...</p>
         </div>
         <div v-else-if="selectedConversation && selectedConversation.messages && selectedConversation.messages.length > 0">
           <template v-for="(message, index) in selectedConversation.messages" :key="message.id || `msg-${index}`">
             <!-- Timestamp separator -->
             <div v-if="shouldShowTimestamp(message, selectedConversation.messages[index - 1])" 
-                 class="flex justify-center my-4">
-              <span class="text-xs text-gray-500 bg-[#242526] px-3 py-1 rounded-full">
+                 class="flex justify-center my-6">
+              <span class="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-4 py-1.5 rounded-full shadow-sm border border-gray-200 dark:border-gray-700">
                 {{ formatDateSeparator(message.createdAt) }}
               </span>
             </div>
             
             <!-- Message -->
             <div
-              class="flex items-end gap-2"
+              class="flex items-start gap-3 mb-4 group"
               :class="message.senderType === 'SYSTEM' ? 'justify-end' : 'justify-start'"
             >
               <!-- Customer message layout -->
-              <div v-if="message.senderType === 'CUSTOMER'" class="flex flex-col items-start w-full mb-3">
-                <!-- Sender name - luôn hiển thị -->
-                <div class="mb-2 px-3 w-full">
-                  <span class="text-sm text-white font-bold block">
+              <template v-if="message.senderType === 'CUSTOMER'">
+                <!-- Avatar -->
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <span class="text-xs font-bold text-white">
+                    {{ getInitials(message.senderName || selectedConversation.userName || selectedConversation.customerName) }}
+                  </span>
+                </div>
+                
+                <!-- Message bubble -->
+                <div class="flex flex-col items-start max-w-[70%]">
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 px-1">
                     {{ message.senderName || selectedConversation.userName || selectedConversation.customerName || 'Người dùng' }}
                   </span>
-                </div>
-                <div class="flex items-end gap-2">
-                  <!-- Avatar for customer messages -->
-                  <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-semibold text-white">
-                      {{ getInitials(message.senderName || selectedConversation.userName || selectedConversation.customerName) }}
-                    </span>
-                  </div>
-                  
-                  <div class="max-w-md px-4 py-2 rounded-2xl bg-[#3a3b3c] text-white rounded-tl-sm">
-                    <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">{{ message.content }}</p>
-                    <div class="flex items-center justify-end gap-1 mt-1">
-                      <span class="text-xs opacity-70">
+                  <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700">
+                    <p class="text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-900 dark:text-white">
+                      {{ message.content }}
+                    </p>
+                    <div class="flex items-center justify-start gap-1 mt-2">
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
                         {{ formatMessageTime(message.createdAt) }}
                       </span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </template>
               
-              <!-- System message layout -->
-              <div v-else class="flex flex-col items-end w-full mb-3">
-                <!-- Sender name - luôn hiển thị -->
-                <div class="mb-2 px-3 w-full flex justify-end">
-                  <span class="text-sm text-white font-bold block">
+              <!-- System message layout (Admin) -->
+              <template v-else>
+                <!-- Message bubble -->
+                <div class="flex flex-col items-end max-w-[70%]">
+                  <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1 px-1">
                     {{ message.senderName || authStore.user?.fullName || 'Bạn' }}
                   </span>
-                </div>
-                <div class="flex items-end gap-2">
-                  <div class="max-w-md px-4 py-2 rounded-2xl bg-[#0084ff] text-white rounded-tr-sm">
-                    <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">{{ message.content }}</p>
-                    <div class="flex items-center justify-end gap-1 mt-1">
-                      <span class="text-xs opacity-70">
+                  <div class="px-4 py-3 rounded-2xl rounded-tr-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
+                    <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                      {{ message.content }}
+                    </p>
+                    <div class="flex items-center justify-end gap-1.5 mt-2">
+                      <span class="text-xs opacity-90">
                         {{ formatMessageTime(message.createdAt) }}
                       </span>
-                      <span v-if="message.isRead" class="text-xs opacity-70">
-                        <i class="fas fa-check-double text-blue-200"></i>
+                      <span v-if="message.isRead" class="text-xs opacity-90">
+                        <i class="fas fa-check-double"></i>
                       </span>
-                      <span v-else class="text-xs opacity-70">
-                        <i class="fas fa-check text-blue-200"></i>
+                      <span v-else class="text-xs opacity-90">
+                        <i class="fas fa-check"></i>
                       </span>
                     </div>
                   </div>
-                  
-                  <!-- Avatar for system messages -->
-                  <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-semibold text-white">
-                      {{ getInitials(message.senderName || authStore.user?.fullName || 'SY') }}
-                    </span>
-                  </div>
                 </div>
-              </div>
+                
+                <!-- Avatar -->
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <span class="text-xs font-bold text-white">
+                    {{ getInitials(message.senderName || authStore.user?.fullName || 'AD') }}
+                  </span>
+                </div>
+              </template>
             </div>
           </template>
         </div>
-        <div v-else class="flex items-center justify-center py-8 text-gray-400">
-          <div class="text-center">
-            <p class="text-sm">Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
-            <div class="text-xs mt-2 text-red-400">
-              Debug: messages = {{ JSON.stringify(selectedConversation?.messages) }}
-            </div>
+        <div v-else class="flex flex-col items-center justify-center py-16 px-4">
+          <div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+            <i class="fas fa-comment-dots text-3xl text-gray-400"></i>
           </div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Chưa có tin nhắn nào</p>
+          <p class="text-xs text-gray-500 dark:text-gray-500">Hãy bắt đầu cuộc trò chuyện với khách hàng!</p>
         </div>
       </div>
 
       <!-- Input Area -->
-      <div class="p-3 border-t border-gray-800 bg-[#242526]">
-        <form @submit.prevent="sendMessage" class="flex items-end gap-2">
-          <button type="button" class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-microphone text-gray-300 text-lg"></i>
+      <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+        <form @submit.prevent="sendMessage" class="flex items-end gap-3">
+          <button type="button" class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-600 dark:text-gray-400" title="Gửi file">
+            <i class="fas fa-paperclip text-lg"></i>
           </button>
-          <button type="button" class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-image text-gray-300 text-lg"></i>
-          </button>
-          <button type="button" class="p-2 hover:bg-[#3a3b3c] rounded-full transition-colors">
-            <i class="fas fa-smile text-gray-300 text-lg"></i>
-          </button>
-          <div class="flex-1 flex items-center gap-2 bg-[#3a3b3c] rounded-full px-4 py-2">
+          <div class="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3 border-2 border-transparent focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-colors">
             <input
               v-model="messageInput"
               type="text"
               placeholder="Nhập tin nhắn..."
-              class="flex-1 bg-transparent border-0 text-white text-sm placeholder-gray-400 focus:outline-none"
+              class="flex-1 bg-transparent border-0 text-gray-900 dark:text-white text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
               :disabled="loadingMessages"
             />
-            <button type="button" class="p-1 hover:bg-[#4e4f50] rounded-full transition-colors">
-              <i class="fas fa-font text-gray-300 text-sm"></i>
+            <button type="button" class="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-500 dark:text-gray-400" title="Emoji">
+              <i class="fas fa-smile text-lg"></i>
             </button>
           </div>
           <button
             type="submit"
             :disabled="!messageInput.trim() || loadingMessages"
-            class="p-2 bg-[#0084ff] text-white rounded-full hover:bg-[#0066cc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0084ff]"
+            class="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-blue-600 disabled:hover:shadow-md"
+            title="Gửi tin nhắn"
           >
             <i class="fas fa-paper-plane text-sm"></i>
           </button>
@@ -259,11 +285,15 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="flex-1 flex items-center justify-center bg-[#18191a]">
-      <div class="text-center text-gray-400">
-        <i class="fas fa-comments text-6xl mb-4"></i>
-        <p class="text-lg">Chọn một cuộc trò chuyện để bắt đầu</p>
-        <p class="text-sm mt-2 text-gray-500">Cuộc trò chuyện sẽ được tạo tự động khi khách hàng gửi tin nhắn</p>
+    <div v-else class="flex-1 flex items-center justify-center bg-white dark:bg-gray-900">
+      <div class="text-center px-4">
+        <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center">
+          <i class="fas fa-comments text-4xl text-blue-500 dark:text-blue-400"></i>
+        </div>
+        <p class="text-xl font-bold text-gray-900 dark:text-white mb-2">Chọn một cuộc trò chuyện để bắt đầu</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          Cuộc trò chuyện sẽ được tạo tự động khi khách hàng gửi tin nhắn. Bạn có thể xem và phản hồi tất cả tin nhắn từ khách hàng tại đây.
+        </p>
       </div>
     </div>
   </div>
@@ -673,29 +703,45 @@ async function sendMessage() {
   }
   
   const messageText = messageInput.value.trim()
-  messageInput.value = ''
-  
   const conversationId = selectedConversation.value.conversationId || selectedConversation.value.id
-  console.log('selectedConversation.value:', selectedConversation.value)
-  console.log('selectedConversation.value.conversationId:', selectedConversation.value.conversationId)
-  console.log('selectedConversation.value.id:', selectedConversation.value.id)
-  console.log('Resolved conversationId:', conversationId)
   
   if (!conversationId) {
     console.error('ERROR: conversationId is null or undefined!')
-    console.error('selectedConversation:', selectedConversation.value)
     alert('Lỗi: Không tìm thấy ID cuộc hội thoại. Vui lòng chọn lại cuộc hội thoại.')
-    messageInput.value = messageText // Restore message
     return
   }
   
-  console.log('Sending message to conversation:', conversationId)
-  console.log('Message text:', messageText)
+  // Create optimistic message (temporary, will be replaced by real message)
+  const tempMessage = {
+    id: `temp-${Date.now()}`,
+    conversationId: conversationId,
+    senderType: 'SYSTEM',
+    senderId: authStore.user?.id,
+    senderName: authStore.user?.fullName || 'Bạn',
+    content: messageText,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  }
+  
+  // Add optimistic message to UI immediately
+  if (!selectedConversation.value.messages) {
+    selectedConversation.value.messages = []
+  }
+  selectedConversation.value.messages.push(tempMessage)
+  messageInput.value = '' // Clear input immediately
+  scrollToBottom()
+  
+  // Update conversation list
+  const conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
+  if (conv) {
+    conv.lastMessage = tempMessage
+    conv.lastMessageAt = tempMessage.createdAt
+    conv.lastMessageTime = tempMessage.createdAt
+  }
   
   // Try WebSocket first
   console.log('Attempting to send via WebSocket...')
   const sentViaWebSocket = sendMessageViaWebSocket(messageText, conversationId)
-  console.log('Sent via WebSocket:', sentViaWebSocket)
   
   if (!sentViaWebSocket) {
     // Fallback to REST API
@@ -705,40 +751,55 @@ async function sendMessage() {
         content: messageText,
         conversationId: conversationId
       }
-      console.log('Request payload:', request)
       
       const response = await chatService.sendMessage(request)
       console.log('Response from sendMessage:', response)
       
-      if (response && response.success) {
-        // Add message to local state
-        if (selectedConversation.value.messages) {
-          selectedConversation.value.messages.push(response.data)
+      if (response && response.success && response.data) {
+        // Replace temp message with real message
+        const tempIndex = selectedConversation.value.messages.findIndex(m => m.id === tempMessage.id)
+        if (tempIndex !== -1) {
+          selectedConversation.value.messages[tempIndex] = response.data
         } else {
-          selectedConversation.value.messages = [response.data]
+          // If temp message not found, just add the real one
+          selectedConversation.value.messages.push(response.data)
         }
         
         // Update last message
         selectedConversation.value.lastMessage = response.data
         selectedConversation.value.lastMessageAt = response.data.createdAt
+        selectedConversation.value.lastMessageTime = response.data.createdAt
         
         // Update conversation in list
-        const conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
         if (conv) {
           conv.lastMessage = response.data
           conv.lastMessageAt = response.data.createdAt
+          conv.lastMessageTime = response.data.createdAt
         }
         
         scrollToBottom()
+      } else {
+        // If API call failed, remove temp message and restore input
+        const tempIndex = selectedConversation.value.messages.findIndex(m => m.id === tempMessage.id)
+        if (tempIndex !== -1) {
+          selectedConversation.value.messages.splice(tempIndex, 1)
+        }
+        messageInput.value = messageText
+        alert('Không thể gửi tin nhắn. Vui lòng thử lại.')
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      // Remove temp message on error
+      const tempIndex = selectedConversation.value.messages.findIndex(m => m.id === tempMessage.id)
+      if (tempIndex !== -1) {
+        selectedConversation.value.messages.splice(tempIndex, 1)
+      }
       messageInput.value = messageText
+      alert('Lỗi khi gửi tin nhắn: ' + (error.response?.data?.message || error.message))
     }
-  } else {
-    // Message sent via WebSocket, will be added when received
-    scrollToBottom()
   }
+  // If sent via WebSocket, the message will be added when received from server
+  // The temp message will be replaced by the real one
 }
 
 function scrollToBottom() {
@@ -806,44 +867,109 @@ function connectWebSocket() {
 }
 
 function handleIncomingMessage(data) {
+  console.log('=== handleIncomingMessage ===', data)
+  
   if (data.type === 'MESSAGE_READ') {
     // Update unread count
     const conv = conversations.value.find(c => (c.id || c.conversationId) === data.conversationId)
     if (conv) {
       conv.unreadCount = 0
     }
+    // Also update selected conversation if it's the same
+    if (selectedConversation.value && 
+        (selectedConversation.value.id === data.conversationId || 
+         selectedConversation.value.conversationId === data.conversationId)) {
+      selectedConversation.value.unreadCount = 0
+    }
   } else if (data.id && data.conversationId) {
-    // New message
+    // New message received
     const conversationId = data.conversationId
-    const conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
-    if (conv) {
-      // Update last message
-      conv.lastMessage = data
-      conv.lastMessageAt = data.createdAt
-      
-      // If this conversation is selected, add message to view
-      const selectedId = selectedConversation.value?.id || selectedConversation.value?.conversationId
-      if (selectedId === conversationId) {
-        if (!selectedConversation.value.messages) {
-          selectedConversation.value.messages = []
+    console.log('Processing new message for conversation:', conversationId)
+    
+    // Find conversation in list
+    let conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
+    
+    // If conversation doesn't exist in list, reload conversations
+    if (!conv) {
+      console.log('Conversation not found in list, reloading...')
+      loadConversations()
+      // After reload, find it again
+      setTimeout(() => {
+        conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
+        if (conv) {
+          updateConversationWithMessage(conv, data, conversationId)
         }
-        // Check if message already exists
-        const exists = selectedConversation.value.messages.find(m => m.id === data.id)
-        if (!exists) {
-          selectedConversation.value.messages.push(data)
-          scrollToBottom()
-        }
-      } else {
-        // Increment unread count if not selected
-        if (data.senderType === 'CUSTOMER') {
-          conv.unreadCount = (conv.unreadCount || 0) + 1
-        }
+      }, 500)
+    } else {
+      updateConversationWithMessage(conv, data, conversationId)
+    }
+  }
+}
+
+function updateConversationWithMessage(conv, messageData, conversationId) {
+  // Update last message in conversation list
+  conv.lastMessage = {
+    content: messageData.content,
+    senderType: messageData.senderType,
+    createdAt: messageData.createdAt
+  }
+  conv.lastMessageTime = messageData.createdAt
+  conv.lastMessageAt = messageData.createdAt
+  
+  // Check if this conversation is currently selected
+  const selectedId = selectedConversation.value?.id || selectedConversation.value?.conversationId
+  const isSelected = selectedId === conversationId
+  
+  if (isSelected) {
+    // Add message to selected conversation view
+    if (!selectedConversation.value.messages) {
+      selectedConversation.value.messages = []
+    }
+    
+    // Check if this is a temp message that needs to be replaced
+    const tempMessageIndex = selectedConversation.value.messages.findIndex(
+      m => m.id && m.id.toString().startsWith('temp-') && 
+      m.content === messageData.content && 
+      m.senderType === messageData.senderType
+    )
+    
+    if (tempMessageIndex !== -1) {
+      // Replace temp message with real message
+      console.log('Replacing temp message with real message:', messageData)
+      selectedConversation.value.messages[tempMessageIndex] = messageData
+    } else {
+      // Check if message already exists (avoid duplicates)
+      const exists = selectedConversation.value.messages.find(m => m.id === messageData.id)
+      if (!exists) {
+        console.log('Adding message to selected conversation:', messageData)
+        selectedConversation.value.messages.push(messageData)
       }
     }
     
-    // Reload conversations to update order
-    loadConversations()
+    // Update last message
+    selectedConversation.value.lastMessage = messageData
+    selectedConversation.value.lastMessageTime = messageData.createdAt
+    scrollToBottom()
+    
+    // If message is from customer, mark as read (since admin is viewing)
+    if (messageData.senderType === 'CUSTOMER') {
+      conv.unreadCount = 0
+      selectedConversation.value.unreadCount = 0
+    }
+  } else {
+    // Conversation is not selected
+    if (messageData.senderType === 'CUSTOMER') {
+      // Increment unread count for customer messages
+      conv.unreadCount = (conv.unreadCount || 0) + 1
+    }
   }
+  
+  // Sort conversations by last message time
+  conversations.value.sort((a, b) => {
+    const timeA = (a.lastMessageAt || a.lastMessageTime) ? new Date(a.lastMessageAt || a.lastMessageTime).getTime() : 0
+    const timeB = (b.lastMessageAt || b.lastMessageTime) ? new Date(b.lastMessageAt || b.lastMessageTime).getTime() : 0
+    return timeB - timeA
+  })
 }
 
 function sendMessageViaWebSocket(content, conversationId) {
@@ -923,12 +1049,44 @@ onMounted(() => {
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #4e4f50;
+  background: rgba(156, 163, 175, 0.5);
   border-radius: 4px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #606162;
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Message animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group {
+  animation: slideIn 0.2s ease-out;
 }
 </style>
+
 
