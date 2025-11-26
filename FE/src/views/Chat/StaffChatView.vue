@@ -46,7 +46,7 @@
             <span>Chưa đọc</span>
             <span v-if="unreadCount > 0" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold min-w-[24px] text-center">
               {{ unreadCount > 99 ? '99+' : unreadCount }}
-            </span>
+          </span>
           </span>
           <span v-if="activeTab === 'unread'" class="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
         </button>
@@ -61,7 +61,7 @@
         <div v-else-if="filteredConversations.length === 0" class="text-center py-12 px-4">
           <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
             <i class="fas fa-comments text-3xl text-gray-400"></i>
-          </div>
+        </div>
           <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Không có cuộc trò chuyện nào</p>
           <p class="text-xs text-gray-500 dark:text-gray-500">Cuộc trò chuyện sẽ xuất hiện khi khách hàng gửi tin nhắn</p>
         </div>
@@ -82,7 +82,7 @@
                 <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800"
                      :class="{ 'ring-blue-400 ring-4': selectedConversation?.id === conv.id || selectedConversation?.conversationId === conv.conversationId }">
                   <span class="text-base font-bold text-white">
-                    {{ getInitials(conv.userName || conv.customerName || 'Người dùng') }}
+                  {{ getInitials(conv.userName || conv.customerName || 'Người dùng') }}
                   </span>
                 </div>
                 <span v-if="conv.unreadCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold ring-2 ring-white dark:ring-gray-800">
@@ -149,8 +149,8 @@
                 <i class="fas fa-envelope text-xs"></i>
                 {{ selectedConversation.userEmail || selectedConversation.customerEmail }}
               </p>
-            </div>
           </div>
+        </div>
         </div>
         <div class="flex items-center gap-2">
           <button class="p-2.5 hover:bg-white/20 rounded-lg transition-colors text-white" title="Gọi điện">
@@ -188,10 +188,10 @@
                 <!-- Avatar -->
                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
                   <span class="text-xs font-bold text-white">
-                    {{ getInitials(message.senderName || selectedConversation.userName || selectedConversation.customerName) }}
-                  </span>
-                </div>
-                
+                      {{ getInitials(message.senderName || selectedConversation.userName || selectedConversation.customerName) }}
+                    </span>
+                  </div>
+                  
                 <!-- Message bubble -->
                 <div class="flex flex-col items-start max-w-[70%]">
                   <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 px-1">
@@ -232,15 +232,15 @@
                         <i class="fas fa-check"></i>
                       </span>
                     </div>
+                    </div>
                   </div>
-                </div>
-                
+                  
                 <!-- Avatar -->
                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-md">
                   <span class="text-xs font-bold text-white">
                     {{ getInitials(message.senderName || authStore.user?.fullName || 'AD') }}
-                  </span>
-                </div>
+                    </span>
+                  </div>
               </template>
             </div>
           </template>
@@ -248,7 +248,7 @@
         <div v-else class="flex flex-col items-center justify-center py-16 px-4">
           <div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
             <i class="fas fa-comment-dots text-3xl text-gray-400"></i>
-          </div>
+            </div>
           <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Chưa có tin nhắn nào</p>
           <p class="text-xs text-gray-500 dark:text-gray-500">Hãy bắt đầu cuộc trò chuyện với khách hàng!</p>
         </div>
@@ -896,7 +896,7 @@ function handleIncomingMessage(data) {
       // After reload, find it again
       setTimeout(() => {
         conv = conversations.value.find(c => (c.id || c.conversationId) === conversationId)
-        if (conv) {
+    if (conv) {
           updateConversationWithMessage(conv, data, conversationId)
         }
       }, 500)
@@ -915,16 +915,16 @@ function updateConversationWithMessage(conv, messageData, conversationId) {
   }
   conv.lastMessageTime = messageData.createdAt
   conv.lastMessageAt = messageData.createdAt
-  
+      
   // Check if this conversation is currently selected
-  const selectedId = selectedConversation.value?.id || selectedConversation.value?.conversationId
+      const selectedId = selectedConversation.value?.id || selectedConversation.value?.conversationId
   const isSelected = selectedId === conversationId
   
   if (isSelected) {
     // Add message to selected conversation view
-    if (!selectedConversation.value.messages) {
-      selectedConversation.value.messages = []
-    }
+        if (!selectedConversation.value.messages) {
+          selectedConversation.value.messages = []
+        }
     
     // Check if this is a temp message that needs to be replaced
     const tempMessageIndex = selectedConversation.value.messages.findIndex(
@@ -940,7 +940,7 @@ function updateConversationWithMessage(conv, messageData, conversationId) {
     } else {
       // Check if message already exists (avoid duplicates)
       const exists = selectedConversation.value.messages.find(m => m.id === messageData.id)
-      if (!exists) {
+        if (!exists) {
         console.log('Adding message to selected conversation:', messageData)
         selectedConversation.value.messages.push(messageData)
       }
@@ -949,21 +949,21 @@ function updateConversationWithMessage(conv, messageData, conversationId) {
     // Update last message
     selectedConversation.value.lastMessage = messageData
     selectedConversation.value.lastMessageTime = messageData.createdAt
-    scrollToBottom()
+          scrollToBottom()
     
     // If message is from customer, mark as read (since admin is viewing)
     if (messageData.senderType === 'CUSTOMER') {
       conv.unreadCount = 0
       selectedConversation.value.unreadCount = 0
-    }
-  } else {
+        }
+      } else {
     // Conversation is not selected
     if (messageData.senderType === 'CUSTOMER') {
       // Increment unread count for customer messages
-      conv.unreadCount = (conv.unreadCount || 0) + 1
+          conv.unreadCount = (conv.unreadCount || 0) + 1
+        }
     }
-  }
-  
+    
   // Sort conversations by last message time
   conversations.value.sort((a, b) => {
     const timeA = (a.lastMessageAt || a.lastMessageTime) ? new Date(a.lastMessageAt || a.lastMessageTime).getTime() : 0

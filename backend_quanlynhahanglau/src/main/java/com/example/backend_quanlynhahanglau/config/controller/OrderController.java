@@ -8,7 +8,6 @@ import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import com.example.backend_quanlynhahanglau.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -113,6 +112,13 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getPendingOrders() {
         List<OrderResponse> orders = orderService.getPendingOrders();
+        return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    @GetMapping("/by-reservation/{reservationId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByReservationId(@PathVariable Long reservationId) {
+        List<OrderResponse> orders = orderService.getOrdersByReservationId(reservationId);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 

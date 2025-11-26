@@ -4,6 +4,8 @@ import com.example.backend_quanlynhahanglau.dto.reservation.PublicReservationReq
 import com.example.backend_quanlynhahanglau.dto.reservation.ReservationRequest;
 import com.example.backend_quanlynhahanglau.dto.reservation.ReservationResponse;
 import com.example.backend_quanlynhahanglau.entity.*;
+import com.example.backend_quanlynhahanglau.enums.DishStatus;
+import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import com.example.backend_quanlynhahanglau.enums.ReservationStatus;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.enums.TableType;
@@ -19,7 +21,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +37,9 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final WebSocketNotificationService webSocketNotificationService;
+    private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
+    private final DishRepository dishRepository;
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getAllReservations() {
@@ -77,12 +84,10 @@ public class ReservationService {
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getReservationsByUserId(Long userId) {
-        // Kiểm tra User có tồn tại không
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("Người dùng", "id", userId);
         }
         
-        // Tìm tất cả Customer theo User ID (có thể có nhiều Customer cho 1 User)
         List<Customer> customers = customerRepository.findByUserId(userId);
         
         if (customers.isEmpty()) {
@@ -108,7 +113,6 @@ public class ReservationService {
             userId = getCurrentUserId();
         }
         
-        // Tạo biến final để sử dụng trong lambda
         final Long finalUserId = userId;
         
         // Tìm hoặc tạo customer
@@ -125,7 +129,6 @@ public class ReservationService {
                             .active(true)
                             .blocked(false);
                     
-                    // Liên kết với User nếu có userId
                     if (finalUserId != null) {
                         User user = userRepository.findById(finalUserId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "id", finalUserId));
@@ -136,7 +139,6 @@ public class ReservationService {
                     return customerRepository.save(customerBuilder.build());
                 });
 
-        // Cập nhật email customer nếu có (không cập nhật tên vì tên sẽ lưu riêng trong reservation)
         boolean customerUpdated = false;
         if (request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()) {
             String newEmail = request.getCustomerEmail().trim();
@@ -207,7 +209,7 @@ public class ReservationService {
         
         Reservation savedReservation = Reservation.builder()
                 .customer(customer)
-                .customerName(reservationCustomerName) // Lưu tên từ form đặt bàn
+                .customerName(reservationCustomerName) 
                 .table(table)
                 .reservationTime(request.getReservationDateTime())
                 .numberOfGuests(request.getNumberOfGuests())
@@ -219,6 +221,16 @@ public class ReservationService {
 
         savedReservation = reservationRepository.save(savedReservation);
         log.info("Public reservation created successfully with ID: {}", savedReservation.getId());
+        
+        // Nếu có items, tạo Order cùng với Reservation
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            try {
+                createOrderFromReservation(savedReservation, request.getItems());
+                log.info("Order created successfully for reservation ID: {}", savedReservation.getId());
+            } catch (Exception e) {
+                log.error("Error creating order for reservation ID: {}", savedReservation.getId(), e);
+            }
+        }
         
         // Refresh reservation để đảm bảo customer được load với dữ liệu mới nhất
         final Long reservationId = savedReservation.getId();
@@ -451,6 +463,22 @@ public class ReservationService {
         reservation.setConfirmedBy(user);
 
         reservation = reservationRepository.save(reservation);
+        
+        // Cập nhật status của tất cả orders liên quan thành CONFIRMED
+        LocalDateTime checkInTime = LocalDateTime.now();
+        List<Order> orders = orderRepository.findByReservationId(id);
+        for (Order order : orders) {
+            if (order.getStatus() != OrderStatus.COMPLETED) {
+                OrderStatus oldStatus = order.getStatus();
+                order.setStatus(OrderStatus.CONFIRMED);
+                // Lưu thời gian checkin để tính thời gian cảnh báo món từ lúc này
+                order.setConfirmedAt(checkInTime);
+                orderRepository.save(order);
+                log.info("Updated order ID: {} status from {} to CONFIRMED and set confirmedAt to {} after check-in reservation ID: {}", 
+                        order.getId(), oldStatus, checkInTime, id);
+            }
+        }
+        
         return mapToResponse(reservation);
     }
 
@@ -634,6 +662,88 @@ public class ReservationService {
             code = CodeGenerator.generateCustomerCode();
         } while (customerRepository.existsByCustomerCode(code));
         return code;
+    }
+
+    /**
+     * Tạo Order từ Reservation với danh sách món đã chọn
+     * Method này được gọi khi khách hàng đặt món cùng với đặt bàn
+     */
+    private void createOrderFromReservation(Reservation reservation, List<com.example.backend_quanlynhahanglau.dto.order.OrderItemRequest> items) {
+        log.info("Creating order from reservation ID: {} with {} items", reservation.getId(), items.size());
+        
+        // Tạo Order
+        Order order = Order.builder()
+                .orderNumber(generateOrderNumber())
+                .status(OrderStatus.PENDING)
+                .createdBy(null) // Public reservation không có user
+                .customer(reservation.getCustomer())
+                .reservation(reservation)
+                .table(reservation.getTable()) // Có thể null nếu chưa gán bàn
+                .subtotal(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .tax(BigDecimal.ZERO)
+                .total(BigDecimal.ZERO)
+                .notes(reservation.getNotes())
+                .orderDetails(new java.util.ArrayList<>())
+                .build();
+        
+        // Save order first to get ID
+        order = orderRepository.save(order);
+        
+        // Add order details
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (com.example.backend_quanlynhahanglau.dto.order.OrderItemRequest itemRequest : items) {
+            Dish dish = dishRepository.findById(itemRequest.getDishId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
+            
+            if (!dish.getActive()) {
+                throw new BadRequestException("Món ăn " + dish.getName() + " không còn hoạt động");
+            }
+            
+            if (dish.getStatus() == DishStatus.DISCONTINUED) {
+                throw new BadRequestException("Món ăn " + dish.getName() + " đã dừng kinh doanh");
+            }
+            
+            // Tạo từng order_detail riêng cho mỗi đơn vị món (quantity = 1 cho mỗi record)
+            for (int i = 0; i < itemRequest.getQuantity(); i++) {
+                BigDecimal itemSubtotal = dish.getPrice();
+                
+                OrderDetail detail = OrderDetail.builder()
+                        .order(order)
+                        .dish(dish)
+                        .quantity(1) // Luôn là 1 cho mỗi record
+                        .price(dish.getPrice())
+                        .subtotal(itemSubtotal)
+                        .notes(itemRequest.getNotes())
+                        .build();
+                
+                order.getOrderDetails().add(detail);
+                orderDetailRepository.save(detail);
+                subtotal = subtotal.add(itemSubtotal);
+            }
+        }
+        
+        // Calculate totals
+        order.setSubtotal(subtotal);
+        
+        // Calculate tax (10%)
+        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10));
+        order.setTax(tax);
+        
+        // Calculate total
+        BigDecimal total = subtotal.add(tax).subtract(order.getDiscount());
+        order.setTotal(total);
+        
+        // Save order with totals
+        orderRepository.save(order);
+        
+        log.info("Order created successfully with ID: {} for reservation ID: {}", order.getId(), reservation.getId());
+    }
+    
+    private String generateOrderNumber() {
+        LocalDateTime now = LocalDateTime.now();
+        String timestamp = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return "ORD" + timestamp;
     }
 
     private ReservationResponse mapToResponse(Reservation reservation) {

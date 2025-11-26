@@ -54,6 +54,13 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersByReservationId(Long reservationId) {
+        return orderRepository.findByReservationId(reservationId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext()
@@ -343,8 +350,6 @@ public class OrderService {
             order.setTax(request.getTax());
         }
 
-        // Thêm items mới vào order hiện có (không xóa items cũ) - chỉ khi có items
-        // Tạo từng order_detail riêng biệt (không gộp) để dễ track thời gian
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (OrderItemRequest itemRequest : request.getItems()) {
                 Dish dish = dishRepository.findById(itemRequest.getDishId())
@@ -377,22 +382,16 @@ public class OrderService {
                 }
             }
         } else {
-            // Nếu không có items, chỉ tính lại totals nếu có thay đổi discount/total
             if (request.getDiscount() != null || request.getTotal() != null) {
-                // Không tính lại, giữ nguyên giá trị đã set ở trên
             } else {
-                // Tính lại subtotal, tax, total từ order_details (để đảm bảo chính xác)
                 recalculateOrderTotals(order);
             }
         }
 
-        // Tính lại subtotal, tax, total từ order_details nếu có items mới
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             recalculateOrderTotals(order);
-            // Cập nhật status order thành PENDING khi thêm món (trừ COMPLETED và CANCELLED đã bị block ở trên)
             order.setStatus(OrderStatus.PENDING);
         }
-        // Nếu chỉ cập nhật discount/total mà không có items, giữ nguyên status
 
         order = orderRepository.save(order);
         return mapToResponse(order);
@@ -616,6 +615,7 @@ public class OrderService {
                             .id(detail.getId())
                             .dishName(detail.getDish().getName())
                             .dishId(detail.getDish().getId())
+                            .dishImageUrl(detail.getDish().getImageUrl())
                             .quantity(detail.getQuantity())
                             .price(detail.getPrice())
                             .subtotal(detail.getSubtotal())
@@ -642,6 +642,7 @@ public class OrderService {
                 .notes(order.getNotes())
                 .createdByName(order.getCreatedBy() != null ? order.getCreatedBy().getFullName() : null)
                 .createdAt(order.getCreatedAt())
+                .confirmedAt(order.getConfirmedAt())
                 .completedAt(order.getCompletedAt())
                 .build();
     }

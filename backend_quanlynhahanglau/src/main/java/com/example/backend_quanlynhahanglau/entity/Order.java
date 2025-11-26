@@ -42,16 +42,16 @@ public class Order {
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal subtotal = BigDecimal.ZERO; // Tổng tiền trước giảm giá
+    private BigDecimal subtotal = BigDecimal.ZERO; 
 
     @Column(precision = 10, scale = 2)
-    private BigDecimal discount = BigDecimal.ZERO; // Giảm giá
+    private BigDecimal discount = BigDecimal.ZERO; 
 
     @Column(precision = 10, scale = 2)
-    private BigDecimal tax = BigDecimal.ZERO; // Thuế
+    private BigDecimal tax = BigDecimal.ZERO; 
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal total = BigDecimal.ZERO; // Tổng tiền sau giảm giá và thuế
+    private BigDecimal total = BigDecimal.ZERO; 
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -62,7 +62,7 @@ public class Order {
 
     @ManyToOne
     @JoinColumn(name = "created_by")
-    private User createdBy; // Nhân viên tạo đơn
+    private User createdBy;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -72,4 +72,6 @@ public class Order {
     private LocalDateTime updatedAt;
 
     private LocalDateTime completedAt;
+    
+    private LocalDateTime confirmedAt; 
 }

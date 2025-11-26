@@ -199,6 +199,116 @@
                 </div>
               </div>
 
+              <!-- Dish Selection -->
+              <div class="border-t border-gray-200 pt-6">
+                <div class="flex items-center justify-between mb-4">
+                  <label class="block text-sm font-medium text-gray-700">
+                    Đặt món trước (Tùy chọn)
+                  </label>
+                  <span class="text-xs text-gray-500">Có thể đặt sau</span>
+                </div>
+                
+                <!-- Loading dishes -->
+                <div v-if="loadingDishes" class="text-center py-8">
+                  <i class="fas fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+                  <p class="text-sm text-gray-500">Đang tải danh sách món...</p>
+                </div>
+                
+                <!-- Dish list -->
+                <div v-else-if="dishes.length > 0" class="space-y-3 max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                  <div
+                    v-for="dish in dishes"
+                    :key="dish.id"
+                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <!-- Dish Image -->
+                    <div class="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                      <img
+                        v-if="getDishImage(dish)"
+                        :src="getDishImage(dish)"
+                        :alt="dish.name"
+                        class="w-full h-full object-cover"
+                        @error="handleImageError"
+                      />
+                      <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+                        <i :class="['fas', getDishIcon(dish.name)]" class="text-2xl text-gray-400"></i>
+                      </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-semibold text-gray-900 text-sm">{{ dish.name }}</h4>
+                        <span v-if="dish.isPromotion" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">Khuyến mãi</span>
+                      </div>
+                      <p class="text-xs text-gray-600 mb-1 line-clamp-2">{{ dish.description }}</p>
+                      <p class="text-sm font-bold text-slate-900">{{ formatPrice(dish.price) }}đ</p>
+                    </div>
+                    
+                    <!-- Quantity selector -->
+                    <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <button
+                        @click="decreaseQuantity(dish.id)"
+                        type="button"
+                        :disabled="getQuantity(dish.id) === 0"
+                        class="w-8 h-8 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      >
+                        <i class="fas fa-minus text-xs"></i>
+                      </button>
+                      <span class="w-10 text-center font-semibold text-gray-900">{{ getQuantity(dish.id) }}</span>
+                      <button
+                        @click="increaseQuantity(dish.id)"
+                        type="button"
+                        class="w-8 h-8 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 flex items-center justify-center transition-colors"
+                      >
+                        <i class="fas fa-plus text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- No dishes available -->
+                <div v-else class="text-center py-8 text-gray-500 text-sm">
+                  <i class="fas fa-utensils text-2xl mb-2"></i>
+                  <p>Hiện chưa có món nào</p>
+                </div>
+                
+                <!-- Selected dishes summary -->
+                <div v-if="selectedDishes.length > 0" class="mt-4 bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <p class="text-sm font-semibold text-slate-900 mb-3">Món đã chọn:</p>
+                  <div class="space-y-2 mb-3">
+                    <div
+                      v-for="item in selectedDishes"
+                      :key="item.dishId"
+                      class="flex items-center gap-3 text-sm"
+                    >
+                      <!-- Dish Image -->
+                      <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                        <img
+                          v-if="getDishImage(dishes.find(d => d.id === item.dishId))"
+                          :src="getDishImage(dishes.find(d => d.id === item.dishId))"
+                          :alt="getDishName(item.dishId)"
+                          class="w-full h-full object-cover"
+                          @error="handleImageError"
+                        />
+                        <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+                          <i :class="['fas', getDishIcon(getDishName(item.dishId))]" class="text-lg text-gray-400"></i>
+                        </div>
+                      </div>
+                      <span class="flex-1 text-gray-700">
+                        {{ getDishName(item.dishId) }} x {{ item.quantity }}
+                      </span>
+                      <span class="font-semibold text-slate-900">
+                        {{ formatPrice(getDishPrice(item.dishId) * item.quantity) }}đ
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+                    <span class="font-bold text-slate-900">Tổng tiền:</span>
+                    <span class="text-lg font-bold text-slate-900">{{ formatPrice(totalAmount) }}đ</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Special Requests -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Yêu cầu đặc biệt</label>
@@ -322,10 +432,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
+import { dishService } from '@/services/dishService'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 import { validateEmail, validatePhone } from '@/utils/validation'
@@ -351,6 +462,11 @@ const reservationCode = ref('')
 const isTableAvailable = ref(false)
 const checkingAvailability = ref(false)
 const availabilityChecked = ref(false)
+
+// Dish selection
+const dishes = ref([])
+const selectedDishes = ref([]) // Array of { dishId, quantity, notes }
+const loadingDishes = ref(false)
 
 // Validation errors
 const errors = ref({
@@ -435,6 +551,121 @@ watch([() => form.value.time, () => form.value.guests], () => {
   if (isTableAvailable.value) {
     resetAvailabilityCheck()
   }
+})
+
+// Watch for table availability to load dishes
+watch(() => isTableAvailable.value, (available) => {
+  if (available && dishes.value.length === 0) {
+    loadDishes()
+  }
+})
+
+// Load dishes
+async function loadDishes() {
+  loadingDishes.value = true
+  try {
+    const response = await dishService.getAvailable()
+    if (response && response.success) {
+      dishes.value = response.data || []
+    }
+  } catch (error) {
+    console.error('Error loading dishes:', error)
+    notification.error('Không thể tải danh sách món. Vui lòng thử lại!')
+  } finally {
+    loadingDishes.value = false
+  }
+}
+
+// Dish selection functions
+function increaseQuantity(dishId) {
+  const existing = selectedDishes.value.find(item => item.dishId === dishId)
+  if (existing) {
+    existing.quantity++
+  } else {
+    selectedDishes.value.push({
+      dishId,
+      quantity: 1,
+      notes: ''
+    })
+  }
+}
+
+function decreaseQuantity(dishId) {
+  const existing = selectedDishes.value.find(item => item.dishId === dishId)
+  if (existing) {
+    existing.quantity--
+    if (existing.quantity <= 0) {
+      const index = selectedDishes.value.findIndex(item => item.dishId === dishId)
+      if (index > -1) {
+        selectedDishes.value.splice(index, 1)
+      }
+    }
+  }
+}
+
+function getQuantity(dishId) {
+  const item = selectedDishes.value.find(item => item.dishId === dishId)
+  return item ? item.quantity : 0
+}
+
+function getDishName(dishId) {
+  const dish = dishes.value.find(d => d.id === dishId)
+  return dish ? dish.name : 'Unknown'
+}
+
+function getDishPrice(dishId) {
+  const dish = dishes.value.find(d => d.id === dishId)
+  return dish ? parseFloat(dish.price) : 0
+}
+
+function getDishImage(dish) {
+  if (dish && dish.imageUrl && dish.imageUrl.trim() !== '') {
+    return dish.imageUrl
+  }
+  return null
+}
+
+function getDishIcon(dishName) {
+  if (!dishName) return 'fa-utensils'
+  const name = dishName.toLowerCase()
+  if (name.includes('lẩu thai') || name.includes('thái')) return 'fa-bowl-food'
+  if (name.includes('tôm')) return 'fa-shrimp'
+  if (name.includes('bò')) return 'fa-drumstick-bite'
+  if (name.includes('hải sản')) return 'fa-fish'
+  if (name.includes('nấm')) return 'fa-seedling'
+  if (name.includes('rau')) return 'fa-leaf'
+  if (name.includes('mì') || name.includes('bún')) return 'fa-bowl-rice'
+  if (name.includes('nước') || name.includes('trà') || name.includes('bia')) return 'fa-glass-water'
+  if (name.includes('cá')) return 'fa-fish'
+  if (name.includes('cua')) return 'fa-crab'
+  if (name.includes('gà')) return 'fa-drumstick-bite'
+  if (name.includes('heo') || name.includes('sườn')) return 'fa-drumstick-bite'
+  return 'fa-utensils'
+}
+
+function handleImageError(event) {
+  // Replace broken image with icon placeholder
+  const img = event.target
+  const parent = img.parentElement
+  if (parent) {
+    img.style.display = 'none'
+    const iconPlaceholder = document.createElement('div')
+    iconPlaceholder.className = 'w-full h-full flex items-center justify-center bg-gray-100'
+    const dishName = img.alt || 'Dish'
+    const iconClass = getDishIcon(dishName)
+    iconPlaceholder.innerHTML = `<i class="fas ${iconClass} text-2xl text-gray-400"></i>`
+    parent.appendChild(iconPlaceholder)
+  }
+}
+
+function formatPrice(price) {
+  return new Intl.NumberFormat('vi-VN').format(price)
+}
+
+const totalAmount = computed(() => {
+  return selectedDishes.value.reduce((total, item) => {
+    return total + (getDishPrice(item.dishId) * item.quantity)
+  }, 0)
 })
 
 async function checkAvailability() {
@@ -607,13 +838,23 @@ async function submitReservation(e) {
   submitting.value = true
   
   try {
+    // Prepare items for order
+    const items = selectedDishes.value
+      .filter(item => item.quantity > 0)
+      .map(item => ({
+        dishId: item.dishId,
+        quantity: item.quantity,
+        notes: item.notes || ''
+      }))
+    
     const reservationData = {
       customerName: form.value.name.trim(),
       customerPhone: form.value.phone.trim(),
       customerEmail: form.value.email ? form.value.email.trim() : '',
       reservationDateTime: `${form.value.date}T${form.value.time}:00`,
       numberOfGuests: parseInt(form.value.guests),
-      notes: form.value.notes ? form.value.notes.trim() : ''
+      notes: form.value.notes ? form.value.notes.trim() : '',
+      items: items.length > 0 ? items : undefined // Only include if there are items
     }
 
     console.log('Sending reservation data:', reservationData)
@@ -649,6 +890,9 @@ async function submitReservation(e) {
       // Reset availability check
       isTableAvailable.value = false
       availabilityChecked.value = false
+      
+      // Reset selected dishes
+      selectedDishes.value = []
       
       // Hiển thị thông báo thành công
       showSuccess.value = true
@@ -697,8 +941,14 @@ function resetForm() {
   }
   showSuccess.value = false
   resetAvailabilityCheck()
+  selectedDishes.value = []
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// Load dishes on mount
+onMounted(() => {
+  // Dishes will be loaded when table is available
+})
 </script>
 
 <style scoped>

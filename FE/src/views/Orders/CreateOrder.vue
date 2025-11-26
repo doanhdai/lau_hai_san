@@ -90,7 +90,18 @@
                 class="border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition"
               >
                 <div class="flex items-center gap-2">
-                  <img :src="dish.imageUrl" :alt="dish.name" class="w-10 h-10 object-cover rounded-lg flex-shrink-0">
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                    <img
+                      v-if="dish.imageUrl && dish.imageUrl.trim() !== ''"
+                      :src="dish.imageUrl"
+                      :alt="dish.name"
+                      class="w-full h-full object-cover"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+                      <i :class="['fas', getDishIcon(dish.name)]" class="text-lg text-gray-400"></i>
+                    </div>
+                  </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">{{ dish.name }}</p>
                     <p class="text-xs text-red-600 font-bold">{{ formatCurrency(dish.price) }}</p>
@@ -506,6 +517,38 @@ function formatDateTime(datetime) {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+function getDishIcon(dishName) {
+  if (!dishName) return 'fa-utensils'
+  const name = dishName.toLowerCase()
+  if (name.includes('lẩu thai') || name.includes('thái')) return 'fa-bowl-food'
+  if (name.includes('tôm')) return 'fa-shrimp'
+  if (name.includes('bò')) return 'fa-drumstick-bite'
+  if (name.includes('hải sản')) return 'fa-fish'
+  if (name.includes('nấm')) return 'fa-seedling'
+  if (name.includes('rau')) return 'fa-leaf'
+  if (name.includes('mì') || name.includes('bún')) return 'fa-bowl-rice'
+  if (name.includes('nước') || name.includes('trà') || name.includes('bia')) return 'fa-glass-water'
+  if (name.includes('cá')) return 'fa-fish'
+  if (name.includes('cua')) return 'fa-crab'
+  if (name.includes('gà')) return 'fa-drumstick-bite'
+  if (name.includes('heo') || name.includes('sườn')) return 'fa-drumstick-bite'
+  return 'fa-utensils'
+}
+
+function handleImageError(event) {
+  const img = event.target
+  const parent = img.parentElement
+  if (parent) {
+    img.style.display = 'none'
+    const iconPlaceholder = document.createElement('div')
+    iconPlaceholder.className = 'w-full h-full flex items-center justify-center bg-gray-100'
+    const dishName = img.alt || 'Dish'
+    const iconClass = getDishIcon(dishName)
+    iconPlaceholder.innerHTML = `<i class="fas ${iconClass} text-lg text-gray-400"></i>`
+    parent.appendChild(iconPlaceholder)
+  }
 }
 
 function addDishToOrder(dish) {

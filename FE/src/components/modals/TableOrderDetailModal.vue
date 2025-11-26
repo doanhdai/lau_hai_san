@@ -108,6 +108,19 @@
                         :disabled="isItemServed(item) || selectedOrder.status === 'COMPLETED' || selectedOrder.status === 'CANCELLED'"
                       />
                     </div>
+                    <!-- Dish Image -->
+                    <div class="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                      <img
+                        v-if="getDishImage(item)"
+                        :src="getDishImage(item)"
+                        :alt="item.dishName"
+                        class="w-full h-full object-cover"
+                        @error="handleImageError"
+                      />
+                      <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+                        <i :class="['fas', getDishIcon(item.dishName)]" class="text-2xl text-gray-400"></i>
+                      </div>
+                    </div>
                     <div class="flex-1">
                       <div class="flex items-start justify-between gap-3">
                         <div class="flex-1">
@@ -379,22 +392,58 @@ function isItemServed(item) {
 function isItemOver30Minutes(item) {
   if (!item || !selectedOrder.value) return false
   
-  // Ưu tiên lấy thời gian từ item.createdAt (nếu item được thêm sau khi order đã tạo)
-  // Nếu không có, lấy từ selectedOrder.createdAt (thời gian order được tạo)
-  let createdAtValue = item.createdAt || item.created_at
-  if (!createdAtValue) {
-    // Nếu item không có createdAt, dùng thời gian order được tạo
-    createdAtValue = selectedOrder.value.createdAt || selectedOrder.value.created_at
+  // Logic tính thời gian:
+  // 1. Nếu order đã checkin (có confirmedAt):
+  //    - Nếu món được thêm TRƯỚC khi checkin: dùng confirmedAt (thời gian checkin)
+  //    - Nếu món được thêm SAU khi checkin: dùng order_detail.createdAt (thời gian món được thêm)
+  // 2. Nếu order chưa checkin (không có confirmedAt): dùng order_detail.createdAt
+  
+  let startTimeValue = null
+  const orderConfirmedAt = selectedOrder.value.confirmedAt || selectedOrder.value.confirmed_at
+  const itemCreatedAt = item.createdAt || item.created_at
+  
+  if (orderConfirmedAt && itemCreatedAt) {
+    // Order đã checkin và món có createdAt
+    // So sánh thời gian: nếu món được thêm trước checkin → dùng confirmedAt, ngược lại → dùng item.createdAt
+    try {
+      const confirmedTime = new Date(orderConfirmedAt)
+      const itemCreatedTime = new Date(itemCreatedAt)
+      
+      if (isNaN(confirmedTime.getTime()) || isNaN(itemCreatedTime.getTime())) {
+        // Invalid date, fallback về item.createdAt
+        startTimeValue = itemCreatedAt
+      } else {
+        // Nếu món được thêm trước hoặc cùng lúc với checkin → dùng confirmedAt
+        // Nếu món được thêm sau checkin → dùng item.createdAt
+        if (itemCreatedTime <= confirmedTime) {
+          startTimeValue = orderConfirmedAt // Món có từ trước khi checkin
+        } else {
+          startTimeValue = itemCreatedAt // Món được thêm sau khi checkin
+        }
+      }
+    } catch (error) {
+      console.error('Error comparing dates:', error)
+      startTimeValue = itemCreatedAt // Fallback
+    }
+  } else if (orderConfirmedAt) {
+    // Order đã checkin nhưng món không có createdAt → dùng confirmedAt
+    startTimeValue = orderConfirmedAt
+  } else if (itemCreatedAt) {
+    // Order chưa checkin → dùng thời gian món được thêm vào
+    startTimeValue = itemCreatedAt
+  } else {
+    // Fallback: dùng order.createdAt nếu không có gì
+    startTimeValue = selectedOrder.value.createdAt || selectedOrder.value.created_at
   }
   
-  if (!createdAtValue) return false
+  if (!startTimeValue) return false
   
   try {
-    const createdAt = new Date(createdAtValue)
-    if (isNaN(createdAt.getTime())) return false // Invalid date
+    const startTime = new Date(startTimeValue)
+    if (isNaN(startTime.getTime())) return false // Invalid date
     
     const now = new Date()
-    const diffInMinutes = (now - createdAt) / (1000 * 60) // Chuyển đổi từ milliseconds sang minutes
+    const diffInMinutes = (now - startTime) / (1000 * 60) // Chuyển đổi từ milliseconds sang minutes
     
     return diffInMinutes > WARNING_TIME_MINUTES
   } catch (error) {
@@ -408,6 +457,48 @@ function getDisplayNotes(item) {
   if (!item || !item.notes) return null
   const regex = new RegExp(SERVED_KEYWORD, 'gi')
   return item.notes.replace(regex, '').trim() || null
+}
+
+// Lấy hình ảnh món ăn
+function getDishImage(item) {
+  if (item && item.dishImageUrl && item.dishImageUrl.trim() !== '') {
+    return item.dishImageUrl
+  }
+  return null
+}
+
+// Lấy icon mặc định cho món ăn
+function getDishIcon(dishName) {
+  if (!dishName) return 'fa-utensils'
+  const name = dishName.toLowerCase()
+  if (name.includes('lẩu thai') || name.includes('thái')) return 'fa-bowl-food'
+  if (name.includes('tôm')) return 'fa-shrimp'
+  if (name.includes('bò')) return 'fa-drumstick-bite'
+  if (name.includes('hải sản')) return 'fa-fish'
+  if (name.includes('nấm')) return 'fa-seedling'
+  if (name.includes('rau')) return 'fa-leaf'
+  if (name.includes('mì') || name.includes('bún')) return 'fa-bowl-rice'
+  if (name.includes('nước') || name.includes('trà') || name.includes('bia')) return 'fa-glass-water'
+  if (name.includes('cá')) return 'fa-fish'
+  if (name.includes('cua')) return 'fa-crab'
+  if (name.includes('gà')) return 'fa-drumstick-bite'
+  if (name.includes('heo') || name.includes('sườn')) return 'fa-drumstick-bite'
+  return 'fa-utensils'
+}
+
+// Xử lý lỗi khi load ảnh
+function handleImageError(event) {
+  const img = event.target
+  const parent = img.parentElement
+  if (parent) {
+    img.style.display = 'none'
+    const iconPlaceholder = document.createElement('div')
+    iconPlaceholder.className = 'w-full h-full flex items-center justify-center bg-gray-100'
+    const dishName = img.alt || 'Dish'
+    const iconClass = getDishIcon(dishName)
+    iconPlaceholder.innerHTML = `<i class="fas ${iconClass} text-2xl text-gray-400"></i>`
+    parent.appendChild(iconPlaceholder)
+  }
 }
 
 // Đếm số món đã served

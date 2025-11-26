@@ -29,5 +29,6 @@ public class OrderResponse {
     private String notes;
     private String createdByName;
     private LocalDateTime createdAt;
+    private LocalDateTime confirmedAt; // Thời gian khi order được confirm (khi checkin)
     private LocalDateTime completedAt;
 }

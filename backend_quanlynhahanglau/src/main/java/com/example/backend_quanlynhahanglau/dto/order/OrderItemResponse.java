@@ -14,6 +14,7 @@ public class OrderItemResponse {
     private Long id;
     private String dishName;
     private Long dishId;
+    private String dishImageUrl;
     private Integer quantity;
     private BigDecimal price;
     private BigDecimal subtotal;

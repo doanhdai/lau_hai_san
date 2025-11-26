@@ -1,9 +1,12 @@
 package com.example.backend_quanlynhahanglau.dto.reservation;
 
+import com.example.backend_quanlynhahanglau.dto.order.OrderItemRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,5 +38,9 @@ public class PublicReservationRequest {
 
     private Long userId; // User ID để liên kết với Customer
 
-    private String notes; 
+    private String notes;
+    
+    // Danh sách món ăn đặt trước (optional)
+    @Valid
+    private List<OrderItemRequest> items;
 }

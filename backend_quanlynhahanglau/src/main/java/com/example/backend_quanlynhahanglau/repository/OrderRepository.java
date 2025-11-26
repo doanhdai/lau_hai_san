@@ -21,6 +21,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatus(OrderStatus status);
     List<Order> findByTable(RestaurantTable table);
     
+    // Tìm đơn hàng theo reservation ID và fetch Dish để tránh lazy loading
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderDetails od " +
+           "LEFT JOIN FETCH od.dish " +
+           "WHERE o.reservation.id = :reservationId")
+    List<Order> findByReservationId(@Param("reservationId") Long reservationId);
+    
     // Tìm đơn hàng theo ngày
     @Query("SELECT o FROM Order o WHERE " +
            "o.createdAt >= :startDate AND o.createdAt <= :endDate")

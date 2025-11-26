@@ -61,6 +61,11 @@ export const orderService = {
     return response.data
   },
 
+  async getByReservationId(reservationId) {
+    const response = await api.get(`/orders/by-reservation/${reservationId}`)
+    return response.data
+  },
+
   async getInvoiceHtml(orderId) {
     const response = await api.get(`/invoices/${orderId}/html`)
     return response.data

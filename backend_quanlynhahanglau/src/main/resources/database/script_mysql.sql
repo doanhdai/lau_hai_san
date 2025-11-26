@@ -82,6 +82,7 @@ CREATE TABLE `order_details`(
 CREATE TABLE `orders`(
 	`id` BIGINT AUTO_INCREMENT NOT NULL,
 	`completed_at` DATETIME(6) NULL,
+	`confirmed_at` DATETIME(6) NULL,
 	`created_at` DATETIME(6) NOT NULL,
 	`discount` DECIMAL(10, 2) NULL,
 	`notes` VARCHAR(1000) NULL,
@@ -344,9 +345,9 @@ INSERT INTO `order_details` (`id`, `notes`, `price`, `quantity`, `subtotal`, `cr
 (6, '', CAST(55000.00 AS DECIMAL(10, 2)), 1, CAST(55000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:48.151710' AS DATETIME), 26, 2);
 
 -- Insert data: orders
-INSERT INTO `orders` (`id`, `completed_at`, `created_at`, `discount`, `notes`, `order_number`, `status`, `subtotal`, `tax`, `total`, `updated_at`, `created_by`, `customer_id`, `reservation_id`, `room_id`, `table_id`) VALUES 
-(1, NULL, CAST('2025-11-06 13:39:13.454270' AS DATETIME), CAST(0.00 AS DECIMAL(10, 2)), 's', 'ORD20251106133913', 'CONFIRMED', CAST(950000.00 AS DECIMAL(10, 2)), CAST(95000.00 AS DECIMAL(10, 2)), CAST(1045000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:39:37.061364' AS DATETIME), 5, 6, 3, NULL, NULL),
-(2, NULL, CAST('2025-11-06 13:56:48.151710' AS DATETIME), CAST(0.00 AS DECIMAL(10, 2)), 'ít thịt', 'ORD20251106135648', 'CONFIRMED', CAST(450000.00 AS DECIMAL(10, 2)), CAST(45000.00 AS DECIMAL(10, 2)), CAST(495000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:57.579774' AS DATETIME), 5, 11, 9, NULL, NULL);
+INSERT INTO `orders` (`id`, `completed_at`, `confirmed_at`, `created_at`, `discount`, `notes`, `order_number`, `status`, `subtotal`, `tax`, `total`, `updated_at`, `created_by`, `customer_id`, `reservation_id`, `room_id`, `table_id`) VALUES 
+(1, NULL, NULL, CAST('2025-11-06 13:39:13.454270' AS DATETIME), CAST(0.00 AS DECIMAL(10, 2)), 's', 'ORD20251106133913', 'CONFIRMED', CAST(950000.00 AS DECIMAL(10, 2)), CAST(95000.00 AS DECIMAL(10, 2)), CAST(1045000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:39:37.061364' AS DATETIME), 5, 6, 3, NULL, NULL),
+(2, NULL, NULL, CAST('2025-11-06 13:56:48.151710' AS DATETIME), CAST(0.00 AS DECIMAL(10, 2)), 'ít thịt', 'ORD20251106135648', 'CONFIRMED', CAST(450000.00 AS DECIMAL(10, 2)), CAST(45000.00 AS DECIMAL(10, 2)), CAST(495000.00 AS DECIMAL(10, 2)), CAST('2025-11-06 13:56:57.579774' AS DATETIME), 5, 11, 9, NULL, NULL);
 
 -- Insert data: reservations
 INSERT INTO `reservations` (`id`, `confirmed_at`, `created_at`, `email_sent`, `notes`, `number_of_guests`, `reservation_time`, `special_requests`, `status`, `updated_at`, `confirmed_by`, `customer_id`, `room_id`, `table_id`) VALUES 
