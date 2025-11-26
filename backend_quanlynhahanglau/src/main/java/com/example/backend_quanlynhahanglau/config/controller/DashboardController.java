@@ -6,7 +6,6 @@ import com.example.backend_quanlynhahanglau.dto.report.DashboardStats;
 import com.example.backend_quanlynhahanglau.dto.report.RevenueReport;
 import com.example.backend_quanlynhahanglau.service.DashboardService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -41,7 +40,6 @@ public class DashboardController {
         try {
             LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
             LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
-            // If only date provided, set end time to end of day
             if (endDate.length() == 10) {
                 end = end.withHour(23).withMinute(59).withSecond(59);
             }
@@ -77,7 +75,6 @@ public class DashboardController {
         try {
             LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
             LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
-            // If only date provided, set end time to end of day
             if (endDate.length() == 10) {
                 end = end.withHour(23).withMinute(59).withSecond(59);
             }
@@ -103,7 +100,6 @@ public class DashboardController {
         try {
             LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
             LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
-            // If only date provided, set end time to end of day
             if (endDate.length() == 10) {
                 end = end.withHour(23).withMinute(59).withSecond(59);
             }

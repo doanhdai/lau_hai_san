@@ -7,7 +7,6 @@ import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.service.TableService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,7 +55,6 @@ public class TableController {
             @RequestParam String reservationTime,
             @RequestParam(required = false) Integer numberOfGuests) {
         try {
-            // Validate numberOfGuests
             if (numberOfGuests == null || numberOfGuests <= 0) {
                 return ResponseEntity.ok(ApiResponse.success(false));
             }

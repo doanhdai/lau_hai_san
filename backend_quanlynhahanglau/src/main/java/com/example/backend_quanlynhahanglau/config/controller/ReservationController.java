@@ -7,7 +7,6 @@ import com.example.backend_quanlynhahanglau.dto.reservation.ReservationResponse;
 import com.example.backend_quanlynhahanglau.service.ReservationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,7 +44,6 @@ public class ReservationController {
         try {
             LocalDateTime start = parseDateTime(startDate);
             LocalDateTime end = parseDateTime(endDate);
-            // If only date provided, set end time to end of day
             if (endDate.length() == 10) {
                 end = end.withHour(23).withMinute(59).withSecond(59);
             }

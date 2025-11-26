@@ -6,7 +6,6 @@ import com.example.backend_quanlynhahanglau.entity.Promotion;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
 import com.example.backend_quanlynhahanglau.repository.DishRepository;
 import com.example.backend_quanlynhahanglau.repository.PromotionRepository;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -22,25 +21,20 @@ import java.util.stream.Collectors;
 public class PromotionService {
     private final PromotionRepository promotionRepository;
     private final DishRepository dishRepository;
-    private final EntityManager entityManager;
 
     @Transactional
     public List<PromotionResponse> getAllPromotions() {
         List<Promotion> promotions = promotionRepository.findAll();
         LocalDateTime now = LocalDateTime.now();
 
-        // Auto-update active status: chỉ set status = 0 (hết hạn) khi endDate < now
         for (Promotion promotion : promotions) {
             Integer currentActive = promotion.getActive();
             if (currentActive == null) {
-                currentActive = 1; // Default to active
+                currentActive = 1;
             }
 
-            // Chỉ auto-update thành hết hạn (0) nếu đã qua endDate
-            // Không auto-update nếu status = 2 (tắt) hoặc 3 (đã xóa)
             if (currentActive != 2 && currentActive != 3) {
                 if (now.isAfter(promotion.getEndDate())) {
-                    // Đã hết hạn -> chuyển sang ngừng hoạt động (0)
                     if (currentActive != 0) {
                         promotion.setActive(0);
                         promotionRepository.save(promotion);
@@ -49,7 +43,6 @@ public class PromotionService {
             }
         }
 
-        // Filter out promotions with active = 3 (soft deleted)
         return promotions.stream()
                 .filter(p -> p.getActive() == null || p.getActive() != 3)
                 .map(this::mapToResponse)
@@ -68,7 +61,6 @@ public class PromotionService {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khuyến mãi", "id", id));
         
-        // Không trả về promotion có active = 3 (soft deleted)
         if (promotion.getActive() != null && promotion.getActive() == 3) {
             throw new ResourceNotFoundException("Khuyến mãi", "id", id);
         }
@@ -78,7 +70,6 @@ public class PromotionService {
 
     @Transactional
     public PromotionResponse createPromotion(PromotionRequest request) {
-        // Mặc định active = 1 (hoạt động) khi tạo mới
         Promotion promotion = Promotion.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -88,7 +79,7 @@ public class PromotionService {
                 .discountAmount(request.getDiscountAmount())
                 .minOrderValue(request.getMinOrderValue())
                 .maxDiscount(request.getMaxDiscount())
-                .active(1) // Mặc định hoạt động
+                .active(1)
                 .build();
 
         promotion = promotionRepository.save(promotion);
@@ -109,20 +100,16 @@ public class PromotionService {
         promotion.setMinOrderValue(request.getMinOrderValue());
         promotion.setMaxDiscount(request.getMaxDiscount());
 
-        // Update active status: chỉ auto-update thành hết hạn (0) nếu endDate < now
         LocalDateTime now = LocalDateTime.now();
         Integer currentActive = promotion.getActive();
         if (currentActive == null) {
             currentActive = 1;
         }
 
-        // Chỉ auto-update thành hết hạn (0) nếu đã qua endDate
-        // Không auto-update nếu status = 2 (tắt) hoặc 3 (đã xóa)
         if (currentActive != 2 && currentActive != 3) {
             if (now.isAfter(request.getEndDate())) {
-                promotion.setActive(0); // Expired
+                promotion.setActive(0);
             }
-            // Không tự động set status = 1 khi trong khoảng thời gian
         }
 
         promotion = promotionRepository.save(promotion);
@@ -134,18 +121,13 @@ public class PromotionService {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khuyến mãi", "id", id));
         
-        // Kiểm tra xem có dish nào đang sử dụng promotion này không
-        // Dùng query rõ ràng để đảm bảo kiểm tra chính xác
         if (dishRepository.existsByPromotionId(promotion)) {
-            // Nếu có dish đang sử dụng, chuyển status thành 3 (soft delete) thay vì xóa
             promotion.setActive(3);
             promotionRepository.save(promotion);
         } else {
-            // Nếu không có dish nào sử dụng, xóa bình thường
             try {
                 promotionRepository.delete(promotion);
             } catch (DataIntegrityViolationException e) {
-                // Nếu vẫn có lỗi foreign key (trường hợp hiếm), chuyển sang soft delete
                 promotion.setActive(3);
                 promotionRepository.save(promotion);
             }
@@ -156,13 +138,11 @@ public class PromotionService {
     public void activatePromotion(Long id) {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khuyến mãi", "id", id));
-        LocalDateTime now = LocalDateTime.now();
-        // Chỉ set active = 1 nếu đang trong khoảng thời gian
+        LocalDateTime now = LocalDateTime.now();        
         if ((now.isAfter(promotion.getStartDate()) || now.isEqual(promotion.getStartDate())) &&
                 (now.isBefore(promotion.getEndDate()) || now.isEqual(promotion.getEndDate()))) {
             promotion.setActive(1);
         } else {
-            // Nếu ngoài khoảng thời gian, vẫn set = 1 (sẽ được auto-update sau)
             promotion.setActive(1);
         }
         promotionRepository.save(promotion);
@@ -172,12 +152,11 @@ public class PromotionService {
     public void deactivatePromotion(Long id) {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khuyến mãi", "id", id));
-        promotion.setActive(2); // Tắt (manually disabled)
+        promotion.setActive(2);
         promotionRepository.save(promotion);
     }
 
     private PromotionResponse mapToResponse(Promotion promotion) {
-        // Determine discount type and value
         String discountType = null;
         BigDecimal discountValue = null;
 
@@ -190,13 +169,12 @@ public class PromotionService {
             discountValue = promotion.getDiscountAmount();
         }
 
-        // Convert Integer active to Boolean for backward compatibility
         Boolean activeBoolean = (promotion.getActive() != null && promotion.getActive() == 1);
 
         return PromotionResponse.builder()
                 .id(promotion.getId())
                 .name(promotion.getName())
-                .promotionName(promotion.getName()) // Alias for frontend compatibility
+                .promotionName(promotion.getName())
                 .description(promotion.getDescription())
                 .startDate(promotion.getStartDate())
                 .endDate(promotion.getEndDate())

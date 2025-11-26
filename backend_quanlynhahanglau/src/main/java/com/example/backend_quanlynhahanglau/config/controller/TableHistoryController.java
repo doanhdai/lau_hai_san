@@ -4,7 +4,6 @@ import com.example.backend_quanlynhahanglau.dto.ApiResponse;
 import com.example.backend_quanlynhahanglau.dto.history.TableHistoryResponse;
 import com.example.backend_quanlynhahanglau.service.TableHistoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +33,6 @@ public class TableHistoryController {
         try {
             LocalDateTime start = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(startDate);
             LocalDateTime end = com.example.backend_quanlynhahanglau.util.DateUtils.parseDateTime(endDate);
-            // If only date provided, set end time to end of day
             if (endDate.length() == 10) {
                 end = end.withHour(23).withMinute(59).withSecond(59);
             }

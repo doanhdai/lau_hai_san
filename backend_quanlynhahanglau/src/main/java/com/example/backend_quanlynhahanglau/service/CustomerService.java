@@ -121,9 +121,6 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getCustomerReservations(Long customerId) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Khách hàng", "id", customerId));
-        
         return reservationRepository.findByCustomerIdOrderByReservationTimeDesc(customerId).stream()
                 .map(this::mapReservationToResponse)
                 .collect(Collectors.toList());

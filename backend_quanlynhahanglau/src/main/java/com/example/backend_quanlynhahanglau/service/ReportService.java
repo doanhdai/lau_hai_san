@@ -7,7 +7,6 @@ import com.example.backend_quanlynhahanglau.entity.Order;
 import com.example.backend_quanlynhahanglau.entity.OrderDetail;
 import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import com.example.backend_quanlynhahanglau.enums.PaymentStatus;
-import com.example.backend_quanlynhahanglau.repository.OrderDetailRepository;
 import com.example.backend_quanlynhahanglau.repository.OrderRepository;
 import com.example.backend_quanlynhahanglau.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportService {
     private final OrderRepository orderRepository;
-    private final OrderDetailRepository orderDetailRepository;
     private final PaymentRepository paymentRepository;
     
     @Transactional(readOnly = true)

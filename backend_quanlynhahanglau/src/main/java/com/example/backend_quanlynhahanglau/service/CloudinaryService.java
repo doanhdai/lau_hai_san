@@ -19,7 +19,8 @@ public class CloudinaryService {
 
     public String uploadImage(MultipartFile file, String folder) throws IOException {
         try {
-            Map<String, Object> params = ObjectUtils.asMap(
+            @SuppressWarnings("unchecked")
+            Map<String, Object> params = (Map<String, Object>) ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "image",
                     "overwrite", true,
@@ -38,7 +39,6 @@ public class CloudinaryService {
 
     public boolean deleteImage(String imageUrl) {
         try {
-            // Lấy public_id từ URL
             String publicId = extractPublicId(imageUrl);
             if (publicId == null) {
                 log.warn("Không thể trích xuất public_id từ URL: {}", imageUrl);
@@ -65,7 +65,6 @@ public class CloudinaryService {
                 return null;
             }
 
-            // Tìm phần sau "/upload/"
             int uploadIndex = imageUrl.indexOf("/upload/");
             if (uploadIndex == -1) {
                 return null;
@@ -73,12 +72,10 @@ public class CloudinaryService {
 
             String afterUpload = imageUrl.substring(uploadIndex + "/upload/".length());
             
-            // Bỏ qua version nếu có (v1234567890/)
             if (afterUpload.matches("^v\\d+/.*")) {
                 afterUpload = afterUpload.substring(afterUpload.indexOf("/") + 1);
             }
 
-            // Bỏ phần extension
             int lastDot = afterUpload.lastIndexOf(".");
             if (lastDot != -1) {
                 afterUpload = afterUpload.substring(0, lastDot);

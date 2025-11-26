@@ -24,12 +24,6 @@ public class InvoiceController {
             new com.example.backend_quanlynhahanglau.entity.Order()
         );
         
-        // Get actual order to generate invoice
-        com.example.backend_quanlynhahanglau.repository.OrderRepository orderRepo = 
-            (com.example.backend_quanlynhahanglau.repository.OrderRepository) 
-            ((org.springframework.context.ApplicationContext) null).getBean("orderRepository");
-        
-        // Simplified - in actual implementation, inject OrderRepository
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_HTML)
                 .body(html);

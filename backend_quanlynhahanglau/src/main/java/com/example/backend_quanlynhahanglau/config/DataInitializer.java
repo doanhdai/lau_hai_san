@@ -1,6 +1,5 @@
 package com.example.backend_quanlynhahanglau.config;
 
-import com.example.backend_quanlynhahanglau.entity.Customer;
 import com.example.backend_quanlynhahanglau.entity.Role;
 import com.example.backend_quanlynhahanglau.entity.User;
 import com.example.backend_quanlynhahanglau.enums.RoleName;
@@ -28,18 +27,12 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        log.info("=== Starting Data Initialization ===");
-        
-        // Initialize Roles
         initializeRoles();
-        
-        // Initialize Default Admin User
+            
         initializeDefaultAdmin();
         
-        // Generate customer codes for existing customers
         generateCustomerCodes();
         
-        log.info("=== Data Initialization Completed ===");
     }
 
     private void initializeRoles() {
