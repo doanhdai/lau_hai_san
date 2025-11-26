@@ -1,7 +1,7 @@
 <template>
-  <div class="h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-white overflow-hidden">
+  <div class="flex bg-white dark:bg-gray-900 text-gray-900 dark:text-white overflow-hidden" style="height: 100%; min-height: 0;">
     <!-- Left Panel - Chat List -->
-    <div class="w-96 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-800 shadow-lg">
+    <div class="w-96 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-800 shadow-lg h-full">
       <!-- Header -->
       <div class="p-5 border-b border-gray-200 dark:border-gray-700 bg-slate-900 dark:bg-slate-800">
         <!-- <div class="flex items-center justify-between mb-4">
@@ -132,9 +132,9 @@
     </div>
 
     <!-- Right Panel - Chat Messages -->
-    <div class="flex-1 flex flex-col bg-white dark:bg-gray-900" v-if="selectedConversation">
+    <div class="flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden h-full" v-if="selectedConversation">
       <!-- Chat Header -->
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-slate-900 dark:bg-slate-800 shadow-md">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-slate-900 dark:bg-slate-800 shadow-md flex-shrink-0">
         <div class="flex items-center gap-4">
           <!-- Avatar -->
           <div class="w-12 h-12 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-lg ring-2 ring-white/50">
@@ -169,7 +169,7 @@
       </div>
 
       <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-900 space-y-4 min-h-0" ref="messagesContainer">
+      <div class="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-900 space-y-4 min-h-0 max-h-full" ref="messagesContainer" style="flex: 1 1 0%;">
         <div v-if="loadingMessages" class="flex flex-col items-center justify-center py-12">
           <i class="fas fa-spinner fa-spin text-3xl text-slate-700 dark:text-slate-400 mb-3"></i>
           <p class="text-sm text-gray-500 dark:text-gray-400">Đang tải tin nhắn...</p>
@@ -261,12 +261,12 @@
       </div>
 
       <!-- Input Area -->
-      <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+      <div class="p-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg flex-shrink-0">
         <form @submit.prevent="sendMessage" class="flex items-end gap-3">
           <button type="button" class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-600 dark:text-gray-400" title="Gửi file">
             <i class="fas fa-paperclip text-lg"></i>
           </button>
-          <div class="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3 border-2 border-transparent focus-within:border-slate-900 dark:focus-within:border-slate-700 transition-colors">
+          <div class="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 border-2 border-transparent focus-within:border-slate-900 dark:focus-within:border-slate-700 transition-colors">
             <input
               v-model="messageInput"
               type="text"
