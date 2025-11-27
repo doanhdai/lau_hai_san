@@ -662,10 +662,21 @@ function formatPrice(price) {
   return new Intl.NumberFormat('vi-VN').format(price)
 }
 
-const totalAmount = computed(() => {
+// Tính subtotal (tổng giá món chưa thuế)
+const subtotal = computed(() => {
   return selectedDishes.value.reduce((total, item) => {
     return total + (getDishPrice(item.dishId) * item.quantity)
   }, 0)
+})
+
+// Tính tax (10%)
+const tax = computed(() => {
+  return subtotal.value * 0.1
+})
+
+// Tính total (subtotal + tax)
+const totalAmount = computed(() => {
+  return subtotal.value + tax.value
 })
 
 async function checkAvailability() {
@@ -847,6 +858,9 @@ async function submitReservation(e) {
         notes: item.notes || ''
       }))
     
+    // Lấy userId nếu đã đăng nhập
+    const userId = authStore.user?.id || null
+
     const reservationData = {
       customerName: form.value.name.trim(),
       customerPhone: form.value.phone.trim(),
@@ -854,18 +868,54 @@ async function submitReservation(e) {
       reservationDateTime: `${form.value.date}T${form.value.time}:00`,
       numberOfGuests: parseInt(form.value.guests),
       notes: form.value.notes ? form.value.notes.trim() : '',
-      items: items.length > 0 ? items : undefined // Only include if there are items
+      items: items.length > 0 ? items : undefined, // Only include if there are items
+      userId: userId // Gửi userId nếu đã đăng nhập
     }
 
+    // Nếu có món đã chọn, không tạo reservation ngay, mà redirect đến trang thanh toán
+    if (items.length > 0) {
+      // Tính tổng đơn món (subtotal + tax)
+      const totalOrderAmount = totalAmount.value
+      const depositAmount = Math.round(totalOrderAmount * 0.2) // 20%, làm tròn
+      
+      // Lưu thông tin reservation vào query params để trang thanh toán có thể tạo reservation
+      const queryParams = {
+        customerName: form.value.name.trim(),
+        customerPhone: form.value.phone.trim(),
+        customerEmail: form.value.email ? form.value.email.trim() : '',
+        reservationDateTime: `${form.value.date}T${form.value.time}:00`,
+        numberOfGuests: parseInt(form.value.guests),
+        notes: form.value.notes ? form.value.notes.trim() : '',
+        depositAmount: depositAmount,
+        totalAmount: totalOrderAmount,
+        items: JSON.stringify(items)
+      }
+      
+      // Thêm userId nếu đã đăng nhập
+      if (userId) {
+        queryParams.userId = userId
+      }
+      
+      router.push({
+        path: '/reservation/deposit-payment',
+        query: queryParams
+      })
+      return
+    }
+    
+    // Nếu không có món, tạo reservation ngay như bình thường
     console.log('Sending reservation data:', reservationData)
     const response = await reservationService.createPublic(reservationData)
     console.log('Reservation response:', response)
     
     if (response.success) {
+      
+      // Nếu không có món, hiển thị thông báo thành công như bình thường
       notification.success('Đặt bàn thành công!')
       
       // Lấy mã đặt bàn từ response
-      reservationCode.value = response.data?.id || response.data?.reservationCode || 'N/A'
+      const reservationId = response.data?.id
+      reservationCode.value = reservationId || response.data?.reservationCode || 'N/A'
       
       // Reset form nhưng giữ lại thông tin đã chọn để hiển thị
       form.value = {

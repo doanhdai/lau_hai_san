@@ -164,42 +164,96 @@
           
           <!-- Order Items -->
           <div class="space-y-3 mb-4 max-h-64 overflow-y-auto">
-            <div v-if="orderForm.items.length === 0" class="text-center py-8 text-gray-500">
+            <!-- Empty state -->
+            <div v-if="orderForm.items.length === 0 && preOrderedItems.length === 0 && existingOrderDetails.length === 0" class="text-center py-8 text-gray-500">
               Chưa có món nào
             </div>
-            <div 
-              v-else
-              v-for="(item, index) in orderForm.items" 
-              :key="index"
-              class="p-3 bg-gray-50 rounded-lg space-y-2"
-            >
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900">{{ item.dishName }}</p>
-                  <p class="text-xs text-gray-600">{{ formatCurrency(item.price) }}</p>
-                </div>
+            
+            <!-- Existing order items (from current order) -->
+            <template v-if="existingOrderDetails.length > 0">
+              <div 
+                v-for="(item, index) in existingOrderDetails" 
+                :key="'existing-' + (item.id || index)"
+                class="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2"
+              >
                 <div class="flex items-center gap-2">
-                  <button @click="decreaseQuantity(index)" class="w-6 h-6 bg-gray-200 rounded hover:bg-gray-300">
-                    -
-                  </button>
-                  <span class="text-sm font-bold w-8 text-center">{{ item.quantity }}</span>
-                  <button @click="increaseQuantity(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
-                    +
-                  </button>
-                  <button @click="removeItem(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">
-                    ×
-                  </button>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="text-sm font-medium text-gray-900">{{ item.dishName || item.dish?.name || 'Món không xác định' }}</p>
+                      <!-- <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Đơn hàng hiện tại</span> -->
+                    </div>
+                    <p class="text-xs text-gray-600">{{ formatCurrency(item.price || item.unitPrice || 0) }} × {{ item.quantity }}</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-green-700">{{ item.quantity }}</span>
+                  </div>
+                </div>
+                <div v-if="item.notes && item.notes.trim()" class="text-xs text-gray-600 italic">
+                  Ghi chú: {{ item.notes }}
                 </div>
               </div>
-              <div>
-                <input
-                  v-model="item.notes"
-                  type="text"
-                  placeholder="Ghi chú cho món này..."
-                  class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                />
+            </template>
+            
+            <!-- Pre-ordered items (from reservation) -->
+            <template v-if="preOrderedItems.length > 0">
+              <div 
+                v-for="(item, index) in preOrderedItems" 
+                :key="'pre-' + (item.dishId || index)"
+                class="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2"
+              >
+                <div class="flex items-center gap-2">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="text-sm font-medium text-gray-900">{{ item.dishName }}</p>
+                      <span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Đã đặt trước</span>
+                    </div>
+                    <p class="text-xs text-gray-600">{{ formatCurrency(item.price) }} × {{ item.quantity }}</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-blue-700">{{ item.quantity }}</span>
+                  </div>
+                </div>
+                <div v-if="item.notes && item.notes.trim()" class="text-xs text-gray-600 italic">
+                  Ghi chú: {{ item.notes }}
+                </div>
               </div>
-            </div>
+            </template>
+            
+            <!-- New items (being added) -->
+            <template v-if="orderForm.items.length > 0">
+              <div 
+                v-for="(item, index) in orderForm.items" 
+                :key="'new-' + (item.dishId || index)"
+                class="p-3 bg-gray-50 rounded-lg space-y-2"
+              >
+                <div class="flex items-center gap-2">
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900">{{ item.dishName }}</p>
+                    <p class="text-xs text-gray-600">{{ formatCurrency(item.price) }}</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button @click="decreaseQuantity(index)" class="w-6 h-6 bg-gray-200 rounded hover:bg-gray-300 flex items-center justify-center">
+                      -
+                    </button>
+                    <span class="text-sm font-bold w-8 text-center">{{ item.quantity }}</span>
+                    <button @click="increaseQuantity(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center">
+                      +
+                    </button>
+                    <button @click="removeItem(index)" class="w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center">
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <input
+                    v-model="item.notes"
+                    type="text"
+                    placeholder="Ghi chú cho món này..."
+                    class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- Pricing -->
@@ -254,7 +308,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { orderService } from '@/services/orderService'
 import { dishService } from '@/services/dishService'
@@ -292,8 +346,23 @@ const filteredDishes = computed(() => {
   )
 })
 
+const preOrderedItems = ref([])
+
 const subtotal = computed(() => {
-  return orderForm.value.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  // Tính tổng từ đơn hàng hiện tại (existing order)
+  const existingOrderTotal = existingOrderDetails.value.reduce((sum, item) => {
+    const price = item.price || item.unitPrice || 0
+    const quantity = item.quantity || 1
+    return sum + (price * quantity)
+  }, 0)
+  
+  // Tính tổng từ món đã đặt trước
+  const preOrderedTotal = preOrderedItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  
+  // Tính tổng từ món mới thêm vào
+  const newItemsTotal = orderForm.value.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  
+  return existingOrderTotal + preOrderedTotal + newItemsTotal
 })
 
 const tax = computed(() => subtotal.value * 0.1)
@@ -315,6 +384,18 @@ const existingOrderTotal = computed(() => {
 onMounted(() => {
   loadData()
   handleQueryParams()
+})
+
+// Watch reservationId để load pre-ordered items khi thay đổi
+watch(() => orderForm.value.reservationId, async (newReservationId, oldReservationId) => {
+  // Chỉ load khi có reservationId mới và chưa có order
+  if (newReservationId && newReservationId !== oldReservationId && !orderForm.value.orderId) {
+    console.log('ReservationId changed, loading pre-ordered items:', newReservationId)
+    await loadPreOrderedItems(newReservationId)
+  } else if (!newReservationId) {
+    // Clear pre-ordered items khi không có reservationId
+    preOrderedItems.value = []
+  }
 })
 
 async function handleQueryParams() {
@@ -360,11 +441,15 @@ async function handleQueryParams() {
         // Nếu có order, set orderId (để biết là update)
         orderForm.value.orderId = foundOrder.id
         await loadExistingOrderDetails(foundOrder.id)
+        // Clear pre-ordered items vì đã có order
+        preOrderedItems.value = []
       } else {
         // Nếu không có order, orderId = null (tạo mới)
         orderForm.value.orderId = null
         existingOrder.value = null
         existingOrderDetails.value = []
+        // Load các món đã đặt trước từ reservation
+        await loadPreOrderedItems(reservationIdNum)
       }
     }
   } else {
@@ -454,11 +539,71 @@ async function loadExistingOrderDetails(orderId) {
       // Lấy order details từ order.items hoặc order.orderDetails
       existingOrderDetails.value = orderRes.data.items || orderRes.data.orderDetails || []
       // Không tự động chuyển tab - giữ nguyên tab hiện tại
+      // Clear pre-ordered items khi đã có order
+      preOrderedItems.value = []
     }
   } catch (error) {
     console.error('Error loading existing order details:', error)
     existingOrder.value = null
     existingOrderDetails.value = []
+  }
+}
+
+async function loadPreOrderedItems(reservationId) {
+  try {
+    if (!reservationId) {
+      preOrderedItems.value = []
+      return
+    }
+    
+    console.log('Loading pre-ordered items for reservation:', reservationId)
+    
+    // Lấy tất cả orders từ reservation
+    const response = await orderService.getByReservationId(reservationId)
+    
+    console.log('Pre-ordered items response:', response)
+    
+    // Xử lý response structure khác nhau
+    let ordersData = []
+    if (response.success && response.data) {
+      if (Array.isArray(response.data)) {
+        ordersData = response.data
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        ordersData = response.data.data
+      }
+    } else if (Array.isArray(response)) {
+      ordersData = response
+    } else if (response.data && Array.isArray(response.data)) {
+      ordersData = response.data
+    }
+    
+    console.log('Orders data:', ordersData)
+    
+    // Lấy tất cả items từ các orders (chỉ lấy orders chưa thanh toán)
+    const allItems = []
+    ordersData.forEach(order => {
+      if (order && order.status !== 'PAID' && order.status !== 'CANCELLED' && order.status !== 'COMPLETED') {
+        const items = order.items || order.orderDetails || []
+        console.log('Order items:', items)
+        items.forEach(item => {
+          if (item) {
+            allItems.push({
+              dishId: item.dishId || item.dish?.id,
+              dishName: item.dishName || item.dish?.name || 'Món không xác định',
+              price: item.price || item.unitPrice || item.dish?.price || 0,
+              quantity: item.quantity || 1,
+              notes: item.notes || ''
+            })
+          }
+        })
+      }
+    })
+    
+    console.log('All pre-ordered items:', allItems)
+    preOrderedItems.value = allItems
+  } catch (error) {
+    console.error('Error loading pre-ordered items:', error)
+    preOrderedItems.value = []
   }
 }
 
@@ -558,6 +703,11 @@ function addDishToOrder(dish) {
     return
   }
   
+  // Đảm bảo orderForm.items là một array
+  if (!Array.isArray(orderForm.value.items)) {
+    orderForm.value.items = []
+  }
+  
   const existingItem = orderForm.value.items.find(item => item.dishId === dish.id)
   
   if (existingItem) {
@@ -571,6 +721,9 @@ function addDishToOrder(dish) {
       notes: ''
     })
   }
+  
+  console.log('Added dish to order:', dish.name, 'Items count:', orderForm.value.items.length)
+  console.log('Current orderForm.items:', orderForm.value.items)
 }
 
 function increaseQuantity(index) {

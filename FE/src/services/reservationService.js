@@ -82,5 +82,20 @@ export const reservationService = {
   async assignTable(id, tableId) {
     const response = await api.put(`/reservations/${id}/table?tableId=${tableId}`)
     return response.data
+  },
+
+  async transferTable(id, newTableId) {
+    const response = await api.put(`/reservations/${id}/transfer-table?newTableId=${newTableId}`)
+    return response.data
+  },
+
+  async payDeposit(id, depositAmount) {
+    const response = await api.post(`/reservations/public/${id}/pay-deposit?depositAmount=${depositAmount}`)
+    return response.data
+  },
+
+  async createWithDeposit(reservationData) {
+    const response = await api.post('/reservations/public/with-deposit', reservationData)
+    return response.data
   }
 }

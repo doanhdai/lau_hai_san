@@ -20,10 +20,6 @@
               <div class="w-4 h-4 rounded border-2 bg-red-400 border-red-400"></div>
               <span class="text-xs text-slate-600">Có khách</span>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 rounded border-2 bg-gray-600 border-gray-700"></div>
-              <span class="text-xs text-slate-600">Đang dọn</span>
-            </div>
           </div>
         </div>
       </div>
@@ -319,6 +315,13 @@
                 <i class="fas fa-utensils"></i>
                 <span>Xem đơn hàng</span>
               </button>
+              <button
+                @click.stop="openTransferTableModal"
+                class="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-exchange-alt"></i>
+                <span>Đổi bàn</span>
+              </button>
             </div>
 
             <!-- Chỉnh trạng thái bàn -->
@@ -372,6 +375,127 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Transfer Table Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showTransferTableModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4"
+        @click.self="closeTransferTableModal"
+      >
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <!-- Modal Header -->
+          <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <h3 class="text-lg font-bold">Đổi bàn cho khách</h3>
+            <button @click="closeTransferTableModal" class="text-white/80 hover:text-white transition-colors">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="flex-1 overflow-y-auto p-6">
+            <!-- Current Table Info -->
+            <div v-if="tableModalTable" class="mb-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <h4 class="text-sm font-semibold text-slate-900 mb-2">Bàn hiện tại</h4>
+              <div class="flex items-center gap-3">
+                <div class="bg-red-100 text-red-700 px-3 py-2 rounded-lg font-bold">
+                  {{ tableModalTable.tableNumber }}
+                </div>
+                <div class="text-sm text-slate-600">
+                  <span class="font-semibold">{{ tableModalTable.capacity }}</span> chỗ
+                </div>
+              </div>
+            </div>
+
+            <!-- Table Type Filter -->
+            <div class="mb-4">
+              <div class="flex gap-2 border-b border-gray-200">
+                <button
+                  @click="transferTableTypeFilter = 'online'"
+                  :class="[
+                    'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+                    transferTableTypeFilter === 'online'
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-900'
+                  ]"
+                >
+                  Bàn Online
+                </button>
+                <button
+                  @click="transferTableTypeFilter = 'regular'"
+                  :class="[
+                    'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+                    transferTableTypeFilter === 'regular'
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-900'
+                  ]"
+                >
+                  Bàn Thường
+                </button>
+              </div>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="loadingTransferTables" class="text-center py-12">
+              <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-3"></i>
+              <p class="text-sm text-slate-600">Đang tải danh sách bàn...</p>
+            </div>
+
+            <!-- Tables Grid -->
+            <div v-else>
+              <div v-if="filteredTransferTables.length === 0" class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                <i class="fas fa-chair text-4xl text-gray-300 mb-3"></i>
+                <p class="text-sm text-slate-600">Không có bàn {{ transferTableTypeFilter === 'online' ? 'online' : 'thường' }} trống</p>
+              </div>
+              <div v-else class="grid grid-cols-4 gap-3">
+                <button
+                  v-for="table in filteredTransferTables"
+                  :key="table.id"
+                  @click="selectedTransferTableId = table.id.toString()"
+                  :class="[
+                    'relative p-4 rounded-lg border-2 transition-all text-left',
+                    selectedTransferTableId === table.id.toString()
+                      ? 'bg-green-50 border-green-400 shadow-md'
+                      : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  ]"
+                >
+                  <!-- Selected indicator dot -->
+                  <div
+                    v-if="selectedTransferTableId === table.id.toString()"
+                    class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full"
+                  ></div>
+                  <div class="pr-6">
+                    <p class="font-bold text-slate-900 text-base mb-1">{{ table.tableNumber }}</p>
+                    <p class="text-xs text-slate-600">({{ table.capacity }} chỗ)</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="flex gap-3 pt-4 px-6 pb-6 border-t border-gray-200 flex-shrink-0">
+            <button
+              @click="closeTransferTableModal"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-slate-700 px-4 py-2.5 rounded-lg font-medium transition-colors"
+            >
+              Huỷ
+            </button>
+            <button
+              @click="handleTransferTable"
+              :disabled="!selectedTransferTableId || transferringTable"
+              class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="!transferringTable">Xác nhận đổi bàn</span>
+              <span v-else class="flex items-center justify-center gap-2">
+                <i class="fas fa-spinner fa-spin"></i>
+                Đang xử lý...
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -483,6 +607,14 @@ const floorOptions = [
 ]
 const selectedFloor = ref(floorOptions[0].value)
 const tableTimers = ref(loadTableTimers())
+
+// Transfer table modal
+const showTransferTableModal = ref(false)
+const availableTransferTables = ref([])
+const loadingTransferTables = ref(false)
+const selectedTransferTableId = ref('')
+const transferTableTypeFilter = ref('online') // 'online' or 'regular'
+const transferringTable = ref(false)
 
 // Min date for filter (today)
 const minDate = computed(() => {
@@ -846,9 +978,10 @@ function findCheckedInReservationIdByTableId(tableId) {
     return null
   }
   
+  // Tìm reservation có status CHECKED_IN và tableId trùng
   const reservation = reservations.value.find(r => 
     r && 
-    r.tableId === tableId && 
+    (r.tableId === tableId || r.table?.id === tableId) && 
     r.status === 'CHECKED_IN'
   )
   
@@ -1002,8 +1135,20 @@ function openTableModal(table) {
   // Nếu bàn đang ở trạng thái CLEANING, tự động chuyển về AVAILABLE vì không còn option CLEANING
   tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
   
-  // Lưu reservationId: ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
-  let reservationId = table.reservation?.id || null
+  // Lưu reservationId: 
+  // 1. Nếu bàn đã check-in (OCCUPIED), tìm reservation có status CHECKED_IN
+  // 2. Nếu không, ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
+  let reservationId = null
+  
+  if (table.status === 'OCCUPIED' && table.id) {
+    // Bàn đã check-in: tìm reservation có status CHECKED_IN
+    reservationId = findCheckedInReservationIdByTableId(table.id)
+  }
+  
+  // Nếu chưa tìm thấy, thử các cách khác
+  if (!reservationId) {
+    reservationId = table.reservation?.id || null
+  }
   
   if (!reservationId && table.id) {
     const tableWithReservation = tablesWithReservations.value.find(t => 
@@ -1021,6 +1166,123 @@ function closeTableModal() {
   tableModalTable.value = null
   tableStatus.value = 'AVAILABLE'
   tableModalReservationId.value = null
+}
+
+// Transfer table functions
+async function openTransferTableModal() {
+  if (!tableModalTable.value) {
+    notification.error('Không tìm thấy thông tin bàn')
+    return
+  }
+
+  // Nếu chưa có reservationId, thử tìm lại
+  let reservationId = tableModalReservationId.value
+  
+  if (!reservationId && tableModalTable.value.status === 'OCCUPIED' && tableModalTable.value.id) {
+    reservationId = findCheckedInReservationIdByTableId(tableModalTable.value.id)
+    if (reservationId) {
+      tableModalReservationId.value = reservationId
+    }
+  }
+
+  if (!reservationId) {
+    console.error('Cannot find reservationId for table:', tableModalTable.value)
+    notification.error('Không tìm thấy thông tin đặt bàn. Vui lòng đảm bảo bàn đã được check-in.')
+    return
+  }
+
+  showTransferTableModal.value = true
+  loadingTransferTables.value = true
+  availableTransferTables.value = []
+  selectedTransferTableId.value = ''
+  transferTableTypeFilter.value = 'online'
+
+  try {
+    // Lấy tất cả bàn trống (status = AVAILABLE)
+    const allTables = await tableService.getAll()
+    const availableTables = allTables.data.filter(table => 
+      table.status === 'AVAILABLE' && 
+      table.active !== false &&
+      table.id !== tableModalTable.value.id // Loại trừ bàn hiện tại
+    )
+
+    // Lọc theo sức chứa (bàn mới phải có sức chứa >= số khách)
+    const reservation = reservations.value.find(r => r.id === tableModalReservationId.value)
+    const numberOfGuests = reservation?.numberOfGuests || 1
+    
+    availableTransferTables.value = availableTables.filter(table => 
+      table.capacity >= numberOfGuests
+    )
+  } catch (error) {
+    console.error('Error loading tables:', error)
+    notification.error('Không thể tải danh sách bàn')
+  } finally {
+    loadingTransferTables.value = false
+  }
+}
+
+function closeTransferTableModal() {
+  showTransferTableModal.value = false
+  availableTransferTables.value = []
+  selectedTransferTableId.value = ''
+  transferTableTypeFilter.value = 'online'
+}
+
+const filteredTransferTables = computed(() => {
+  if (!Array.isArray(availableTransferTables.value)) return []
+  
+  return availableTransferTables.value.filter(table => {
+    if (!table) return false
+    
+    // Bàn Online: type === 'ONLINE'
+    if (transferTableTypeFilter.value === 'online') {
+      return table.type === 'ONLINE'
+    } 
+    // Bàn Thường: type === 'OFFLINE'
+    else {
+      return table.type === 'OFFLINE'
+    }
+  })
+})
+
+async function handleTransferTable() {
+  if (!selectedTransferTableId.value || !tableModalReservationId.value) {
+    notification.error('Vui lòng chọn bàn')
+    return
+  }
+
+  const newTable = availableTransferTables.value.find(t => t.id === parseInt(selectedTransferTableId.value))
+  if (!newTable) {
+    notification.error('Bàn không hợp lệ')
+    return
+  }
+
+  if (!confirm(`Xác nhận đổi bàn từ ${tableModalTable.value.tableNumber} sang bàn ${newTable.tableNumber}?`)) {
+    return
+  }
+
+  transferringTable.value = true
+  try {
+    const response = await reservationService.transferTable(
+      tableModalReservationId.value,
+      parseInt(selectedTransferTableId.value)
+    )
+
+    if (response.success !== false) {
+      notification.success(`Đã đổi bàn thành công sang bàn ${newTable.tableNumber}`)
+      closeTransferTableModal()
+      closeTableModal()
+      loadData()
+    } else {
+      notification.error(response.message || 'Không thể đổi bàn')
+    }
+  } catch (error) {
+    console.error('Error transferring table:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể đổi bàn'
+    notification.error(errorMessage)
+  } finally {
+    transferringTable.value = false
+  }
 }
 
 // Kiểm tra xem bàn có đơn hàng chưa thanh toán không

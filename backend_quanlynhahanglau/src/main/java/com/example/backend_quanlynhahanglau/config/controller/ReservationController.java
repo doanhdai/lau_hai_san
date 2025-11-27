@@ -144,4 +144,35 @@ public class ReservationController {
         ReservationResponse reservation = reservationService.updateReservationTable(id, tableId);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật bàn cho đặt bàn thành công", reservation));
     }
+
+    @PutMapping("/{id}/transfer-table")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<ReservationResponse>> transferTable(
+            @PathVariable Long id,
+            @RequestParam Long newTableId) {
+        ReservationResponse reservation = reservationService.transferTable(id, newTableId);
+        return ResponseEntity.ok(ApiResponse.success("Đổi bàn thành công", reservation));
+    }
+
+    @PostMapping("/public/{id}/pay-deposit")
+    public ResponseEntity<ApiResponse<ReservationResponse>> payDeposit(
+            @PathVariable Long id,
+            @RequestParam String depositAmount) {
+        try {
+            java.math.BigDecimal deposit = new java.math.BigDecimal(depositAmount);
+            ReservationResponse reservation = reservationService.payDeposit(id, deposit);
+            return ResponseEntity.ok(ApiResponse.success("Thanh toán cọc thành công", reservation));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số tiền cọc không hợp lệ: " + depositAmount));
+        }
+    }
+
+    @PostMapping("/public/with-deposit")
+    public ResponseEntity<ApiResponse<ReservationResponse>> createPublicReservationWithDeposit(
+            @Valid @RequestBody com.example.backend_quanlynhahanglau.dto.reservation.PublicReservationWithDepositRequest request) {
+        ReservationResponse reservation = reservationService.createPublicReservationWithDeposit(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Đặt bàn và thanh toán cọc thành công", reservation));
+    }
 }

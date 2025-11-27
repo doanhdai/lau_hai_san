@@ -3,6 +3,7 @@ package com.example.backend_quanlynhahanglau.dto.reservation;
 import com.example.backend_quanlynhahanglau.enums.ReservationStatus;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -25,5 +26,6 @@ public class ReservationResponse {
     private Boolean emailSent;
     private String confirmedByName;
     private LocalDateTime confirmedAt;
+    private BigDecimal depositAmount; // Số tiền đã cọc
     private LocalDateTime createdAt;
 }

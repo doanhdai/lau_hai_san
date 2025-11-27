@@ -19,7 +19,11 @@
           <span class="text-4xl opacity-50">⭐</span>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+      <div 
+        @click="filterByType('positive')"
+        class="card bg-gradient-to-br from-green-500 to-green-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200"
+        :class="{ 'ring-4 ring-green-300': filterType === 'positive' }"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-green-100 text-sm">Tích cực</p>
@@ -28,7 +32,11 @@
           <span class="text-4xl opacity-50">😊</span>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+      <div 
+        @click="filterByType('negative')"
+        class="card bg-gradient-to-br from-red-500 to-red-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200"
+        :class="{ 'ring-4 ring-red-300': filterType === 'negative' }"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-red-100 text-sm">Tiêu cực</p>
@@ -37,7 +45,11 @@
           <span class="text-4xl opacity-50">😞</span>
         </div>
       </div>
-      <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+      <div 
+        @click="filterByType('all')"
+        class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200"
+        :class="{ 'ring-4 ring-blue-300': filterType === 'all' }"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-blue-100 text-sm">Tổng phản hồi</p>
@@ -179,6 +191,7 @@ const searchQuery = ref('')
 const filterRating = ref('')
 const filterDateFrom = ref('')
 const filterDateTo = ref('')
+const filterType = ref('all') // 'all', 'positive', 'negative'
 const deletingFeedbackId = ref(null)
 
 const averageRating = computed(() => {
@@ -192,6 +205,13 @@ const badFeedbackCount = computed(() => feedbacks.value.filter(f => f.rating <= 
 
 const filteredFeedbacks = computed(() => {
   let result = feedbacks.value
+
+  // Lọc theo loại phản hồi (tích cực/tiêu cực)
+  if (filterType.value === 'positive') {
+    result = result.filter(f => f.rating >= 4)
+  } else if (filterType.value === 'negative') {
+    result = result.filter(f => f.rating <= 2)
+  }
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -348,5 +368,9 @@ async function deleteFeedback(feedback) {
 function formatDate(date) {
   if (!date) return '-'
   return new Date(date).toLocaleString('vi-VN')
+}
+
+function filterByType(type) {
+  filterType.value = type
 }
 </script>

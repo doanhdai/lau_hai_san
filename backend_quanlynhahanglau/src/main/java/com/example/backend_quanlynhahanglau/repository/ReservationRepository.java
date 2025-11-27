@@ -75,4 +75,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findUpcomingReservations(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
+    
+    // Tìm reservation theo table và status
+    @Query("SELECT r FROM Reservation r WHERE r.table = :table AND r.status = :status")
+    List<Reservation> findByTableAndStatus(
+            @Param("table") com.example.backend_quanlynhahanglau.entity.RestaurantTable table,
+            @Param("status") ReservationStatus status);
 }

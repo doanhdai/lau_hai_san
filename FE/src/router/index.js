@@ -44,6 +44,11 @@ const router = createRouter({
           component: () => import('@/views/Public/MyReservationsPage.vue')
         },
         {
+          path: 'reservation/deposit-payment',
+          name: 'DepositPayment',
+          component: () => import('@/views/Public/DepositPaymentPage.vue')
+        },
+        {
           path: 'sitemap',
           name: 'SiteMap',
           component: () => import('@/views/Public/SiteMapPage.vue')

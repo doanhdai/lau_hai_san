@@ -123,6 +123,7 @@ CREATE TABLE `reservations`(
 	`id` BIGINT AUTO_INCREMENT NOT NULL,
 	`confirmed_at` DATETIME(6) NULL,
 	`created_at` DATETIME(6) NOT NULL,
+	`deposit_amount` DECIMAL(10, 2) NULL,
 	`email_sent` TINYINT(1) NULL DEFAULT 0,
 	`notes` VARCHAR(1000) NULL,
 	`number_of_guests` INT NOT NULL,

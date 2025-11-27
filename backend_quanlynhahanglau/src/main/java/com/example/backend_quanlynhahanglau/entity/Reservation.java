@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -55,6 +56,9 @@ public class Reservation {
     private User confirmedBy; // Nhân viên xác nhận
 
     private LocalDateTime confirmedAt;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal depositAmount; // Số tiền đã cọc (20% tổng đơn món)
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

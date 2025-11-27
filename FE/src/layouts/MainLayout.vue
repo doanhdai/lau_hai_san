@@ -231,6 +231,7 @@ const menuItems = computed(() => {
       { path: '/admin/orders', label: 'Đơn hàng', icon: 'fa-shopping-bag' },
       { path: '/admin/reservations', label: 'Đặt bàn', icon: 'fa-calendar' },
       { path: '/admin/reservations/checkin', label: 'Check-in bàn', icon: 'fa-check-circle' },
+      { path: '/admin/chat', label: 'Nhắn tin', icon: 'fa-comments' },
       { path: '/admin/promotions', label: 'Khuyến mãi', icon: 'fa-gift' },
       { path: '/admin/feedbacks', label: 'Phản hồi', icon: 'fa-comments' },
       { path: '/admin/reports', label: 'Báo cáo', icon: 'fa-chart-bar' },

@@ -639,6 +639,91 @@ public class ReservationService {
     }
 
     /**
+     * Đổi bàn cho khách đã check-in
+     * Cập nhật reservation, orders và trạng thái bàn
+     */
+    @Transactional
+    public ReservationResponse transferTable(Long reservationId, Long newTableId) {
+        // Tìm reservation
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", reservationId));
+
+        // Kiểm tra reservation đã check-in chưa
+        if (reservation.getStatus() != ReservationStatus.CHECKED_IN) {
+            throw new BadRequestException("Chỉ có thể đổi bàn cho khách đã check-in");
+        }
+
+        // Kiểm tra reservation có bàn hiện tại không
+        if (reservation.getTable() == null) {
+            throw new BadRequestException("Đặt bàn này chưa có bàn được gán");
+        }
+
+        Long oldTableId = reservation.getTable().getId();
+
+        // Kiểm tra bàn mới có khác bàn cũ không
+        if (oldTableId.equals(newTableId)) {
+            throw new BadRequestException("Bàn mới phải khác bàn hiện tại");
+        }
+
+        // Tìm bàn mới
+        RestaurantTable newTable = tableRepository.findById(newTableId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", newTableId));
+
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (newTable.getIsDeleted() != null && newTable.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", newTableId);
+        }
+
+        // Kiểm tra bàn có active không
+        if (newTable.getActive() == null || !newTable.getActive()) {
+            throw new BadRequestException("Bàn không khả dụng");
+        }
+
+        // Kiểm tra bàn mới có trống không (chỉ cho phép đổi sang bàn AVAILABLE)
+        if (newTable.getStatus() != TableStatus.AVAILABLE) {
+            throw new BadRequestException("Chỉ có thể đổi sang bàn trống (AVAILABLE)");
+        }
+
+        // Kiểm tra sức chứa bàn mới có đủ không
+        if (newTable.getCapacity() < reservation.getNumberOfGuests()) {
+            throw new BadRequestException(
+                    String.format("Bàn %s chỉ có %d chỗ, không đủ cho %d khách",
+                            newTable.getTableNumber(), newTable.getCapacity(), reservation.getNumberOfGuests()));
+        }
+
+        // Lấy bàn cũ
+        RestaurantTable oldTable = reservation.getTable();
+
+        // Cập nhật reservation với bàn mới
+        reservation.setTable(newTable);
+        reservation = reservationRepository.save(reservation);
+        log.info("Updated reservation ID: {} table from {} to {}", reservationId, oldTableId, newTableId);
+
+        // Cập nhật tất cả orders liên quan đến reservation này
+        List<Order> orders = orderRepository.findByReservationId(reservationId);
+        for (Order order : orders) {
+            // Chỉ cập nhật orders chưa thanh toán (PENDING, CONFIRMED, PREPARING, SERVED)
+            if (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.COMPLETED) {
+                order.setTable(newTable);
+                orderRepository.save(order);
+                log.info("Updated order ID: {} table from {} to {}", order.getId(), oldTableId, newTableId);
+            }
+        }
+
+        // Cập nhật trạng thái bàn mới thành OCCUPIED
+        newTable.setStatus(TableStatus.OCCUPIED);
+        tableRepository.save(newTable);
+        log.info("Updated new table ID: {} status to OCCUPIED", newTableId);
+
+        // Cập nhật trạng thái bàn cũ thành AVAILABLE
+        oldTable.setStatus(TableStatus.AVAILABLE);
+        tableRepository.save(oldTable);
+        log.info("Updated old table ID: {} status to AVAILABLE", oldTableId);
+
+        return mapToResponse(reservation);
+    }
+
+    /**
      * Lấy userId từ SecurityContext nếu user đã đăng nhập
      * @return userId nếu user đã đăng nhập, null nếu chưa đăng nhập
      */
@@ -769,7 +854,124 @@ public class ReservationService {
                 .emailSent(reservation.getEmailSent())
                 .confirmedByName(reservation.getConfirmedBy() != null ? reservation.getConfirmedBy().getFullName() : null)
                 .confirmedAt(reservation.getConfirmedAt())
+                .depositAmount(reservation.getDepositAmount())
                 .createdAt(reservation.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Thanh toán cọc 20% cho reservation có đặt món trước
+     */
+    @Transactional
+    public ReservationResponse payDeposit(Long reservationId, BigDecimal depositAmount) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", reservationId));
+
+        // Kiểm tra reservation đã có cọc chưa
+        if (reservation.getDepositAmount() != null && reservation.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new BadRequestException("Đặt bàn này đã được thanh toán cọc");
+        }
+
+        // Kiểm tra reservation có order không (phải có món mới cần cọc)
+        List<Order> orders = orderRepository.findByReservationId(reservationId);
+        if (orders.isEmpty()) {
+            throw new BadRequestException("Đặt bàn này không có món, không cần thanh toán cọc");
+        }
+
+        // Tính tổng đơn món từ orderDetails (vì total có thể chưa được tính)
+        BigDecimal totalOrderAmount = BigDecimal.ZERO;
+        for (Order order : orders) {
+            if (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.COMPLETED) {
+                // Nếu order có total và > 0, dùng total
+                if (order.getTotal() != null && order.getTotal().compareTo(BigDecimal.ZERO) > 0) {
+                    totalOrderAmount = totalOrderAmount.add(order.getTotal());
+                } else {
+                    // Nếu không, tính từ orderDetails
+                    if (order.getOrderDetails() != null && !order.getOrderDetails().isEmpty()) {
+                        BigDecimal orderSubtotal = order.getOrderDetails().stream()
+                                .map(detail -> detail.getSubtotal() != null ? detail.getSubtotal() : BigDecimal.ZERO)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        // Tính tax (10%)
+                        BigDecimal tax = orderSubtotal.multiply(BigDecimal.valueOf(0.10));
+                        // Tính total (subtotal + tax - discount)
+                        BigDecimal orderTotal = orderSubtotal.add(tax)
+                                .subtract(order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO);
+                        totalOrderAmount = totalOrderAmount.add(orderTotal);
+                    }
+                }
+            }
+        }
+
+        if (totalOrderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Tổng đơn món không hợp lệ. Vui lòng kiểm tra lại đơn hàng.");
+        }
+
+        log.info("Reservation {} - Total order amount: {}, Deposit amount: {}", 
+                reservationId, totalOrderAmount, depositAmount);
+
+        // Tính 20% tổng đơn
+        BigDecimal expectedDeposit = totalOrderAmount.multiply(BigDecimal.valueOf(0.20));
+
+        // Kiểm tra số tiền cọc có đúng không (cho phép sai số nhỏ)
+        BigDecimal difference = depositAmount.subtract(expectedDeposit).abs();
+        if (difference.compareTo(BigDecimal.valueOf(0.01)) > 0) {
+            throw new BadRequestException(
+                    String.format("Số tiền cọc không đúng. Yêu cầu: %s VNĐ (20%% của %s VNĐ)",
+                            formatCurrency(expectedDeposit), formatCurrency(totalOrderAmount)));
+        }
+
+        // Lưu số tiền cọc
+        reservation.setDepositAmount(depositAmount);
+        reservation = reservationRepository.save(reservation);
+
+        log.info("Deposit paid for reservation ID: {}, amount: {}", reservationId, depositAmount);
+
+        // Gửi email thông báo thanh toán cọc thành công
+        try {
+            emailService.sendDepositPaymentEmail(reservation, depositAmount, totalOrderAmount);
+        } catch (Exception e) {
+            log.error("Error sending deposit payment email for reservation ID: {}", reservationId, e);
+            // Không throw exception để không ảnh hưởng đến flow chính
+        }
+
+        return mapToResponse(reservation);
+    }
+
+    /**
+     * Tạo reservation với thanh toán cọc trong một transaction
+     * Chỉ dùng khi có món ăn và cần thanh toán cọc
+     */
+    @Transactional
+    public ReservationResponse createPublicReservationWithDeposit(
+            com.example.backend_quanlynhahanglau.dto.reservation.PublicReservationWithDepositRequest request) {
+        log.info("Creating public reservation with deposit for phone: {}", request.getCustomerPhone());
+        
+        // Tạo reservation request từ request có deposit
+        PublicReservationRequest reservationRequest = PublicReservationRequest.builder()
+                .customerName(request.getCustomerName())
+                .customerPhone(request.getCustomerPhone())
+                .customerEmail(request.getCustomerEmail())
+                .reservationDateTime(request.getReservationDateTime())
+                .numberOfGuests(request.getNumberOfGuests())
+                .tableId(request.getTableId())
+                .notes(request.getNotes())
+                .userId(request.getUserId())
+                .items(request.getItems())
+                .build();
+        
+        // Tạo reservation và order
+        ReservationResponse reservationResponse = createPublicReservation(reservationRequest);
+        
+        // Thanh toán cọc
+        ReservationResponse finalResponse = payDeposit(reservationResponse.getId(), request.getDepositAmount());
+        
+        log.info("Public reservation with deposit created successfully with ID: {}", finalResponse.getId());
+        
+        return finalResponse;
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "0";
+        return String.format("%,.0f", amount.doubleValue());
     }
 }
