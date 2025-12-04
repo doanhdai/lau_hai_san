@@ -223,7 +223,7 @@ const menuItems = computed(() => {
   if (primaryRole === 'ROLE_ADMIN') {
     return [
       { path: '/admin/dashboard', label: 'Tổng quan', icon: 'fa-home' },
-      { path: '/admin/users', label: 'Người dùng', icon: 'fa-users' },
+      { path: '/admin/users', label: 'Nhân viên', icon: 'fa-users' },
       { path: '/admin/customers', label: 'Khách hàng', icon: 'fa-user' },
       { path: '/admin/tables', label: 'Quản lý bàn', icon: 'fa-chair' },
       { path: '/admin/dishes', label: 'Thực đơn', icon: 'fa-utensils' },

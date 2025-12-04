@@ -35,7 +35,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll().stream()
+        return orderRepository.findAllWithRelations().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -80,6 +80,8 @@ public class OrderService {
                 .notes(request.getNotes())
                 .orderDetails(new ArrayList<>())
                 .build();
+
+        // Gán nhân viên phụ trách cho Order sẽ được xử lý sau khi có table (nếu không có reservation)
 
         Reservation reservation = null;
         
@@ -182,9 +184,30 @@ public class OrderService {
                 // Nếu bàn đang OCCUPIED, giữ nguyên (có thể là order thứ 2, 3...)
                 if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
                     table.setStatus(TableStatus.OCCUPIED);
-                    tableRepository.save(table);
                 }
                 
+                // Gán nhân viên phụ trách cho Order (nếu không có reservation)
+                // Logic: Ưu tiên lấy từ table.assignedStaff (nếu Admin/Manager đã gán), 
+                // nếu không có thì lấy user hiện tại (nếu là STAFF)
+                // Điều này đảm bảo nếu Admin/Manager đã gán nhân viên cho bàn, nhân viên đó sẽ được gán cho order
+                // Áp dụng cho cả order đầu tiên và các order tiếp theo (khi bàn đã OCCUPIED)
+                if (request.getReservationId() == null) {
+                    if (table.getAssignedStaff() != null) {
+                        // Bàn đã có nhân viên phụ trách (do Admin/Manager gán hoặc từ order trước), copy vào order
+                        order.setAssignedStaff(table.getAssignedStaff());
+                    } else {
+                        // Bàn chưa có nhân viên phụ trách, nếu user hiện tại là STAFF thì gán
+                        boolean isStaff = user.getRoles().stream()
+                                .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+                        if (isStaff) {
+                            order.setAssignedStaff(user);
+                            // Đồng thời gán vào bàn để hiển thị real-time
+                            table.setAssignedStaff(user);
+                        }
+                    }
+                }
+                
+                tableRepository.save(table);
                 order.setTable(table);
             }
         }
@@ -258,11 +281,16 @@ public class OrderService {
             // Cập nhật lại trạng thái bàn
             // Sau khi thanh toán, chuyển bàn sang AVAILABLE ngay (bao gồm cả CLEANING và OCCUPIED)
             if (order.getTable() != null) {
-                order.getTable().setStatus(TableStatus.AVAILABLE);
-                tableRepository.save(order.getTable());
+                RestaurantTable table = order.getTable();
+                table.setStatus(TableStatus.AVAILABLE);
+                // Xóa nhân viên phụ trách khỏi bàn (để bàn sẵn sàng cho khách mới)
+                // Nhưng giữ nhân viên trong Reservation để tra cứu sau này
+                table.setAssignedStaff(null);
+                tableRepository.save(table);
             }
             
             // Cập nhật trạng thái reservation thành COMPLETED nếu có
+            // Lưu ý: Giữ nguyên assignedStaff trong Reservation để tra cứu
             if (order.getReservation() != null && order.getReservation().getStatus() != ReservationStatus.COMPLETED) {
                 order.getReservation().setStatus(ReservationStatus.COMPLETED);
                 reservationRepository.save(order.getReservation());
@@ -521,6 +549,36 @@ public class OrderService {
         }
         
         table.setStatus(TableStatus.OCCUPIED);
+        
+        // Xử lý gán nhân viên phụ trách
+        User assignedStaff = null;
+        boolean isStaff = user.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+        
+        if (isStaff) {
+            // Nếu user là STAFF, tự động gán chính mình
+            assignedStaff = user;
+        } else if (request.getAssignedStaffId() != null) {
+            // Nếu user là Admin/Manager và có chọn nhân viên, gán nhân viên được chọn
+            assignedStaff = userRepository.findById(request.getAssignedStaffId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", "id", request.getAssignedStaffId()));
+            
+            // Kiểm tra user được chọn có role STAFF không
+            boolean selectedIsStaff = assignedStaff.getRoles().stream()
+                    .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+            
+            if (!selectedIsStaff) {
+                throw new BadRequestException("Chỉ có thể gán nhân viên (STAFF) cho đơn hàng");
+            }
+            
+        }
+        
+        // Gán nhân viên vào Order và Table nếu có
+        if (assignedStaff != null) {
+            order.setAssignedStaff(assignedStaff);
+            table.setAssignedStaff(assignedStaff);
+        }
+        
         tableRepository.save(table);
         order.setTable(table);
 
@@ -621,6 +679,7 @@ public class OrderService {
                             .subtotal(detail.getSubtotal())
                             .notes(detail.getNotes())
                             .createdAt(createdAt)
+                            .estimatedPreparationTime(detail.getDish().getEstimatedPreparationTime() != null ? detail.getDish().getEstimatedPreparationTime() : 30)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -644,6 +703,12 @@ public class OrderService {
                 .createdAt(order.getCreatedAt())
                 .confirmedAt(order.getConfirmedAt())
                 .completedAt(order.getCompletedAt())
+                // Lấy nhân viên phụ trách: ưu tiên từ Reservation, nếu không có thì từ Order
+                .assignedStaffName(
+                    (order.getReservation() != null && order.getReservation().getAssignedStaff() != null)
+                        ? order.getReservation().getAssignedStaff().getFullName()
+                        : (order.getAssignedStaff() != null ? order.getAssignedStaff().getFullName() : null)
+                )
                 .build();
     }
 }

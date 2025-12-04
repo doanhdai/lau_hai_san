@@ -22,4 +22,6 @@ public class TableResponse {
     private String notes;
     private Integer positionX; // Vị trí X trên bản đồ (pixels)
     private Integer positionY; // Vị trí Y trên bản đồ (pixels)
+    private Long assignedStaffId; // ID nhân viên phụ trách
+    private String assignedStaffName; // Tên nhân viên phụ trách
 }

@@ -2,13 +2,16 @@ package com.example.backend_quanlynhahanglau.service;
 
 import com.example.backend_quanlynhahanglau.dto.table.TableRequest;
 import com.example.backend_quanlynhahanglau.dto.table.TableResponse;
+import com.example.backend_quanlynhahanglau.entity.Order;
 import com.example.backend_quanlynhahanglau.entity.RestaurantTable;
 import com.example.backend_quanlynhahanglau.enums.DiningFloor;
+import com.example.backend_quanlynhahanglau.enums.OrderStatus;
 import com.example.backend_quanlynhahanglau.enums.TableStatus;
 import com.example.backend_quanlynhahanglau.enums.TableType;
 import com.example.backend_quanlynhahanglau.exception.BadRequestException;
 import com.example.backend_quanlynhahanglau.exception.DuplicateResourceException;
 import com.example.backend_quanlynhahanglau.exception.ResourceNotFoundException;
+import com.example.backend_quanlynhahanglau.repository.OrderRepository;
 import com.example.backend_quanlynhahanglau.repository.ReservationRepository;
 import com.example.backend_quanlynhahanglau.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,8 @@ import java.util.stream.Collectors;
 public class TableService {
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
+    private final com.example.backend_quanlynhahanglau.repository.UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     @Transactional(readOnly = true)
     public List<TableResponse> getAllTables() {
@@ -299,6 +304,73 @@ public class TableService {
         return false;
     }
 
+    @Transactional
+    public TableResponse assignStaffToTable(Long tableId, Long staffId) {
+        RestaurantTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", tableId));
+        
+        // Kiểm tra bàn đã bị xóa mềm chưa
+        if (table.getIsDeleted() != null && table.getIsDeleted()) {
+            throw new ResourceNotFoundException("Bàn", "id", tableId);
+        }
+        
+        // Nếu staffId là null, xóa nhân viên phụ trách khỏi bàn
+        if (staffId == null) {
+            table.setAssignedStaff(null);
+            table = tableRepository.save(table);
+            log.info("Removed assigned staff from table {}", table.getTableNumber());
+            return mapToResponse(table);
+        }
+        
+        // Kiểm tra user có tồn tại và có role STAFF không
+        com.example.backend_quanlynhahanglau.entity.User staff = userRepository.findById(staffId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", "id", staffId));
+        
+        // Kiểm tra user có role STAFF
+        boolean isStaff = staff.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+        
+        if (!isStaff) {
+            throw new BadRequestException("Chỉ có thể gán nhân viên (STAFF) cho bàn");
+        }
+        
+        table.setAssignedStaff(staff);
+        table = tableRepository.save(table);
+        log.info("Assigned staff {} to table {}", staff.getFullName(), table.getTableNumber());
+        
+        // Cập nhật nhân viên phụ trách cho tất cả các order chưa hoàn thành của bàn này
+        List<Order> tableOrders = orderRepository.findByTable(table);
+        List<Order> activeOrders = tableOrders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.COMPLETED 
+                        && order.getStatus() != OrderStatus.CANCELLED)
+                .collect(Collectors.toList());
+        
+        if (!activeOrders.isEmpty()) {
+            for (Order order : activeOrders) {
+                order.setAssignedStaff(staff);
+                orderRepository.save(order);
+                log.info("Updated assigned staff {} to order {} when assigning to table", staff.getFullName(), order.getId());
+            }
+            log.info("Updated assigned staff {} to {} active orders of table {}", staff.getFullName(), activeOrders.size(), table.getTableNumber());
+        }
+        
+        // Nếu bàn đang có reservation đã check-in, cập nhật nhân viên phụ trách vào reservation
+        // Tìm reservation đang check-in với bàn này
+        List<com.example.backend_quanlynhahanglau.entity.Reservation> activeReservations = 
+                reservationRepository.findByTableAndStatus(
+                    table, 
+                    com.example.backend_quanlynhahanglau.enums.ReservationStatus.CHECKED_IN
+                );
+        if (!activeReservations.isEmpty()) {
+            com.example.backend_quanlynhahanglau.entity.Reservation reservation = activeReservations.get(0);
+            reservation.setAssignedStaff(staff);
+            reservationRepository.save(reservation);
+            log.info("Updated assigned staff {} to reservation {} when assigning to table", staff.getFullName(), reservation.getId());
+        }
+        
+        return mapToResponse(table);
+    }
+
     private TableResponse mapToResponse(RestaurantTable table) {
         return TableResponse.builder()
                 .id(table.getId())
@@ -312,6 +384,8 @@ public class TableService {
                 .notes(table.getNotes())
                 .positionX(table.getPositionX())
                 .positionY(table.getPositionY())
+                .assignedStaffId(table.getAssignedStaff() != null ? table.getAssignedStaff().getId() : null)
+                .assignedStaffName(table.getAssignedStaff() != null ? table.getAssignedStaff().getFullName() : null)
                 .build();
     }
 

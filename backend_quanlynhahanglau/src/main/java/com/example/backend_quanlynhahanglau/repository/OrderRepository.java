@@ -28,11 +28,21 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "WHERE o.reservation.id = :reservationId")
     List<Order> findByReservationId(@Param("reservationId") Long reservationId);
     
-    // Tìm đơn hàng theo ngày
-    @Query("SELECT o FROM Order o WHERE " +
-           "o.createdAt >= :startDate AND o.createdAt <= :endDate")
+    // Tìm đơn hàng theo ngày và fetch table để tránh lazy loading
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.reservation " +
+           "WHERE o.createdAt >= :startDate AND o.createdAt <= :endDate")
     List<Order> findByDate(@Param("startDate") LocalDateTime startDate, 
                            @Param("endDate") LocalDateTime endDate);
+    
+    // Tìm tất cả đơn hàng và fetch table, customer, reservation để tránh lazy loading
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.reservation")
+    List<Order> findAllWithRelations();
     
     // Thống kê doanh thu theo ngày (tính từ đơn đã xác nhận trở đi)
     @Query("SELECT SUM(o.total) FROM Order o WHERE " +

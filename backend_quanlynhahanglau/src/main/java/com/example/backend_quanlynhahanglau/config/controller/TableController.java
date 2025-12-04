@@ -124,4 +124,15 @@ public class TableController {
         TableResponse table = tableService.updateTablePosition(id, positionX, positionY);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật vị trí bàn thành công", table));
     }
+
+    @PutMapping("/{id:\\d+}/assign-staff")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<TableResponse>> assignStaffToTable(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long staffId) {
+        TableResponse table = tableService.assignStaffToTable(id, staffId);
+        return ResponseEntity.ok(ApiResponse.success(
+                staffId != null ? "Gán nhân viên cho bàn thành công" : "Xóa nhân viên phụ trách thành công", 
+                table));
+    }
 }

@@ -462,7 +462,23 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.CHECKED_IN);
         reservation.setConfirmedBy(user);
 
+        // Gán nhân viên phụ trách vào Reservation (lưu vĩnh viễn để tra cứu)
+        // Nếu user là STAFF, tự động gán làm nhân viên phụ trách
+        // Admin/Manager check-in sẽ không tự động gán, họ có thể gán sau
+        if (user.getRoles().stream().anyMatch(role -> role.getName().name().equals("ROLE_STAFF"))) {
+            reservation.setAssignedStaff(user);
+            log.info("Assigned staff {} to reservation {} after check-in", user.getFullName(), reservation.getId());
+        }
+
         reservation = reservationRepository.save(reservation);
+        
+        // Nếu reservation có bàn, gán nhân viên phụ trách cho bàn đó (tạm thời để hiển thị real-time)
+        if (reservation.getTable() != null && reservation.getAssignedStaff() != null) {
+            RestaurantTable table = reservation.getTable();
+            table.setAssignedStaff(reservation.getAssignedStaff());
+            tableRepository.save(table);
+            log.info("Assigned staff {} to table {} after check-in", reservation.getAssignedStaff().getFullName(), table.getTableNumber());
+        }
         
         // Cập nhật status của tất cả orders liên quan thành CONFIRMED
         LocalDateTime checkInTime = LocalDateTime.now();
@@ -699,6 +715,13 @@ public class ReservationService {
         reservation = reservationRepository.save(reservation);
         log.info("Updated reservation ID: {} table from {} to {}", reservationId, oldTableId, newTableId);
 
+        // Cập nhật nhân viên phụ trách vào bàn mới (nếu reservation có nhân viên phụ trách)
+        if (reservation.getAssignedStaff() != null) {
+            newTable.setAssignedStaff(reservation.getAssignedStaff());
+            tableRepository.save(newTable);
+            log.info("Assigned staff {} to new table {} after transfer", reservation.getAssignedStaff().getFullName(), newTable.getTableNumber());
+        }
+
         // Cập nhật tất cả orders liên quan đến reservation này
         List<Order> orders = orderRepository.findByReservationId(reservationId);
         for (Order order : orders) {
@@ -715,10 +738,11 @@ public class ReservationService {
         tableRepository.save(newTable);
         log.info("Updated new table ID: {} status to OCCUPIED", newTableId);
 
-        // Cập nhật trạng thái bàn cũ thành AVAILABLE
+        // Cập nhật trạng thái bàn cũ thành AVAILABLE và xóa nhân viên phụ trách
         oldTable.setStatus(TableStatus.AVAILABLE);
+        oldTable.setAssignedStaff(null); // Xóa nhân viên phụ trách khỏi bàn cũ
         tableRepository.save(oldTable);
-        log.info("Updated old table ID: {} status to AVAILABLE", oldTableId);
+        log.info("Updated old table ID: {} status to AVAILABLE and removed assigned staff", oldTableId);
 
         return mapToResponse(reservation);
     }
@@ -855,6 +879,8 @@ public class ReservationService {
                 .confirmedByName(reservation.getConfirmedBy() != null ? reservation.getConfirmedBy().getFullName() : null)
                 .confirmedAt(reservation.getConfirmedAt())
                 .depositAmount(reservation.getDepositAmount())
+                .assignedStaffId(reservation.getAssignedStaff() != null ? reservation.getAssignedStaff().getId() : null)
+                .assignedStaffName(reservation.getAssignedStaff() != null ? reservation.getAssignedStaff().getFullName() : null)
                 .createdAt(reservation.getCreatedAt())
                 .build();
     }

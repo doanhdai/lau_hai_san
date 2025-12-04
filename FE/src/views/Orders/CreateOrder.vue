@@ -90,7 +90,7 @@
                 class="border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition"
               >
                 <div class="flex items-center gap-2">
-                  <div class="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                  <div class="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
                     <img
                       v-if="dish.imageUrl && dish.imageUrl.trim() !== ''"
                       :src="dish.imageUrl"
@@ -99,12 +99,15 @@
                       @error="handleImageError"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
-                      <i :class="['fas', getDishIcon(dish.name)]" class="text-lg text-gray-400"></i>
+                      <i :class="['fas', getDishIcon(dish.name)]" class="text-xl text-gray-400"></i>
                     </div>
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">{{ dish.name }}</p>
                     <p class="text-xs text-red-600 font-bold">{{ formatCurrency(dish.price) }}</p>
+                    <p v-if="dish.estimatedPreparationTime" class="text-xs text-gray-500 mt-0.5">
+                      Dự kiến {{ dish.estimatedPreparationTime }}p
+                    </p>
                   </div>
                 </div>
               </div>

@@ -872,45 +872,13 @@ async function submitReservation(e) {
       userId: userId // Gửi userId nếu đã đăng nhập
     }
 
-    // Nếu có món đã chọn, không tạo reservation ngay, mà redirect đến trang thanh toán
-    if (items.length > 0) {
-      // Tính tổng đơn món (subtotal + tax)
-      const totalOrderAmount = totalAmount.value
-      const depositAmount = Math.round(totalOrderAmount * 0.2) // 20%, làm tròn
-      
-      // Lưu thông tin reservation vào query params để trang thanh toán có thể tạo reservation
-      const queryParams = {
-        customerName: form.value.name.trim(),
-        customerPhone: form.value.phone.trim(),
-        customerEmail: form.value.email ? form.value.email.trim() : '',
-        reservationDateTime: `${form.value.date}T${form.value.time}:00`,
-        numberOfGuests: parseInt(form.value.guests),
-        notes: form.value.notes ? form.value.notes.trim() : '',
-        depositAmount: depositAmount,
-        totalAmount: totalOrderAmount,
-        items: JSON.stringify(items)
-      }
-      
-      // Thêm userId nếu đã đăng nhập
-      if (userId) {
-        queryParams.userId = userId
-      }
-      
-      router.push({
-        path: '/reservation/deposit-payment',
-        query: queryParams
-      })
-      return
-    }
-    
-    // Nếu không có món, tạo reservation ngay như bình thường
+    // Tạo reservation ngay (có món hoặc không có món đều tạo ngay)
     console.log('Sending reservation data:', reservationData)
     const response = await reservationService.createPublic(reservationData)
     console.log('Reservation response:', response)
     
     if (response.success) {
-      
-      // Nếu không có món, hiển thị thông báo thành công như bình thường
+      // Hiển thị thông báo thành công
       notification.success('Đặt bàn thành công!')
       
       // Lấy mã đặt bàn từ response

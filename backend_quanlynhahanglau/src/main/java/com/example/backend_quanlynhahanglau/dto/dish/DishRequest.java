@@ -30,4 +30,7 @@ public class DishRequest {
     private String imageUrl;
     private Boolean isPromotion;
     private Long promotionId;
+    
+    @Positive(message = "Thời gian dự kiến ra món phải là số dương")
+    private Integer estimatedPreparationTime; // Thời gian dự kiến ra món (phút)
 }

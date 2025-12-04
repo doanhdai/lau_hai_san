@@ -171,7 +171,17 @@ const showCreateModal = ref(false)
 const selectedDish = ref(null)
 
 const filteredDishes = computed(() => {
-  let result = dishes.value
+  let result = [...dishes.value]
+
+  // Sắp xếp món mới nhất lên đầu (theo createdAt hoặc ID giảm dần)
+  result.sort((a, b) => {
+    // Ưu tiên sắp xếp theo createdAt nếu có
+    if (a.createdAt && b.createdAt) {
+      return new Date(b.createdAt) - new Date(a.createdAt)
+    }
+    // Nếu không có createdAt, sắp xếp theo ID (ID lớn hơn = mới hơn)
+    return (b.id || 0) - (a.id || 0)
+  })
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()

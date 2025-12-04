@@ -61,6 +61,7 @@ CREATE TABLE `dishes`(
 	`updated_at` DATETIME(6) NULL,
 	`category_id` BIGINT NOT NULL,
 	`promotion_id` BIGINT NULL,
+	`estimated_preparation_time` INT NULL DEFAULT 30 COMMENT 'Thời gian dự kiến ra món (phút)',
 	PRIMARY KEY (`id`),
 	CONSTRAINT `CHK_dishes_status` CHECK (`status`='UNAVAILABLE' OR `status`='AVAILABLE' OR `status`='DISCONTINUED')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -556,3 +557,59 @@ DEALLOCATE PREPARE alterIfExists;
 
 -- Xóa index cũ nếu tồn tại
 DROP INDEX IF EXISTS `idx_receiver` ON `chat_messages`;
+
+-- ============================================
+-- Thêm cột assigned_staff_id cho tính năng nhân viên phụ trách
+-- ============================================
+
+-- Thêm assigned_staff_id vào bảng reservations
+ALTER TABLE `reservations` 
+ADD COLUMN `assigned_staff_id` BIGINT NULL 
+COMMENT 'ID nhân viên phụ trách đặt bàn';
+
+-- Thêm foreign key constraint cho reservations.assigned_staff_id
+ALTER TABLE `reservations` 
+ADD CONSTRAINT `FK_reservations_assigned_staff` 
+FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) 
+ON DELETE SET NULL 
+ON UPDATE CASCADE;
+
+-- Thêm assigned_staff_id vào bảng orders
+ALTER TABLE `orders` 
+ADD COLUMN `assigned_staff_id` BIGINT NULL 
+COMMENT 'ID nhân viên phụ trách đơn hàng (cho đơn hàng không có reservation)';
+
+-- Thêm foreign key constraint cho orders.assigned_staff_id
+ALTER TABLE `orders` 
+ADD CONSTRAINT `FK_orders_assigned_staff` 
+FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) 
+ON DELETE SET NULL 
+ON UPDATE CASCADE;
+
+-- Thêm assigned_staff_id vào bảng restaurant_tables
+ALTER TABLE `restaurant_tables` 
+ADD COLUMN `assigned_staff_id` BIGINT NULL 
+COMMENT 'ID nhân viên phụ trách bàn (tạm thời, xóa khi thanh toán xong)';
+
+-- Thêm foreign key constraint cho restaurant_tables.assigned_staff_id
+ALTER TABLE `restaurant_tables` 
+ADD CONSTRAINT `FK_restaurant_tables_assigned_staff` 
+FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) 
+ON DELETE SET NULL 
+ON UPDATE CASCADE;
+
+-- ============================================
+-- Thêm INDEX để tối ưu query performance
+-- ============================================
+
+-- Index cho reservations.assigned_staff_id (thường query theo nhân viên)
+CREATE INDEX `idx_reservations_assigned_staff` ON `reservations`(`assigned_staff_id`);
+
+-- Index cho orders.assigned_staff_id (thường query theo nhân viên)
+CREATE INDEX `idx_orders_assigned_staff` ON `orders`(`assigned_staff_id`);
+
+-- Index cho restaurant_tables.assigned_staff_id (thường query theo nhân viên và status)
+CREATE INDEX `idx_restaurant_tables_assigned_staff` ON `restaurant_tables`(`assigned_staff_id`);
+
+-- Composite index cho restaurant_tables (query thường kết hợp assigned_staff_id và status)
+CREATE INDEX `idx_restaurant_tables_staff_status` ON `restaurant_tables`(`assigned_staff_id`, `status`);

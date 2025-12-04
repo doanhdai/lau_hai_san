@@ -125,6 +125,21 @@
             </select>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Thời gian dự kiến ra món (phút)
+            </label>
+            <input
+              v-model.number="form.estimatedPreparationTime"
+              type="number"
+              min="1"
+              step="1"
+              class="input-field"
+              placeholder="30"
+            />
+            <p class="text-xs text-gray-500 mt-1">Thời gian dự kiến để món được ra (mặc định: 30 phút)</p>
+          </div>
+
           <div class="hidden">
             <!-- Keep old imageUrl input hidden for backward compatibility -->
           </div>
@@ -188,7 +203,8 @@ const form = ref({
   price: 0,
   status: 'AVAILABLE',
   imageUrl: '',
-  isPromotion: false
+  isPromotion: false,
+  estimatedPreparationTime: 30
 })
 
 watch(() => props.dish, (newVal) => {
@@ -207,7 +223,8 @@ watch(() => props.dish, (newVal) => {
       price: newVal.price || 0,
       status: status,
       imageUrl: newVal.imageUrl || '',
-      isPromotion: newVal.isPromotion || false
+      isPromotion: newVal.isPromotion || false,
+      estimatedPreparationTime: newVal.estimatedPreparationTime || 30
     }
     originalImageUrl.value = newVal.imageUrl || ''
     selectedFile.value = null
@@ -220,7 +237,8 @@ watch(() => props.dish, (newVal) => {
       price: 0,
       status: 'AVAILABLE',
       imageUrl: '',
-      isPromotion: false
+      isPromotion: false,
+      estimatedPreparationTime: 30
     }
     originalImageUrl.value = ''
     selectedFile.value = null
@@ -288,6 +306,7 @@ function handleSubmit() {
     formData.append('categoryId', form.value.categoryId.toString())
     formData.append('status', form.value.status || 'AVAILABLE')
     formData.append('isPromotion', (form.value.isPromotion || false).toString())
+    formData.append('estimatedPreparationTime', (form.value.estimatedPreparationTime || 30).toString())
     if (form.value.imageUrl && !selectedFile.value) {
       formData.append('imageUrl', form.value.imageUrl)
     }
@@ -304,7 +323,8 @@ function handleSubmit() {
       categoryId: Number(form.value.categoryId),
       status: form.value.status || 'AVAILABLE',
       imageUrl: form.value.imageUrl || null,
-      isPromotion: form.value.isPromotion || false
+      isPromotion: form.value.isPromotion || false,
+      estimatedPreparationTime: Number(form.value.estimatedPreparationTime) || 30
     }
     emit('save', { isFormData: false, data })
   }

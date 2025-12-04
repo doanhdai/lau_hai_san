@@ -31,4 +31,5 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private LocalDateTime confirmedAt; // Thời gian khi order được confirm (khi checkin)
     private LocalDateTime completedAt;
+    private String assignedStaffName; // Tên nhân viên phụ trách bàn
 }

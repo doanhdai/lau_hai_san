@@ -21,4 +21,6 @@ public class CounterOrderRequest {
     private String notes;
     
     private Long promotionId; // Optional promotion code
+    
+    private Long assignedStaffId; // ID nhân viên phụ trách (Admin/Manager có thể chọn)
 }

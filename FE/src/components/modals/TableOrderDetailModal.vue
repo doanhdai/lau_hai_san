@@ -132,12 +132,12 @@
                             <span v-else class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-medium">
                               Chưa lên
                             </span>
-                            <!-- Cảnh báo quá 30 phút -->
+                            <!-- Cảnh báo quá thời gian dự kiến -->
                             <span 
-                              v-if="!isItemServed(item) && isItemOver30Minutes(item)" 
+                              v-if="!isItemServed(item) && isItemOverEstimatedTime(item)" 
                               class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium animate-pulse"
                             >
-                              <i class="fas fa-exclamation-triangle mr-1"></i>Bạn chưa lên món này! Đã quá {{ WARNING_TIME_MINUTES }}p
+                              <i class="fas fa-exclamation-triangle mr-1"></i>Bạn chưa lên món này! Đã quá {{ getEstimatedTime(item) }}p
                             </span>
                           </div>
                           <div class="flex items-center justify-between gap-4 mt-1">
@@ -242,7 +242,7 @@ const router = useRouter()
 const SERVED_KEYWORD = 'served'
 
 // Thời gian cảnh báo (phút) - món quá thời gian này chưa được đánh dấu đã lên sẽ hiển thị cảnh báo
-const WARNING_TIME_MINUTES = 30
+// Không dùng constant nữa, sẽ dùng thời gian dự kiến từ dish
 
 const props = defineProps({
   show: {
@@ -388,9 +388,18 @@ function isItemServed(item) {
   return item.notes.includes(SERVED_KEYWORD)
 }
 
-// Kiểm tra món đã quá thời gian cảnh báo chưa được đánh dấu đã lên
-function isItemOver30Minutes(item) {
+// Lấy thời gian dự kiến ra món (phút), mặc định 30 phút nếu không có
+function getEstimatedTime(item) {
+  if (!item) return 30
+  return item.estimatedPreparationTime || 30
+}
+
+// Kiểm tra món đã quá thời gian dự kiến chưa được đánh dấu đã lên
+function isItemOverEstimatedTime(item) {
   if (!item || !selectedOrder.value) return false
+  
+  // Lấy thời gian dự kiến từ dish (mặc định 30 phút)
+  const estimatedTime = getEstimatedTime(item)
   
   // Logic tính thời gian:
   // 1. Nếu order đã checkin (có confirmedAt):
@@ -445,7 +454,7 @@ function isItemOver30Minutes(item) {
     const now = new Date()
     const diffInMinutes = (now - startTime) / (1000 * 60) // Chuyển đổi từ milliseconds sang minutes
     
-    return diffInMinutes > WARNING_TIME_MINUTES
+    return diffInMinutes > estimatedTime
   } catch (error) {
     console.error('Error calculating time difference:', error)
     return false

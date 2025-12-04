@@ -60,20 +60,36 @@
         <div class="card sticky top-4">
           <h2 class="text-xl font-bold text-gray-900 mb-4">Đơn hàng</h2>
 
-          <!-- Customer Info -->
+          <!-- Table and Staff Selection -->
           <div class="space-y-3 mb-4">
-            <input
-              v-model="order.customerName"
-              type="text"
-              placeholder="Tên khách hàng (tùy chọn)"
-              class="input-field"
-            />
-            <input
-              v-model="order.customerPhone"
-              type="text"
-              placeholder="Số điện thoại (tùy chọn)"
-              class="input-field"
-            />
+            <!-- Chọn bàn (bắt buộc) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Chọn bàn *</label>
+              <select
+                v-model="order.tableId"
+                class="input-field"
+                required
+              >
+                <option :value="null">-- Chọn bàn --</option>
+                <option v-for="table in availableTables" :key="table.id" :value="table.id">
+                  {{ table.tableNumber }} ({{ table.capacity }} người)
+                </option>
+              </select>
+            </div>
+            
+            <!-- Chọn nhân viên phụ trách (chỉ Admin/Manager) -->
+            <div v-if="isAdminOrManager">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nhân viên phụ trách (tùy chọn)</label>
+              <select
+                v-model="order.assignedStaffId"
+                class="input-field"
+              >
+                <option :value="null">-- Chọn nhân viên --</option>
+                <option v-for="staff in staffList" :key="staff.id" :value="staff.id">
+                  {{ staff.fullName }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <!-- Order Items -->
@@ -166,20 +182,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { dishService } from '@/services/dishService'
 import { orderService } from '@/services/orderService'
+import { tableService } from '@/services/tableService'
+import { userService } from '@/services/userService'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 const notification = useNotificationStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const submitting = ref(false)
 const dishes = ref([])
 const searchQuery = ref('')
+const tables = ref([])
+const staffList = ref([])
+const loadingTables = ref(false)
+const loadingStaff = ref(false)
 
 const order = ref({
-  customerName: '',
-  customerPhone: '',
+  tableId: null,
+  assignedStaffId: null,
   items: [],
   notes: ''
+})
+
+// Check if user is Admin or Manager
+const isAdminOrManager = computed(() => {
+  const user = authStore.user
+  if (!user || !user.roles) return false
+  return user.roles.some(role => role.name === 'ROLE_ADMIN' || role.name === 'ROLE_MANAGER')
 })
 
 const filteredDishes = computed(() => {
@@ -205,6 +236,10 @@ const total = computed(() => {
 
 onMounted(() => {
   loadDishes()
+  loadTables()
+  if (isAdminOrManager.value) {
+    loadStaffList()
+  }
 })
 
 async function loadDishes() {
@@ -219,6 +254,51 @@ async function loadDishes() {
     loading.value = false
   }
 }
+
+async function loadTables() {
+  loadingTables.value = true
+  try {
+    const response = await tableService.getAvailable()
+    if (response.success) {
+      tables.value = response.data || []
+    }
+  } catch (error) {
+    console.error('Error loading tables:', error)
+    notification.error('Không thể tải danh sách bàn')
+  } finally {
+    loadingTables.value = false
+  }
+}
+
+async function loadStaffList() {
+  loadingStaff.value = true
+  try {
+    const response = await userService.getAll({ 
+      page: 0, 
+      size: 100, 
+      role: 'ROLE_STAFF',
+      active: true 
+    })
+    
+    if (response.success && response.data) {
+      const users = response.data.content || response.data || []
+      staffList.value = users.filter(user => 
+        user.roles && user.roles.some(role => role.name === 'ROLE_STAFF')
+      )
+    }
+  } catch (error) {
+    console.error('Error loading staff list:', error)
+    notification.error('Không thể tải danh sách nhân viên')
+  } finally {
+    loadingStaff.value = false
+  }
+}
+
+const availableTables = computed(() => {
+  return tables.value.filter(table => 
+    table.status === 'AVAILABLE' || table.status === 'RESERVED'
+  )
+})
 
 function addToOrder(dish) {
   const existingItem = order.value.items.find(item => item.dishId === dish.id)
@@ -285,8 +365,8 @@ function handleImageError(event) {
 function clearOrder() {
   if (confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
     order.value = {
-      customerName: '',
-      customerPhone: '',
+      tableId: null,
+      assignedStaffId: null,
       items: [],
       notes: ''
     }
@@ -299,17 +379,22 @@ async function submitOrder() {
     return
   }
 
+  if (!order.value.tableId) {
+    notification.error('Vui lòng chọn bàn')
+    return
+  }
+
   submitting.value = true
   try {
     const orderData = {
-      customerName: order.value.customerName || null,
-      customerPhone: order.value.customerPhone || null,
+      tableId: order.value.tableId,
       items: order.value.items.map(item => ({
         dishId: item.dishId,
         quantity: item.quantity,
         notes: item.notes
       })),
-      notes: order.value.notes
+      notes: order.value.notes,
+      assignedStaffId: order.value.assignedStaffId || null
     }
 
     const response = await orderService.createCounterOrder(orderData)

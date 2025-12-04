@@ -25,14 +25,6 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-2">Loại khách hàng</label>
-          <select v-model="filterType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
-            <option value="">Tất cả</option>
-            <option value="vip">VIP</option>
-            <option value="normal">Thường</option>
-          </select>
-        </div>
-        <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
           <select v-model="filterStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
             <option value="">Tất cả</option>
@@ -64,7 +56,6 @@
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Họ tên</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Số điện thoại</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Email</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Loại</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Trạng thái</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Thao tác</th>
             </tr>
@@ -84,13 +75,6 @@
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900">{{ customer.phone }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{{ customer.email || '-' }}</td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span v-if="customer.isVip" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 flex items-center gap-1 w-fit">
-                  <i class="fas fa-star text-xs"></i>
-                  <span>VIP</span>
-                </span>
-                <span v-else class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">Thường</span>
-              </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 <span v-if="customer.blocked" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Bị chặn</span>
                 <span v-else-if="customer.active" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Hoạt động</span>
@@ -149,13 +133,22 @@ const notification = useNotificationStore()
 const loading = ref(false)
 const customers = ref([])
 const searchQuery = ref('')
-const filterType = ref('')
 const filterStatus = ref('')
 const showCreateModal = ref(false)
 const selectedCustomer = ref(null)
 
 const filteredCustomers = computed(() => {
-  let result = customers.value
+  let result = [...customers.value]
+
+  // Sắp xếp khách hàng mới nhất lên đầu (theo ID giảm dần, hoặc createdAt nếu có)
+  result.sort((a, b) => {
+    // Ưu tiên sắp xếp theo createdAt nếu có
+    if (a.createdAt && b.createdAt) {
+      return new Date(b.createdAt) - new Date(a.createdAt)
+    }
+    // Nếu không có createdAt, sắp xếp theo ID (ID lớn hơn = mới hơn)
+    return (b.id || 0) - (a.id || 0)
+  })
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -164,12 +157,6 @@ const filteredCustomers = computed(() => {
       c.phone.includes(query) ||
       (c.email && c.email.toLowerCase().includes(query))
     )
-  }
-
-  if (filterType.value === 'vip') {
-    result = result.filter(c => c.isVip)
-  } else if (filterType.value === 'normal') {
-    result = result.filter(c => !c.isVip)
   }
 
   if (filterStatus.value === 'active') {

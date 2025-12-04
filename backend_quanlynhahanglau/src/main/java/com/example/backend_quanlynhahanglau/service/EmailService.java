@@ -42,7 +42,6 @@ public class EmailService {
 
             String customerEmail = reservation.getCustomer().getEmail();
             String customerName = reservation.getCustomer().getFullName();
-            String tableNumber = reservation.getTable().getTableNumber();
             String reservationTime = reservation.getReservationTime().format(DATE_TIME_FORMATTER);
             String numberOfGuests = String.valueOf(reservation.getNumberOfGuests());
 
@@ -52,7 +51,6 @@ public class EmailService {
             
             String emailBody = buildTableAssignedEmailBody(
                     customerName, 
-                    tableNumber, 
                     reservationTime, 
                     numberOfGuests,
                     reservation.getSpecialRequests()
@@ -75,7 +73,6 @@ public class EmailService {
      */
     private String buildTableAssignedEmailBody(
             String customerName,
-            String tableNumber,
             String reservationTime,
             String numberOfGuests,
             String specialRequests) {
@@ -86,7 +83,6 @@ public class EmailService {
         body.append("═══════════════════════════════════════\n");
         body.append("THÔNG TIN ĐẶT BÀN\n");
         body.append("═══════════════════════════════════════\n\n");
-        body.append("- SỐ BÀN: ").append(tableNumber).append("\n");
         body.append("- Thời gian: ").append(reservationTime).append("\n");
         body.append("- Số lượng khách: ").append(numberOfGuests).append(" người\n");
         
@@ -96,7 +92,7 @@ public class EmailService {
         
         body.append("\n");
         body.append("═══════════════════════════════════════\n");
-        body.append("Vui lòng đến đúng giờ và đến đúng số bàn ").append(tableNumber).append(".\n");
+        body.append("Vui lòng đến đúng giờ.\n");
         body.append("Chúng tôi rất mong được phục vụ quý khách!\n\n");
         body.append("Trân trọng,\n");
         body.append("Nhà hàng Lẩu Hải Sản");

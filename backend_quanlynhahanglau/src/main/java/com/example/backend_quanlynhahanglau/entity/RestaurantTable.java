@@ -56,4 +56,8 @@ public class RestaurantTable {
     @Column(name = "is_deleted", columnDefinition = "bit default 0")
     @Builder.Default
     private Boolean isDeleted = false; // Xóa mềm
+
+    @ManyToOne
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff; // Nhân viên phụ trách bàn
 }

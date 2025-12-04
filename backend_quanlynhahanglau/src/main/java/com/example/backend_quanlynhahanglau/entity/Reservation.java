@@ -57,6 +57,10 @@ public class Reservation {
 
     private LocalDateTime confirmedAt;
 
+    @ManyToOne
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff; // Nhân viên phụ trách (lưu vĩnh viễn để tra cứu)
+
     @Column(precision = 10, scale = 2)
     private BigDecimal depositAmount; // Số tiền đã cọc (20% tổng đơn món)
 

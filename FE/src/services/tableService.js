@@ -58,5 +58,11 @@ export const tableService = {
   async checkAvailability(reservationTime, numberOfGuests) {
     const response = await api.get(`/tables/check-availability?reservationTime=${reservationTime}&numberOfGuests=${numberOfGuests}`)
     return response.data
+  },
+
+  async assignStaff(tableId, staffId) {
+    const params = staffId ? { staffId } : {}
+    const response = await api.put(`/tables/${tableId}/assign-staff`, null, { params })
+    return response.data
   }
 }

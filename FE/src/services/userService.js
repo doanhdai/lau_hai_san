@@ -156,9 +156,17 @@ export const userService = {
       const response = await api.get('/users/by-role', {
         params: { role }
       })
+      // API returns: { success, message, data: List<UserResponse> }
+      if (response.data && response.data.success && response.data.data) {
+        return {
+          success: true,
+          data: response.data.data // List<UserResponse>
+        }
+      }
+      // Fallback: return response as is
       return {
         success: true,
-        data: response.data
+        data: response.data?.data || response.data || []
       }
     } catch (error) {
       console.error('Error fetching users by role:', error)

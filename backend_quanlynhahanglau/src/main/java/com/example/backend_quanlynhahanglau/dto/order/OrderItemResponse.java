@@ -20,4 +20,5 @@ public class OrderItemResponse {
     private BigDecimal subtotal;
     private String notes;
     private LocalDateTime createdAt;
+    private Integer estimatedPreparationTime; // Thời gian dự kiến ra món (phút) từ dish
 }

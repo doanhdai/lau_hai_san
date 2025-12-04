@@ -27,5 +27,7 @@ public class ReservationResponse {
     private String confirmedByName;
     private LocalDateTime confirmedAt;
     private BigDecimal depositAmount; // Số tiền đã cọc
+    private Long assignedStaffId; // ID nhân viên phụ trách
+    private String assignedStaffName; // Tên nhân viên phụ trách
     private LocalDateTime createdAt;
 }

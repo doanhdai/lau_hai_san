@@ -64,6 +64,10 @@ public class Order {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @ManyToOne
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff; // Nhân viên phụ trách (cho order không có reservation)
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

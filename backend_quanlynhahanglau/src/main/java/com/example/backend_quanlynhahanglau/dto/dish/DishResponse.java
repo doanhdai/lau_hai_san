@@ -4,6 +4,7 @@ import com.example.backend_quanlynhahanglau.enums.DishStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -22,4 +23,6 @@ public class DishResponse {
     private Boolean isPromotion;
     private String promotionName;
     private Boolean active;
+    private LocalDateTime createdAt;
+    private Integer estimatedPreparationTime; // Thời gian dự kiến ra món (phút)
 }

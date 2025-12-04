@@ -3,18 +3,18 @@
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý người dùng</h1>
-        <p class="text-slate-600 mt-1 text-sm">Quản lý tài khoản người dùng và phân quyền</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Quản lý nhân viên</h1>
+        <p class="text-slate-600 mt-1 text-sm">Quản lý tài khoản nhân viên</p>
       </div>
       <button @click="openCreateModal" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
         <i class="fas fa-plus"></i>
-        <span>Thêm người dùng</span>
+        <span>Thêm nhân viên</span>
       </button>
     </div>
 
     <!-- Filters -->
     <div class="bg-white border border-gray-200 rounded-lg p-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Tìm kiếm</label>
           <input
@@ -23,16 +23,6 @@
             placeholder="Tên, email, số điện thoại..."
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
           />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-2">Vai trò</label>
-          <select v-model="filters.role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition">
-            <option value="">Tất cả vai trò</option>
-            <option value="ROLE_ADMIN">Quản trị viên</option>
-            <option value="ROLE_MANAGER">Quản lý</option>
-            <option value="ROLE_STAFF">Nhân viên</option>
-            <option value="ROLE_CUSTOMER">Khách hàng</option>
-          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
@@ -58,7 +48,7 @@
           <thead class="bg-slate-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
-                Người dùng
+                Nhân viên
               </th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
                 Liên hệ
@@ -112,8 +102,8 @@
             <tr v-else-if="users.length === 0">
               <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                 <i class="fas fa-user text-6xl mb-4 text-slate-300 block"></i>
-                <p class="text-base font-medium">Không tìm thấy người dùng</p>
-                <p class="text-sm mt-1">Thử thay đổi bộ lọc hoặc thêm người dùng mới</p>
+                <p class="text-base font-medium">Không tìm thấy nhân viên</p>
+                <p class="text-sm mt-1">Thử thay đổi bộ lọc hoặc thêm nhân viên mới</p>
               </td>
             </tr>
 
@@ -233,7 +223,6 @@ const selectedUser = ref(null)
 
 const filters = reactive({
   search: '',
-  role: '',
   status: ''
 })
 
@@ -261,7 +250,7 @@ async function loadUsers() {
       page: pagination.currentPage - 1,
       size: pagination.pageSize,
       search: filters.search || undefined,
-      role: filters.role || undefined,
+      role: 'ROLE_STAFF', // Chỉ lấy nhân viên, không lấy admin và khách hàng
       active: filters.status !== '' ? filters.status === 'true' : undefined
     }
 
@@ -283,7 +272,7 @@ async function loadUsers() {
     }
   } catch (error) {
     console.error('Error loading users:', error)
-    notification.error('Không thể tải danh sách người dùng')
+    notification.error('Không thể tải danh sách nhân viên')
   } finally {
     loading.value = false
   }

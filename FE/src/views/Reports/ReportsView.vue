@@ -262,9 +262,16 @@
                                 {{ order.customerName || 'Khách vãng lai' }}
                               </td>
                               <td class="px-4 py-3 text-sm text-gray-700">
-                                <span v-if="order.tableNumber">Bàn {{ order.tableNumber }}</span>
-                                <span v-else-if="order.tableId">Đã phân bàn</span>
-                                <span v-else class="text-gray-400">-</span>
+                                <div>
+                                  <div>
+                                    <span v-if="order.tableNumber">Bàn {{ order.tableNumber }}</span>
+                                    <span v-else-if="order.tableId">Đã phân bàn</span>
+                                    <span v-else class="text-gray-400">-</span>
+                                  </div>
+                                  <div v-if="order.assignedStaffName" class="text-xs text-gray-500 mt-1">
+                                    NV: {{ order.assignedStaffName }}
+                                  </div>
+                                </div>
                               </td>
                               <td class="px-4 py-3 text-sm">
                                 <span :class="getStatusBadgeClass(order.status)" class="px-2 py-1 rounded-full text-xs font-medium">

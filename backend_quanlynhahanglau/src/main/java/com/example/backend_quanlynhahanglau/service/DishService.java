@@ -94,6 +94,7 @@ public class DishService {
                 .status(request.getStatus() != null ? request.getStatus() : DishStatus.AVAILABLE)
                 .imageUrl(request.getImageUrl())
                 .isPromotion(request.getIsPromotion() != null ? request.getIsPromotion() : false)
+                .estimatedPreparationTime(request.getEstimatedPreparationTime() != null ? request.getEstimatedPreparationTime() : 30)
                 .active(true)
                 .build();
 
@@ -128,6 +129,7 @@ public class DishService {
                 .status(request.getStatus() != null ? request.getStatus() : DishStatus.AVAILABLE)
                 .imageUrl(imageUrl)
                 .isPromotion(request.getIsPromotion() != null ? request.getIsPromotion() : false)
+                .estimatedPreparationTime(request.getEstimatedPreparationTime() != null ? request.getEstimatedPreparationTime() : 30)
                 .active(true)
                 .build();
 
@@ -164,6 +166,7 @@ public class DishService {
             dish.setImageUrl(request.getImageUrl().isEmpty() ? null : request.getImageUrl());
         }
         dish.setIsPromotion(request.getIsPromotion() != null ? request.getIsPromotion() : dish.getIsPromotion());
+        dish.setEstimatedPreparationTime(request.getEstimatedPreparationTime() != null ? request.getEstimatedPreparationTime() : dish.getEstimatedPreparationTime());
 
         if (request.getPromotionId() != null) {
             Promotion promotion = promotionRepository.findById(request.getPromotionId())
@@ -248,6 +251,7 @@ public class DishService {
         dish.setCategory(category);
         dish.setStatus(request.getStatus() != null ? request.getStatus() : dish.getStatus());
         dish.setIsPromotion(request.getIsPromotion() != null ? request.getIsPromotion() : dish.getIsPromotion());
+        dish.setEstimatedPreparationTime(request.getEstimatedPreparationTime() != null ? request.getEstimatedPreparationTime() : dish.getEstimatedPreparationTime());
 
         // Xử lý ảnh: nếu có file ảnh mới thì upload, nếu không thì giữ nguyên hoặc dùng imageUrl từ request
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -290,6 +294,8 @@ public class DishService {
                 .isPromotion(dish.getIsPromotion())
                 .promotionName(dish.getPromotion() != null ? dish.getPromotion().getName() : null)
                 .active(dish.getActive())
+                .createdAt(dish.getCreatedAt())
+                .estimatedPreparationTime(dish.getEstimatedPreparationTime())
                 .build();
     }
 }

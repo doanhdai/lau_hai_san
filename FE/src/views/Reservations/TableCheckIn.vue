@@ -294,7 +294,70 @@
                   <span class="text-sm text-slate-600">Vị trí:</span>
                   <span class="text-sm font-semibold text-slate-900">{{ tableModalTable.location }}</span>
                 </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">Nhân viên phụ trách:</span>
+                  <div class="relative">
+                    <!-- Hiển thị tên nhân viên hoặc button chọn -->
+                    <button
+                      v-if="tableModalTable.assignedStaffName"
+                      @click.stop="showStaffDropdown = !showStaffDropdown"
+                      class="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-1"
+                    >
+                      {{ tableModalTable.assignedStaffName }}
+                      <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <button
+                      v-else
+                      @click.stop="showStaffDropdown = !showStaffDropdown"
+                      class="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition-colors flex items-center gap-1"
+                    >
+                      <i class="fas fa-user-plus text-xs"></i>
+                      Chọn nhân viên
+                    </button>
+                    
+                    <!-- Dropdown chọn nhân viên -->
+                    <div
+                      v-if="showStaffDropdown"
+                      ref="staffDropdownRef"
+                      class="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+                    >
+                      <div v-if="loadingStaff" class="p-3 text-center text-xs text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Đang tải...
+                      </div>
+                      <div v-else-if="staffList.length === 0" class="p-3 text-center text-xs text-gray-500">
+                        Không có nhân viên
+                      </div>
+                      <div v-else class="py-1">
+                        <button
+                          v-for="staff in staffList"
+                          :key="staff.id"
+                          @click="selectStaff(staff.id)"
+                          class="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        >
+                          <span>{{ staff.fullName }}</span>
+                          <i v-if="tableModalTable.assignedStaffId === staff.id" class="fas fa-check text-blue-600"></i>
+                        </button>
+                        <button
+                          v-if="tableModalTable.assignedStaffId"
+                          @click="removeStaffFromTable"
+                          class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-200 mt-1"
+                        >
+                          <i class="fas fa-times mr-2"></i>
+                          Xóa nhân viên
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+            
+            <!-- Debug info (chỉ hiển thị trong development) -->
+            <div v-if="false" class="border-t border-gray-200 pt-4 mt-4 text-xs text-gray-500">
+              <p>Debug: isAdminOrManager = {{ isAdminOrManager }}</p>
+              <p>User roles: {{ authStore.user?.roles?.map(r => r.name || r).join(', ') || 'None' }}</p>
+              <p>Staff list count: {{ staffList.length }}</p>
             </div>
 
             <!-- Nút điều hướng đến Order (nếu bàn đã check-in) -->
@@ -574,11 +637,14 @@ import { useRouter } from 'vue-router'
 import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
 import { orderService } from '@/services/orderService'
+import { userService } from '@/services/userService'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 import TableOrderDetailModal from '@/components/modals/TableOrderDetailModal.vue'
 
 const router = useRouter()
 const notification = useNotificationStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const reservations = ref([])
@@ -601,6 +667,12 @@ const tableModalReservationId = ref(null) // Lưu reservationId khi mở modal b
 const searchQuery = ref('') // Search query for customer name
 const maxTableReservationTime = ref(45)
 const TABLE_TIMER_STORAGE_KEY = 'table_check_in_timers'
+const staffList = ref([])
+const selectedStaffId = ref(null)
+const assigningStaff = ref(false)
+const loadingStaff = ref(false)
+const showStaffDropdown = ref(false)
+const staffDropdownRef = ref(null)
 const floorOptions = [
   { label: 'Tầng 1', value: 'FLOOR_1' },
   { label: 'Tầng 2', value: 'FLOOR_2' }
@@ -634,6 +706,30 @@ const isToday = computed(() => {
   return today.getFullYear() === selectedDate.getFullYear() &&
          today.getMonth() === selectedDate.getMonth() &&
          today.getDate() === selectedDate.getDate()
+})
+
+// Check if user is Admin or Manager
+const isAdminOrManager = computed(() => {
+  const user = authStore.user
+  if (!user) {
+    return false
+  }
+  if (!user.roles || !Array.isArray(user.roles)) {
+    return false
+  }
+  // user.roles có thể là array of strings hoặc array of objects
+  return user.roles.some(role => {
+    // Nếu role là string
+    if (typeof role === 'string') {
+      return role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER'
+    }
+    // Nếu role là object
+    if (typeof role === 'object' && role !== null) {
+      const roleName = role.name || role
+      return roleName === 'ROLE_ADMIN' || roleName === 'ROLE_MANAGER'
+    }
+    return false
+  })
 })
 
 // Merge tables with reservations
@@ -888,7 +984,24 @@ watch(selectedFloor, (floor) => {
   }
 })
 
+// Handle click outside dropdown
+function handleClickOutside(event) {
+  if (!showStaffDropdown.value) return
+  
+  const target = event.target
+  const dropdown = staffDropdownRef.value
+  
+  // Check if click is outside dropdown and not on the button
+  if (dropdown && !dropdown.contains(target)) {
+    const button = target.closest('button')
+    if (!button || !button.querySelector('.fa-user-plus') && !button.querySelector('.fa-chevron-down')) {
+      showStaffDropdown.value = false
+    }
+  }
+}
+
 onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
   // Set default filter date to today
   const today = new Date()
   const year = today.getFullYear()
@@ -906,6 +1019,7 @@ onMounted(() => {
   
   // Cleanup on unmount
   onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
     clearInterval(timer)
   })
 })
@@ -965,7 +1079,17 @@ async function loadData() {
 
 function selectTable(table) {
   // Open table management modal when clicking on table
-  openTableModal(table)
+  console.log('selectTable: Table clicked', table)
+  if (!table) {
+    console.error('selectTable: table is null or undefined')
+    return
+  }
+  try {
+    openTableModal(table)
+  } catch (error) {
+    console.error('Error in selectTable:', error)
+    notification.error('Không thể mở modal: ' + (error.message || 'Lỗi không xác định'))
+  }
 }
 
 /**
@@ -1130,35 +1254,57 @@ async function handleOrderUpdated() {
   }
 }
 
-function openTableModal(table) {
-  tableModalTable.value = { ...table }
-  // Nếu bàn đang ở trạng thái CLEANING, tự động chuyển về AVAILABLE vì không còn option CLEANING
-  tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
-  
-  // Lưu reservationId: 
-  // 1. Nếu bàn đã check-in (OCCUPIED), tìm reservation có status CHECKED_IN
-  // 2. Nếu không, ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
-  let reservationId = null
-  
-  if (table.status === 'OCCUPIED' && table.id) {
-    // Bàn đã check-in: tìm reservation có status CHECKED_IN
-    reservationId = findCheckedInReservationIdByTableId(table.id)
+async function openTableModal(table) {
+  try {
+    console.log('openTableModal: Opening modal for table', table)
+    
+    tableModalTable.value = { ...table }
+    // Nếu bàn đang ở trạng thái CLEANING, tự động chuyển về AVAILABLE vì không còn option CLEANING
+    tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
+    
+    // Lưu reservationId: 
+    // 1. Nếu bàn đã check-in (OCCUPIED), tìm reservation có status CHECKED_IN
+    // 2. Nếu không, ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
+    let reservationId = null
+    
+    if (table.status === 'OCCUPIED' && table.id) {
+      // Bàn đã check-in: tìm reservation có status CHECKED_IN
+      reservationId = findCheckedInReservationIdByTableId(table.id)
+    }
+    
+    // Nếu chưa tìm thấy, thử các cách khác
+    if (!reservationId) {
+      reservationId = table.reservation?.id || null
+    }
+    
+    if (!reservationId && table.id) {
+      const tableWithReservation = tablesWithReservations.value.find(t => 
+        t && t.id === table.id && t.reservation
+      )
+      reservationId = tableWithReservation?.reservation?.id || null
+    }
+    
+    tableModalReservationId.value = reservationId
+    
+    // Set selectedStaffId từ table hiện tại
+    selectedStaffId.value = table.assignedStaffId || null
+    
+    // Load danh sách nhân viên để hiển thị dropdown (không block modal nếu có lỗi)
+    try {
+      await loadStaffList()
+    } catch (error) {
+      console.error('Error loading staff list (non-blocking):', error)
+      // Không block modal nếu load staff list fail
+    }
+    
+    showTableModal.value = true
+    console.log('openTableModal: Modal opened successfully')
+  } catch (error) {
+    console.error('Error opening table modal:', error)
+    notification.error('Không thể mở modal quản lý bàn: ' + (error.message || 'Lỗi không xác định'))
+    // Vẫn cố gắng mở modal nếu có thể
+    showTableModal.value = true
   }
-  
-  // Nếu chưa tìm thấy, thử các cách khác
-  if (!reservationId) {
-    reservationId = table.reservation?.id || null
-  }
-  
-  if (!reservationId && table.id) {
-    const tableWithReservation = tablesWithReservations.value.find(t => 
-      t && t.id === table.id && t.reservation
-    )
-    reservationId = tableWithReservation?.reservation?.id || null
-  }
-  
-  tableModalReservationId.value = reservationId
-  showTableModal.value = true
 }
 
 function closeTableModal() {
@@ -1166,6 +1312,168 @@ function closeTableModal() {
   tableModalTable.value = null
   tableStatus.value = 'AVAILABLE'
   tableModalReservationId.value = null
+  selectedStaffId.value = null
+}
+
+// Staff management functions
+async function loadStaffList() {
+  loadingStaff.value = true
+  try {
+    console.log('loadStaffList: Starting to load staff list...')
+    
+    // Dùng getByRole (API chuyên dụng trả về List<UserResponse>)
+    const response = await userService.getByRole('ROLE_STAFF')
+    console.log('loadStaffList: API response', response)
+    
+    if (response && response.success && response.data) {
+      // getByRole trả về List<UserResponse> trực tiếp trong response.data
+      let users = []
+      if (Array.isArray(response.data)) {
+        users = response.data
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        users = response.data.data
+      }
+      
+      console.log('loadStaffList: Raw users from API', users)
+      
+      // Filter chỉ lấy user active (nếu có)
+      // UserResponse.roles là Set<String>, không phải array of objects
+      staffList.value = users.filter(user => {
+        if (!user) {
+          console.log('loadStaffList: Skipping null user')
+          return false
+        }
+        
+        // getByRole đã filter theo role rồi, chỉ cần check active
+        const isActive = user.active !== false
+        console.log('loadStaffList: User', user.fullName, 'active:', user.active, 'isActive:', isActive, 'roles:', user.roles)
+        
+        return isActive
+      })
+      
+      console.log('loadStaffList: Loaded', staffList.value.length, 'staff members', staffList.value.map(s => ({ id: s.id, name: s.fullName, active: s.active, roles: s.roles })))
+      
+      if (staffList.value.length === 0) {
+        console.warn('loadStaffList: No active staff found. Total users from API:', users.length)
+        console.warn('loadStaffList: All users:', users.map(u => ({ id: u.id, name: u.fullName, active: u.active, roles: u.roles })))
+        notification.warning('Không tìm thấy nhân viên nào đang hoạt động')
+      }
+    } else {
+      console.warn('loadStaffList: Invalid response format', response)
+      // Fallback: thử dùng getAll
+      console.log('loadStaffList: Trying fallback with getAll...')
+      const fallbackResponse = await userService.getAll({ 
+        page: 0, 
+        size: 100, 
+        role: 'ROLE_STAFF',
+        active: true 
+      })
+      console.log('loadStaffList: Fallback response', fallbackResponse)
+      
+      if (fallbackResponse && fallbackResponse.success && fallbackResponse.data) {
+        const users = fallbackResponse.data.content || fallbackResponse.data || []
+        console.log('loadStaffList: Fallback users', users)
+        
+        staffList.value = users.filter(user => {
+          if (!user || !user.roles) return false
+          
+          // user.roles có thể là Set<String> hoặc Array<String>
+          const rolesArray = Array.isArray(user.roles) ? user.roles : Array.from(user.roles || [])
+          const hasStaffRole = rolesArray.some(role => {
+            const roleName = typeof role === 'string' ? role : (role.name || role)
+            return roleName === 'ROLE_STAFF'
+          })
+          return hasStaffRole && (user.active !== false)
+        })
+        
+        console.log('loadStaffList: Fallback filtered staffList', staffList.value)
+      }
+    }
+  } catch (error) {
+    console.error('Error loading staff list:', error)
+    console.error('Error details:', error.response?.data)
+    notification.error('Không thể tải danh sách nhân viên: ' + (error.response?.data?.message || error.message || 'Lỗi không xác định'))
+  } finally {
+    loadingStaff.value = false
+  }
+}
+
+async function selectStaff(staffId) {
+  if (!staffId || !tableModalTable.value?.id) {
+    return
+  }
+
+  // Đóng dropdown
+  showStaffDropdown.value = false
+  
+  // Gán nhân viên
+  selectedStaffId.value = staffId
+  await assignStaffToTable()
+}
+
+async function assignStaffToTable() {
+  if (!selectedStaffId.value || !tableModalTable.value?.id) {
+    notification.error('Vui lòng chọn nhân viên')
+    return
+  }
+
+  assigningStaff.value = true
+  try {
+    const response = await tableService.assignStaff(tableModalTable.value.id, selectedStaffId.value)
+    
+    if (response.success) {
+      notification.success('Gán nhân viên phụ trách thành công')
+      // Cập nhật thông tin bàn trong modal
+      tableModalTable.value.assignedStaffId = selectedStaffId.value
+      const selectedStaff = staffList.value.find(s => s.id === selectedStaffId.value)
+      if (selectedStaff) {
+        tableModalTable.value.assignedStaffName = selectedStaff.fullName
+      }
+      // Reload tables để cập nhật thông tin
+      await loadTables()
+    } else {
+      notification.error(response.message || 'Không thể gán nhân viên')
+    }
+  } catch (error) {
+    console.error('Error assigning staff:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể gán nhân viên'
+    notification.error(errorMessage)
+  } finally {
+    assigningStaff.value = false
+  }
+}
+
+async function removeStaffFromTable() {
+  if (!tableModalTable.value?.id) {
+    return
+  }
+
+  if (!confirm('Bạn có chắc chắn muốn xóa nhân viên phụ trách khỏi bàn này?')) {
+    return
+  }
+
+  assigningStaff.value = true
+  try {
+    const response = await tableService.assignStaff(tableModalTable.value.id, null)
+    
+    if (response.success) {
+      notification.success('Xóa nhân viên phụ trách thành công')
+      // Cập nhật thông tin bàn trong modal
+      tableModalTable.value.assignedStaffId = null
+      tableModalTable.value.assignedStaffName = null
+      selectedStaffId.value = null
+      // Reload tables để cập nhật thông tin
+      await loadTables()
+    } else {
+      notification.error(response.message || 'Không thể xóa nhân viên phụ trách')
+    }
+  } catch (error) {
+    console.error('Error removing staff:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể xóa nhân viên phụ trách'
+    notification.error(errorMessage)
+  } finally {
+    assigningStaff.value = false
+  }
 }
 
 // Transfer table functions

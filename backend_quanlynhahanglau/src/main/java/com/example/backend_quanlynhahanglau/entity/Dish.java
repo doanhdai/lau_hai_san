@@ -55,6 +55,9 @@ public class Dish {
     @Column(columnDefinition = "bit default 1")
     private Boolean active = true; // Cột dùng cho soft delete
 
+    @Column(name = "estimated_preparation_time")
+    private Integer estimatedPreparationTime = 30; // Thời gian dự kiến ra món (phút), mặc định 30 phút
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
