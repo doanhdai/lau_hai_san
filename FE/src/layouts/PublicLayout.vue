@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
     <!-- Navbar -->
-    <nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" :class="scrolled ? 'bg-white shadow-lg' : 'bg-transparent'">
+    <nav v-if="!isCustomerOrderPage" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" :class="scrolled ? 'bg-white shadow-lg' : 'bg-transparent'">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-20">
           <!-- Logo -->
@@ -134,12 +134,12 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-1">
+    <main :class="['flex-1', isCustomerOrderPage ? '' : 'pt-20']">
       <router-view />
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white">
+    <footer v-if="!isCustomerOrderPage" class="bg-gray-900 text-white">
       <div class="container mx-auto px-4 py-12">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
           <!-- About -->
@@ -221,6 +221,7 @@
 
     <!-- Scroll to Top Button -->
     <button
+      v-if="!isCustomerOrderPage"
       v-show="showScrollTop"
       @click="scrollToTop"
       class="fixed bottom-8 right-8 w-11 h-11 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors z-40 flex items-center justify-center"
@@ -230,15 +231,19 @@
   </div>
   
   <!-- Chat Widget for Customer -->
-  <CustomerChatWidget />
+  <CustomerChatWidget v-if="!isCustomerOrderPage" />
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import CustomerChatWidget from '@/components/CustomerChatWidget.vue'
 
 const router = useRouter()
+const route = useRoute()
+
+// Kiểm tra xem có phải route customer order không (ẩn header và footer)
+const isCustomerOrderPage = computed(() => route.path === '/customer/order')
 
 // Lazy load authStore to avoid circular dependency
 const authStore = ref(null)

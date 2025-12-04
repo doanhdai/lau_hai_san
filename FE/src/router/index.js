@@ -52,6 +52,12 @@ const router = createRouter({
           path: 'sitemap',
           name: 'SiteMap',
           component: () => import('@/views/Public/SiteMapPage.vue')
+        },
+        {
+          path: 'customer/order',
+          name: 'CustomerOrder',
+          component: () => import('@/views/Customer/CustomerOrderPage.vue'),
+          meta: { requiresAuth: false }
         }
       ]
     },

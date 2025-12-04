@@ -63,6 +63,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/feedbacks/public").permitAll()
                         // Cho phép các endpoint chat public (cho customer)
                         .requestMatchers("/api/chat/public/**").permitAll()
+                        // Cho phép customer thêm món vào order qua QR code (không cần auth)
+                        .requestMatchers(HttpMethod.GET, "/api/orders/public/by-table/*").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/public/*/add-items").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/orders/public/*/items/*").permitAll()
+                        // Cho phép customer xem danh sách món ăn (không cần auth)
+                        .requestMatchers(HttpMethod.GET, "/api/dishes/available").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
                         .anyRequest().authenticated()
                 );

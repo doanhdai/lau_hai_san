@@ -296,51 +296,60 @@ async function loadOrder() {
   loadingOrder.value = true
   try {
     let reservationId = props.reservationId
+    let matchingOrders = []
 
-    // If only tableId is provided, find reservation from tablesWithReservations
-    if (!reservationId && props.tableId) {
-      const tableWithReservation = props.tablesWithReservations.find(t => 
-        t && t.id === props.tableId && t.reservation
-      )
-      if (tableWithReservation && tableWithReservation.reservation) {
-        reservationId = tableWithReservation.reservation.id
-      } else if (Array.isArray(props.reservations)) {
-        // Try to find from reservations list
-        const reservation = props.reservations.find(r => 
-          r && r.tableId === props.tableId && 
-          (r.status === 'CONFIRMED' || r.status === 'CHECKED_IN')
-        )
-        if (reservation) {
-          reservationId = reservation.id
+    // Ưu tiên tìm order theo tableId trước (cho walk-in customers hoặc orders mới tạo)
+    // Sau đó mới tìm theo reservationId nếu không tìm thấy
+    if (props.tableId) {
+      try {
+        console.log('Loading orders by tableId:', props.tableId)
+        const ordersRes = await orderService.getByTableId(props.tableId)
+        console.log('Orders by tableId response:', ordersRes)
+        matchingOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
+        
+        // Nếu tìm thấy orders theo tableId, ưu tiên dùng những orders này
+        if (matchingOrders.length > 0) {
+          console.log('Found orders by tableId:', matchingOrders.length)
         }
+      } catch (error) {
+        console.error('Error loading orders by tableId:', error)
+        matchingOrders = []
       }
     }
 
-    // Load all orders to find order by reservationId or tableId
-    const ordersRes = await orderService.getAll()
-    const allOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
+    // Nếu không tìm thấy order theo tableId và có reservationId, thử tìm theo reservationId
+    if (matchingOrders.length === 0) {
+      // If only tableId is provided, find reservation from tablesWithReservations
+      if (!reservationId && props.tableId) {
+        const tableWithReservation = props.tablesWithReservations.find(t => 
+          t && t.id === props.tableId && t.reservation
+        )
+        if (tableWithReservation && tableWithReservation.reservation) {
+          reservationId = tableWithReservation.reservation.id
+        } else if (Array.isArray(props.reservations)) {
+          // Try to find from reservations list
+          const reservation = props.reservations.find(r => 
+            r && r.tableId === props.tableId && 
+            (r.status === 'CONFIRMED' || r.status === 'CHECKED_IN')
+          )
+          if (reservation) {
+            reservationId = reservation.id
+          }
+        }
+      }
 
-    let matchingOrders = []
-
-    // Nếu có reservationId, tìm order theo reservationId
-    if (reservationId) {
-      matchingOrders = allOrders.filter(order => {
-        const orderReservationId = order.reservationId
-        return orderReservationId === reservationId || 
-               orderReservationId === Number(reservationId) || 
-               Number(orderReservationId) === reservationId ||
-               String(orderReservationId) === String(reservationId)
-      })
-    } 
-    // Nếu không có reservationId nhưng có tableId, tìm order theo tableId (cho walk-in customers)
-    else if (props.tableId) {
-      matchingOrders = allOrders.filter(order => {
-        const orderTableId = order.tableId
-        return orderTableId === props.tableId || 
-               orderTableId === Number(props.tableId) || 
-               Number(orderTableId) === props.tableId ||
-               String(orderTableId) === String(props.tableId)
-      })
+      // Nếu có reservationId, tìm order theo reservationId
+      if (reservationId) {
+        try {
+          console.log('Loading orders by reservationId:', reservationId)
+          const ordersRes = await orderService.getByReservationId(reservationId)
+          console.log('Orders by reservationId response:', ordersRes)
+          matchingOrders = ordersRes.success ? ordersRes.data : ordersRes.data || []
+        } catch (error) {
+          console.error('Error loading orders by reservationId:', error)
+          matchingOrders = []
+        }
+      }
     }
 
     // Loại bỏ orders có status CANCELLED và sắp xếp theo createdAt mới nhất
@@ -352,22 +361,40 @@ async function loadOrder() {
         return dateB - dateA // Sắp xếp giảm dần (mới nhất trước)
       })
 
-    // Chọn order mới nhất
-    const foundOrder = validOrders.length > 0 ? validOrders[0] : null
+    // Chọn order mới nhất (chưa thanh toán)
+    const foundOrder = validOrders
+      .filter(order => order.status !== 'COMPLETED' && order.status !== 'CANCELLED')
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return dateB - dateA // Mới nhất trước
+      })[0] || validOrders[0] || null
 
     if (!foundOrder || !foundOrder.id) {
       selectedOrder.value = null
+      console.log('No order found for table/reservation')
       // Không hiển thị notification nếu không tìm thấy order (có thể là bàn mới chưa có order)
       return
     }
 
-    // Get order by order_id
-    const orderRes = await orderService.getById(foundOrder.id)
-    if (orderRes.success && orderRes.data) {
-      selectedOrder.value = orderRes.data
+    console.log('Found order:', foundOrder.id, foundOrder.orderNumber)
+
+    // Sử dụng order đã có (đã có đầy đủ items từ query), không cần gọi getById lại
+    // Vì getByTableId và getByReservationId đã JOIN FETCH orderDetails
+    if (foundOrder.items && foundOrder.items.length > 0) {
+      selectedOrder.value = foundOrder
+      console.log('Using order with items:', foundOrder.items.length)
     } else {
-      selectedOrder.value = null
-      notification.error('Không thể tải thông tin đơn hàng')
+      // Nếu không có items, thử gọi getById để load lại
+      console.log('Order has no items, reloading...')
+      const orderRes = await orderService.getById(foundOrder.id)
+      if (orderRes.success && orderRes.data) {
+        selectedOrder.value = orderRes.data
+        console.log('Reloaded order with items:', orderRes.data.items?.length || 0)
+      } else {
+        selectedOrder.value = foundOrder // Vẫn dùng order đã có, dù không có items
+        console.warn('Could not reload order, using existing data')
+      }
     }
   } catch (error) {
     console.error('Error loading order:', error)

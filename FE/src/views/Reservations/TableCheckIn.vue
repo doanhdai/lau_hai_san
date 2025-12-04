@@ -372,6 +372,13 @@
                 <span>Thêm món</span>
               </button>
               <button
+                @click.stop="showQRCode"
+                class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-qrcode"></i>
+                <span>QR Code đặt món</span>
+              </button>
+              <button
                 @click.stop="viewOrderList"
                 class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
@@ -628,6 +635,15 @@
       @close="closeOrderModal"
       @order-updated="handleOrderUpdated"
     />
+
+    <!-- QR Code Modal -->
+    <QRCodeModal
+      :show="showQRModal"
+      :table-id="tableModalTable?.id"
+      :table-number="tableModalTable?.tableNumber || ''"
+      :reservation-id="tableModalReservationId"
+      @close="showQRModal = false"
+    />
   </div>
 </template>
 
@@ -641,6 +657,7 @@ import { userService } from '@/services/userService'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 import TableOrderDetailModal from '@/components/modals/TableOrderDetailModal.vue'
+import QRCodeModal from '@/components/modals/QRCodeModal.vue'
 
 const router = useRouter()
 const notification = useNotificationStore()
@@ -655,6 +672,7 @@ const selectedReservation = ref(null)
 const showDetailModal = ref(false)
 const showTableModal = ref(false)
 const showOrderModal = ref(false)
+const showQRModal = ref(false)
 const tableModalTable = ref(null)
 const tableStatus = ref('AVAILABLE')
 const updatingStatus = ref(false)
@@ -1263,25 +1281,33 @@ async function openTableModal(table) {
     tableStatus.value = (table.status && table.status !== 'CLEANING') ? table.status : 'AVAILABLE'
     
     // Lưu reservationId: 
-    // 1. Nếu bàn đã check-in (OCCUPIED), tìm reservation có status CHECKED_IN
-    // 2. Nếu không, ưu tiên từ table.reservation, nếu không có thì tìm từ tablesWithReservations
+    // Kiểm tra order hiện tại của bàn để xác định có reservation hay không
+    // Nếu order không có reservationId thì đó là offline customer (không có reservation)
     let reservationId = null
     
     if (table.status === 'OCCUPIED' && table.id) {
-      // Bàn đã check-in: tìm reservation có status CHECKED_IN
-      reservationId = findCheckedInReservationIdByTableId(table.id)
-    }
-    
-    // Nếu chưa tìm thấy, thử các cách khác
-    if (!reservationId) {
-      reservationId = table.reservation?.id || null
-    }
-    
-    if (!reservationId && table.id) {
-      const tableWithReservation = tablesWithReservations.value.find(t => 
-        t && t.id === table.id && t.reservation
-      )
-      reservationId = tableWithReservation?.reservation?.id || null
+      // Tìm order hiện tại của bàn (chưa thanh toán)
+      const currentOrder = orders.value
+        .filter(o => {
+          if (!o || o.tableId !== table.id) return false
+          return o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+        })
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0]
+      
+      // Nếu order có reservationId thì đó là customer có reservation
+      if (currentOrder && currentOrder.reservationId) {
+        reservationId = currentOrder.reservationId
+        // Kiểm tra reservation có status CHECKED_IN không
+        const reservation = reservations.value.find(r => 
+          r && r.id === reservationId && r.status === 'CHECKED_IN'
+        )
+        if (!reservation) {
+          reservationId = null // Reservation không còn CHECKED_IN
+        }
+      } else {
+        // Order không có reservationId = offline customer, không set reservationId
+        reservationId = null
+      }
     }
     
     tableModalReservationId.value = reservationId
@@ -1534,6 +1560,14 @@ function closeTransferTableModal() {
   availableTransferTables.value = []
   selectedTransferTableId.value = ''
   transferTableTypeFilter.value = 'online'
+}
+
+function showQRCode() {
+  if (!tableModalTable.value || !tableModalTable.value.id) {
+    notification.error('Không tìm thấy thông tin bàn')
+    return
+  }
+  showQRModal.value = true
 }
 
 const filteredTransferTables = computed(() => {

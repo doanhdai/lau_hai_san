@@ -42,7 +42,8 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
-        Order order = orderRepository.findById(id)
+        // Sử dụng query riêng với JOIN FETCH để đảm bảo load đầy đủ relations
+        Order order = orderRepository.findByIdWithRelations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", id));
         return mapToResponse(order);
     }
@@ -59,6 +60,146 @@ public class OrderService {
         return orderRepository.findByReservationId(reservationId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersByTableId(Long tableId) {
+        return orderRepository.findByTableId(tableId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy order hiện tại của bàn (chưa thanh toán) - Public endpoint cho customer
+     */
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderByTableIdForCustomer(Long tableId) {
+        // Tìm order chưa thanh toán của bàn này (mới nhất)
+        List<Order> orders = orderRepository.findByTableId(tableId);
+        if (orders == null || orders.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy đơn hàng cho bàn này. Vui lòng liên hệ nhân viên để tạo đơn hàng.", "tableId", tableId);
+        }
+        
+        Order currentOrder = orders.stream()
+                .filter(o -> o.getStatus() != OrderStatus.COMPLETED && o.getStatus() != OrderStatus.CANCELLED)
+                .sorted((a, b) -> {
+                    LocalDateTime timeA = a.getCreatedAt() != null ? a.getCreatedAt() : LocalDateTime.MIN;
+                    LocalDateTime timeB = b.getCreatedAt() != null ? b.getCreatedAt() : LocalDateTime.MIN;
+                    return timeB.compareTo(timeA); // Mới nhất trước
+                })
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng chưa thanh toán cho bàn này. Vui lòng liên hệ nhân viên.", "tableId", tableId));
+        
+        return mapToResponse(currentOrder);
+    }
+
+    /**
+     * Thêm món vào order - Public endpoint cho customer (không cần auth)
+     * Nếu orderId = null hoặc không tồn tại, sẽ tạo order mới
+     */
+    @Transactional
+    public OrderResponse addItemsToOrderForCustomer(Long id, OrderRequest request) {
+        Order order;
+        
+        // Nếu id là null hoặc 0 hoặc không tìm thấy order, tạo order mới
+        if (id == null || id == 0) {
+            // Tạo order mới
+            order = Order.builder()
+                    .orderNumber(generateOrderNumber())
+                    .status(OrderStatus.PENDING)
+                    .createdBy(null) // Customer không có user account
+                    .subtotal(BigDecimal.ZERO)
+                    .discount(BigDecimal.ZERO)
+                    .tax(BigDecimal.ZERO)
+                    .total(BigDecimal.ZERO)
+                    .notes(request.getNotes())
+                    .orderDetails(new ArrayList<>())
+                    .build();
+            
+            // Set table nếu có
+            if (request.getTableId() != null) {
+                RestaurantTable table = tableRepository.findById(request.getTableId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
+                
+                if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                    throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
+                }
+                
+                if (table.getActive() == null || !table.getActive()) {
+                    throw new BadRequestException("Bàn không khả dụng");
+                }
+                
+                // Nếu bàn đang AVAILABLE hoặc RESERVED, đổi thành OCCUPIED
+                if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
+                    table.setStatus(TableStatus.OCCUPIED);
+                    tableRepository.save(table);
+                }
+                
+                order.setTable(table);
+            }
+            
+            // Set reservation nếu có
+            if (request.getReservationId() != null) {
+                Reservation reservation = reservationRepository.findById(request.getReservationId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", request.getReservationId()));
+                order.setReservation(reservation);
+                
+                // Lấy table từ reservation nếu chưa có
+                if (order.getTable() == null && reservation.getTable() != null) {
+                    order.setTable(reservation.getTable());
+                }
+            }
+            
+            // Save order để có ID
+            order = orderRepository.save(order);
+        } else {
+            // Tìm order hiện có
+            order = orderRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", "id", id));
+        }
+
+        // Chỉ cho phép thêm món vào order chưa thanh toán
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Không thể thêm món vào đơn hàng đã hoàn thành hoặc đã hủy");
+        }
+
+        // Thêm các món mới vào order
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (OrderItemRequest itemRequest : request.getItems()) {
+                Dish dish = dishRepository.findById(itemRequest.getDishId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Món ăn", "id", itemRequest.getDishId()));
+
+                // Kiểm tra món còn bán không
+                if (dish.getStatus() == DishStatus.DISCONTINUED) {
+                    throw new BadRequestException("Món ăn \"" + dish.getName() + "\" đã dừng kinh doanh");
+                }
+
+                // Tính subtotal = price * quantity
+                BigDecimal itemSubtotal = dish.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+
+                OrderDetail orderDetail = OrderDetail.builder()
+                        .order(order)
+                        .dish(dish)
+                        .quantity(itemRequest.getQuantity())
+                        .price(dish.getPrice())
+                        .subtotal(itemSubtotal)
+                        .notes(itemRequest.getNotes() != null ? itemRequest.getNotes() : "")
+                        .build();
+
+                orderDetailRepository.save(orderDetail);
+            }
+        }
+
+        // Cập nhật notes nếu có
+        if (request.getNotes() != null) {
+            order.setNotes(request.getNotes());
+        }
+
+        // Tính lại tổng tiền
+        recalculateOrderTotals(order);
+        order = orderRepository.save(order);
+
+        return mapToResponse(order);
     }
 
     @Transactional
@@ -652,6 +793,60 @@ public class OrderService {
         
         BigDecimal total = subtotal.add(tax).subtract(order.getDiscount());
         order.setTotal(total);
+    }
+
+    /**
+     * Tạo order mới cho customer (không cần auth)
+     */
+    private Order createNewOrderForCustomer(OrderRequest request) {
+        Order order = Order.builder()
+                .orderNumber(generateOrderNumber())
+                .status(OrderStatus.PENDING)
+                .createdBy(null) // Customer không có user account
+                .subtotal(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .tax(BigDecimal.ZERO)
+                .total(BigDecimal.ZERO)
+                .notes(request.getNotes())
+                .orderDetails(new ArrayList<>())
+                .build();
+        
+        // Set table nếu có
+        if (request.getTableId() != null) {
+            RestaurantTable table = tableRepository.findById(request.getTableId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Bàn", "id", request.getTableId()));
+            
+            if (table.getIsDeleted() != null && table.getIsDeleted()) {
+                throw new ResourceNotFoundException("Bàn", "id", request.getTableId());
+            }
+            
+            if (table.getActive() == null || !table.getActive()) {
+                throw new BadRequestException("Bàn không khả dụng");
+            }
+            
+            // Nếu bàn đang AVAILABLE hoặc RESERVED, đổi thành OCCUPIED
+            if (table.getStatus() == TableStatus.AVAILABLE || table.getStatus() == TableStatus.RESERVED) {
+                table.setStatus(TableStatus.OCCUPIED);
+                tableRepository.save(table);
+            }
+            
+            order.setTable(table);
+        }
+        
+        // Set reservation nếu có
+        if (request.getReservationId() != null) {
+            Reservation reservation = reservationRepository.findById(request.getReservationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Đặt bàn", "id", request.getReservationId()));
+            order.setReservation(reservation);
+            
+            // Lấy table từ reservation nếu chưa có
+            if (order.getTable() == null && reservation.getTable() != null) {
+                order.setTable(reservation.getTable());
+            }
+        }
+        
+        // Save order để có ID
+        return orderRepository.save(order);
     }
 
     private String generateOrderNumber() {

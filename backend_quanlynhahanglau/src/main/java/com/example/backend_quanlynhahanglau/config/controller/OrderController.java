@@ -122,6 +122,13 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
+    @GetMapping("/by-table/{tableId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByTableId(@PathVariable Long tableId) {
+        List<OrderResponse> orders = orderService.getOrdersByTableId(tableId);
+        return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
     @PutMapping("/{orderId}/items/{itemId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderDetail(
@@ -135,6 +142,34 @@ public class OrderController {
     @DeleteMapping("/{orderId}/items/{itemId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<OrderResponse>> deleteOrderDetail(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId) {
+        OrderResponse order = orderService.deleteOrderDetail(orderId, itemId);
+        return ResponseEntity.ok(ApiResponse.success("Xóa món thành công", order));
+    }
+
+    // Public endpoints for customer to add items to order via QR code
+    @GetMapping("/public/by-table/{tableId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderByTableId(@PathVariable Long tableId) {
+        OrderResponse order = orderService.getOrderByTableIdForCustomer(tableId);
+        return ResponseEntity.ok(ApiResponse.success(order));
+    }
+
+    @PutMapping("/public/{id}/add-items")
+    public ResponseEntity<ApiResponse<OrderResponse>> addItemsToOrderPublic(
+            @PathVariable Long id,
+            @Valid @RequestBody OrderRequest request) {
+        // Nếu id = 0, tạo order mới, ngược lại thêm món vào order hiện có
+        OrderResponse order = orderService.addItemsToOrderForCustomer(id, request);
+        if (id == null || id == 0) {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Tạo đơn hàng và thêm món thành công", order));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Thêm món vào đơn hàng thành công", order));
+    }
+
+    @DeleteMapping("/public/{orderId}/items/{itemId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> deleteOrderDetailPublic(
             @PathVariable Long orderId,
             @PathVariable Long itemId) {
         OrderResponse order = orderService.deleteOrderDetail(orderId, itemId);

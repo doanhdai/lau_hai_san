@@ -21,6 +21,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatus(OrderStatus status);
     List<Order> findByTable(RestaurantTable table);
     
+    // Tìm đơn hàng theo tableId và fetch orderDetails để tránh lazy loading
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderDetails od " +
+           "LEFT JOIN FETCH od.dish " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.reservation " +
+           "WHERE o.table.id = :tableId")
+    List<Order> findByTableId(@Param("tableId") Long tableId);
+    
     // Tìm đơn hàng theo reservation ID và fetch Dish để tránh lazy loading
     @Query("SELECT DISTINCT o FROM Order o " +
            "LEFT JOIN FETCH o.orderDetails od " +
@@ -37,12 +47,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByDate(@Param("startDate") LocalDateTime startDate, 
                            @Param("endDate") LocalDateTime endDate);
     
-    // Tìm tất cả đơn hàng và fetch table, customer, reservation để tránh lazy loading
+    // Tìm tất cả đơn hàng và fetch table, customer, reservation, orderDetails để tránh lazy loading
     @Query("SELECT DISTINCT o FROM Order o " +
            "LEFT JOIN FETCH o.table " +
            "LEFT JOIN FETCH o.customer " +
-           "LEFT JOIN FETCH o.reservation")
+           "LEFT JOIN FETCH o.reservation " +
+           "LEFT JOIN FETCH o.orderDetails od " +
+           "LEFT JOIN FETCH od.dish")
     List<Order> findAllWithRelations();
+    
+    // Tìm đơn hàng theo ID và fetch đầy đủ relations
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.reservation " +
+           "LEFT JOIN FETCH o.orderDetails od " +
+           "LEFT JOIN FETCH od.dish " +
+           "WHERE o.id = :id")
+    Optional<Order> findByIdWithRelations(@Param("id") Long id);
     
     // Thống kê doanh thu theo ngày (tính từ đơn đã xác nhận trở đi)
     @Query("SELECT SUM(o.total) FROM Order o WHERE " +

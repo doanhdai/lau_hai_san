@@ -1,4 +1,4 @@
-import api from './api'
+import api, { publicApiClient } from './api'
 
 export const orderService = {
   async getAll() {
@@ -63,6 +63,29 @@ export const orderService = {
 
   async getByReservationId(reservationId) {
     const response = await api.get(`/orders/by-reservation/${reservationId}`)
+    return response.data
+  },
+
+  async getByTableId(tableId) {
+    const response = await api.get(`/orders/by-table/${tableId}`)
+    return response.data
+  },
+
+  // Public endpoints for customer (no auth required)
+  async getOrderByTableIdPublic(tableId) {
+    const response = await publicApiClient.get(`/orders/public/by-table/${tableId}`)
+    return response.data
+  },
+
+  async addItemsToOrderPublic(orderId, orderData) {
+    // Nếu orderId là 0 hoặc null, vẫn dùng PUT với id = 0, backend sẽ tự động tạo order mới
+    const idToUse = orderId || 0
+    const response = await publicApiClient.put(`/orders/public/${idToUse}/add-items`, orderData)
+    return response.data
+  },
+
+  async deleteOrderDetailPublic(orderId, itemId) {
+    const response = await publicApiClient.delete(`/orders/public/${orderId}/items/${itemId}`)
     return response.data
   },
 

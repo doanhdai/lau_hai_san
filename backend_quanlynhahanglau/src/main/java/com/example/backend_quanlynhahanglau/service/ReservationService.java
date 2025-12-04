@@ -461,6 +461,13 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.CHECKED_IN);
         reservation.setConfirmedBy(user);
+        
+        // Lưu confirmedAt khi check-in (nếu chưa có - có thể đã được set khi chọn bàn)
+        LocalDateTime checkInTime = LocalDateTime.now();
+        if (reservation.getConfirmedAt() == null) {
+            reservation.setConfirmedAt(checkInTime);
+            log.info("Set confirmedAt for reservation ID: {} during check-in", reservation.getId());
+        }
 
         // Gán nhân viên phụ trách vào Reservation (lưu vĩnh viễn để tra cứu)
         // Nếu user là STAFF, tự động gán làm nhân viên phụ trách
@@ -481,17 +488,21 @@ public class ReservationService {
         }
         
         // Cập nhật status của tất cả orders liên quan thành CONFIRMED
-        LocalDateTime checkInTime = LocalDateTime.now();
+        // Sử dụng confirmedAt từ reservation (đã được set ở trên hoặc khi chọn bàn)
+        LocalDateTime orderCheckInTime = reservation.getConfirmedAt() != null ? reservation.getConfirmedAt() : LocalDateTime.now();
         List<Order> orders = orderRepository.findByReservationId(id);
         for (Order order : orders) {
             if (order.getStatus() != OrderStatus.COMPLETED) {
                 OrderStatus oldStatus = order.getStatus();
                 order.setStatus(OrderStatus.CONFIRMED);
                 // Lưu thời gian checkin để tính thời gian cảnh báo món từ lúc này
-                order.setConfirmedAt(checkInTime);
+                // Sử dụng cùng confirmedAt với reservation để đồng bộ
+                if (order.getConfirmedAt() == null) {
+                    order.setConfirmedAt(orderCheckInTime);
+                }
                 orderRepository.save(order);
                 log.info("Updated order ID: {} status from {} to CONFIRMED and set confirmedAt to {} after check-in reservation ID: {}", 
-                        order.getId(), oldStatus, checkInTime, id);
+                        order.getId(), oldStatus, orderCheckInTime, id);
             }
         }
         
@@ -590,6 +601,12 @@ public class ReservationService {
         // Gán bàn mới
         reservation.setTable(newTable);
         
+        // Khi chọn bàn cho reservation, lưu confirmedAt (thời gian xác nhận bàn)
+        // Chỉ set nếu chưa có confirmedAt (tránh ghi đè nếu đã check-in trước đó)
+        if (reservation.getConfirmedAt() == null) {
+            reservation.setConfirmedAt(LocalDateTime.now());
+            log.info("Set confirmedAt for reservation ID: {} when assigning table", reservation.getId());
+        }
 
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Updated table for reservation ID: {} to table ID: {}", savedReservation.getId(), tableId);

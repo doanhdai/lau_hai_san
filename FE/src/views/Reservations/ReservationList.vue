@@ -16,7 +16,7 @@
 
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+    <!-- <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
       <div class="bg-white border border-gray-200 rounded-lg p-2">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -61,15 +61,49 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center h-64">
       <div class="inline-block w-10 h-10 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
-    <!-- Content: List View -->
+    <!-- Content: Tabs -->
     <template v-else>
+    <div class="bg-white border border-gray-200 rounded-lg mb-3">
+      <div class="flex border-b border-gray-200">
+        <button
+          @click="activeTab = 'list'"
+          :class="[
+            'px-4 py-2 text-sm font-medium transition-colors',
+            activeTab === 'list'
+              ? 'text-slate-900 border-b-2 border-slate-900'
+              : 'text-slate-600 hover:text-slate-900'
+          ]"
+        >
+          <i class="fas fa-list mr-2"></i>
+          Danh sách
+        </button>
+        <button
+          @click="activeTab = 'schedule'"
+          :class="[
+            'px-4 py-2 text-sm font-medium transition-colors',
+            activeTab === 'schedule'
+              ? 'text-slate-900 border-b-2 border-slate-900'
+              : 'text-slate-600 hover:text-slate-900'
+          ]"
+        >
+          <i class="fas fa-calendar-alt mr-2"></i>
+          Lịch đặt bàn
+        </button>
+      </div>
+    </div>
+
+    <!-- Schedule View -->
+    <ReservationSchedule v-if="activeTab === 'schedule'" />
+
+    <!-- List View -->
+    <template v-if="activeTab === 'list'">
     <!-- Filters -->
         <div class="bg-white border border-gray-200 rounded-lg p-3 mb-3">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -198,6 +232,7 @@
             <p class="text-slate-600 text-sm">Không tìm thấy đặt bàn nào</p>
       </div>
     </div>
+    </template>
     </template>
 
     <!-- Reservation Modal -->
@@ -362,6 +397,7 @@ import { reservationService } from '@/services/reservationService'
 import { tableService } from '@/services/tableService'
 import { useNotificationStore } from '@/stores/notification'
 import ReservationModal from '@/components/modals/ReservationModal.vue'
+import ReservationSchedule from '@/components/schedule/ReservationSchedule.vue'
 
 const router = useRouter()
 const notification = useNotificationStore()
@@ -382,6 +418,7 @@ const availableTables = ref([])
 const loadingTables = ref(false)
 const assigningTable = ref(false)
 const tableTypeFilter = ref('online') // 'online' or 'regular'
+const activeTab = ref('list') // 'list' or 'schedule'
 
 const pendingCount = computed(() => {
   if (!Array.isArray(reservations.value)) return 0
