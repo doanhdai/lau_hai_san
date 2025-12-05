@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
     <!-- Navbar -->
-    <nav v-if="!isCustomerOrderPage" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" :class="scrolled ? 'bg-white shadow-lg' : 'bg-transparent'">
+    <nav v-if="!isCustomerOrderPage" class="fixed top-0 left-0 right-0 z-50 bg-white shadow-lg transition-all duration-300">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-20">
           <!-- Logo -->
@@ -10,10 +10,10 @@
               <i class="fas fa-bowl-food text-white text-xl"></i>
             </div>
             <div>
-              <h1 class="text-lg font-bold" :class="scrolled ? 'text-slate-900' : 'text-white'">
+              <h1 class="text-lg font-bold text-slate-900">
                 Nhà Hàng Lẩu
               </h1>
-              <p class="text-xs" :class="scrolled ? 'text-slate-600' : 'text-white/80'">
+              <p class="text-xs text-slate-600">
                 Hương vị đậm đà
               </p>
             </div>
@@ -25,23 +25,20 @@
               v-for="item in menuItems" 
               :key="item.path"
               :to="item.path"
-              class="nav-link font-medium text-sm transition-all duration-200"
-              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
+              class="nav-link font-medium text-sm text-slate-900 hover:text-slate-700 transition-all duration-200"
             >
               {{ item.label }}
             </router-link>
             <router-link 
               v-if="isAuthenticated"
               to="/my-reservations" 
-              class="font-medium text-sm transition-all duration-200"
-              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
+              class="font-medium text-sm text-slate-900 hover:text-slate-700 transition-all duration-200"
             >
               Lịch sử
             </router-link>
             <router-link 
               to="/reservation" 
-              class="font-medium text-sm transition-all duration-200"
-              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
+              class="font-medium text-sm text-slate-900 hover:text-slate-700 transition-all duration-200"
             >
               Đặt Bàn Ngay
             </router-link>
@@ -51,7 +48,6 @@
               v-if="!isAuthenticated"
               to="/login" 
               class="font-medium text-sm transition-all duration-200 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg shadow-sm"
-              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
             >
               Đăng nhập
             </router-link>
@@ -59,8 +55,7 @@
             <button 
               v-if="isAuthenticated"
               @click="handleLogout"
-              class="font-medium text-sm transition-all duration-200"
-              :class="scrolled ? 'text-slate-700 hover:text-slate-900' : 'text-white/90 hover:text-white'"
+              class="font-medium text-sm text-slate-900 hover:text-slate-700 transition-all duration-200"
             >
               Đăng xuất
             </button>
@@ -71,8 +66,7 @@
           <!-- Mobile Menu Button -->
           <button 
             @click="mobileMenuOpen = !mobileMenuOpen"
-            class="md:hidden p-2 rounded-lg"
-            :class="scrolled ? 'text-gray-700' : 'text-white'"
+            class="md:hidden p-2 rounded-lg text-gray-700"
           >
             <span v-if="!mobileMenuOpen" class="text-2xl">☰</span>
             <span v-else class="text-2xl">✕</span>
@@ -289,6 +283,9 @@ onMounted(async () => {
   } catch (e) {
     console.warn('AuthStore not available:', e)
   }
+  
+  // Check initial scroll position
+  handleScroll()
   
   // Setup scroll listener
   window.addEventListener('scroll', handleScroll)

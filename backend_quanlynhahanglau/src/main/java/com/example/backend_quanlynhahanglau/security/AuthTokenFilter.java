@@ -28,9 +28,14 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        // Skip authentication filter for WebSocket endpoints (handled by WebSocket interceptors)
+        // Skip authentication filter for public endpoints
         String path = request.getRequestURI();
-        if (path != null && (path.startsWith("/ws/") || path.startsWith("/app/") || path.startsWith("/topic/") || path.startsWith("/queue/"))) {
+        if (path != null && (
+                path.startsWith("/api/auth/") || 
+                path.startsWith("/ws/") || 
+                path.startsWith("/app/") || 
+                path.startsWith("/topic/") || 
+                path.startsWith("/queue/"))) {
             filterChain.doFilter(request, response);
             return;
         }
